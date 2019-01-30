@@ -19,6 +19,7 @@ package cmd
 import (
 	"fmt"
 
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 
 	"github.com/Ridecell/ridectl/pkg/exec"
@@ -42,21 +43,19 @@ var pyShellCmd = &cobra.Command{
 		}
 		return nil
 	},
-	Run: func(_ *cobra.Command, args []string) {
+	RunE: func(_ *cobra.Command, args []string) error {
 		clientset, err := kubernetes.GetClient(kubeconfigFlag)
 		if err != nil {
-			panic(nil)
+			return errors.Wrap(err, "unable to load Kubernetes configuration")
 		}
 		pod, err := kubernetes.FindSummonPod(clientset, args[0], fmt.Sprintf("app.kubernetes.io/instance=%s-web", args[0]))
 		if err != nil {
-			panic(err)
+			return errors.Wrap(err, "unable to find pod")
 		}
 		fmt.Printf("Connecting to %s/%s\n", pod.Namespace, pod.Name)
 
 		// Spawn kubectl exec.
 		kubectlArgs := []string{"kubectl", "exec", "-it", "-n", pod.Namespace, pod.Name, "--", "bash", "-l", "-c", "python manage.py shell"}
-		err = exec.Exec(kubectlArgs)
-		// If we get this far, something is very wrong.
-		panic(err)
+		return exec.Exec(kubectlArgs)
 	},
 }
