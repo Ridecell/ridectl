@@ -14,35 +14,16 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package cmd
+package cmd_test
 
 import (
-	"fmt"
-	"os"
-	"path/filepath"
+	"testing"
 
-	"github.com/mitchellh/go-homedir"
-	"github.com/spf13/cobra"
+	"github.com/onsi/ginkgo"
+	"github.com/onsi/gomega"
 )
 
-var kubeconfigFlag string
-
-var rootCmd = &cobra.Command{
-	Use:   "ridectl",
-	Short: "Ridectl controls Summon instances in Kubernetes",
-}
-
-func init() {
-	home, err := homedir.Dir()
-	if err != nil {
-		panic(err)
-	}
-	rootCmd.PersistentFlags().StringVar(&kubeconfigFlag, "kubeconfig", filepath.Join(home, ".kube", "config"), "(optional) absolute path to the kubeconfig file")
-}
-
-func Execute() {
-	if err := rootCmd.Execute(); err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
+func TestCmd(t *testing.T) {
+	gomega.RegisterFailHandler(ginkgo.Fail)
+	ginkgo.RunSpecs(t, "Cmd Suite")
 }

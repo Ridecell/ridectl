@@ -14,35 +14,20 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package cmd
+package exec
 
 import (
-	"fmt"
 	"os"
-	"path/filepath"
-
-	"github.com/mitchellh/go-homedir"
-	"github.com/spf13/cobra"
+	"os/exec"
+	"syscall"
 )
 
-var kubeconfigFlag string
-
-var rootCmd = &cobra.Command{
-	Use:   "ridectl",
-	Short: "Ridectl controls Summon instances in Kubernetes",
-}
-
-func init() {
-	home, err := homedir.Dir()
+func Exec(command []string) error {
+	binary, err := exec.LookPath(command[0])
 	if err != nil {
-		panic(err)
+		return err
 	}
-	rootCmd.PersistentFlags().StringVar(&kubeconfigFlag, "kubeconfig", filepath.Join(home, ".kube", "config"), "(optional) absolute path to the kubeconfig file")
-}
-
-func Execute() {
-	if err := rootCmd.Execute(); err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
+	err = syscall.Exec(binary, command, os.Environ())
+	// Panic rather than returning since this should never happen.
+	panic(err)
 }
