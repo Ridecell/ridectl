@@ -15,7 +15,7 @@
 all: test build
 
 # Run tests
-test: generate fmt vet manifests
+test: generate fmt vet
 	ginkgo --randomizeAllSpecs --randomizeSuites --cover --trace --progress ./pkg/... ./cmd/...
 	gover
 
