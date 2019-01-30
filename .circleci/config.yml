@@ -1,0 +1,103 @@
+version: 2
+jobs:
+  test:
+    docker:
+    - image: circleci/golang:1
+    working_directory: /go/src/github.com/Ridecell/ridectl
+
+    steps:
+    - checkout
+    - restore_cache:
+        keys:
+        - v1-vendor-{{ checksum "Gopkg.lock" }}
+        - v1-vendor
+
+    - run: make dep test
+    - run: goveralls -coverprofile=gover.coverprofile -service=circle-ci -repotoken=$COVERALLS_TOKEN
+
+    - save_cache:
+        key: v1-vendor-{{ checksum "Gopkg.lock" }}
+        paths:
+        - vendor/
+
+  build:
+    docker:
+    - image: circleci/golang:1
+    working_directory: /go/src/github.com/Ridecell/ridectl
+
+    steps:
+    - checkout
+    - restore_cache:
+        keys:
+        - v1-vendor-{{ checksum "Gopkg.lock" }}
+        - v1-vendor
+
+    - run: make dep build_macos build_linux
+    - run: mkdir workspace && cp -R bin/ workspace/
+    - persist_to_workspace:
+        root: workspace
+        paths:
+        - bin
+
+    - save_cache:
+        key: v1-vendor-{{ checksum "Gopkg.lock" }}
+        paths:
+        - vendor/
+
+  upload:
+    docker:
+    - image: circleci/golang:1
+    working_directory: /go/src/github.com/Ridecell/ridectl
+
+    steps:
+    - attach_workspace:
+        at: workspace
+
+    - run: go get github.com/tcnksm/ghr
+    - run: ghr -u ${CIRCLE_PROJECT_USERNAME} -r ${CIRCLE_PROJECT_REPONAME} -c ${CIRCLE_SHA1} ${CIRCLE_TAG} workspace/bin/
+
+  build_docker:
+    docker:
+    - image: us.gcr.io/ridecell-public/docker-gcloud:2018-09-17
+    steps:
+    - checkout
+    - setup_remote_docker
+    - run: docker build -t us.gcr.io/ridecell-1/ridectl:${CIRCLE_TAG} -t us.gcr.io/ridecell-1/ridectl:latest .
+    - run: echo ${GCP_SERVICE_ACCOUNT} > gcp-key.json
+    - run: gcloud auth activate-service-account --key-file gcp-key.json
+    - run: gcloud --quiet config set project ridecell-1
+    - run: gcloud auth configure-docker
+    - run: docker push us.gcr.io/ridecell-1/ridectl:${CIRCLE_TAG}
+    - run: docker push us.gcr.io/ridecell-1/ridectl:latest
+
+
+workflows:
+  version: 2
+  default:
+    jobs:
+    - test:
+        filters:
+          tags:
+            only: /^v.*/
+    - build:
+        requires:
+        - test
+        filters:
+          tags:
+            only: /^v.*/
+    - upload:
+        requires:
+        - build
+        filters:
+          branches:
+            ignore: /.*/
+          tags:
+            only: /^v.*/
+    - build_docker:
+        requires:
+        - build
+        filters:
+          branches:
+            ignore: /.*/
+          tags:
+            only: /^v.*/
