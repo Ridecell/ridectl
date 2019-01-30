@@ -215,21 +215,3 @@ var editCmd = &cobra.Command{
 		return nil
 	},
 }
-
-// For later maybe
-// kubeConfigFlags := genericclioptions.NewConfigFlags()
-// matchVersionKubeConfigFlags := cmdutil.NewMatchVersionFlags(kubeConfigFlags)
-// f := cmdutil.NewFactory(matchVersionKubeConfigFlags)
-// filenameOptions := &resource.FilenameOptions{Filenames: []string{clusterFile}}
-// r := f.NewBuilder().
-//  Unstructured().
-//  Schema(false).
-//  ContinueOnError().
-//  FilenameParam(false, filenameOptions).
-//  Flatten().
-//  Do()
-// err = r.Err()
-// if err != nil {
-//  return err
-// }
-// fmt.Printf("success\n")
