@@ -12,8 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+required = ["k8s.io/code-generator/cmd/deepcopy-gen"]
+
 [prune]
-  go-tests = true
+go-tests = true
+
+[[prune.project]]
+name = "github.com/Ridecell/ridecell-operator"
+unused-packages = true
 
 # For dependency below: Refer to issue https://github.com/golang/dep/issues/1799
 [[override]]
