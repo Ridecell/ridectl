@@ -27,7 +27,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
-	"sort"
+	"strings"
 
 	"github.com/Ridecell/ridectl/pkg/cmd/edit"
 	"github.com/aws/aws-sdk-go/aws"
@@ -37,8 +37,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/shurcooL/httpfs/vfsutil"
 	"github.com/spf13/cobra"
-	yaml "gopkg.in/yaml.v2"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	kyaml "k8s.io/apimachinery/pkg/util/yaml"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -62,7 +60,7 @@ type encryptedSecretContext struct {
 	origEnc  *secretsv1beta1.EncryptedSecret
 	origDec  *edit.DecryptedSecret
 	afterDec *edit.DecryptedSecret
-	afterEnc *secretsv1beta1.EncryptedSecret
+	other    runtime.Object
 }
 
 var editCmd = &cobra.Command{
@@ -101,25 +99,9 @@ var editCmd = &cobra.Command{
 		if err != nil {
 			if os.IsNotExist(err) && filenameFlag == "" {
 				// No file, render the template with the default content.
-				templateData, err := vfsutil.ReadFile(Templates, "new_instance.yml.tpl")
+				buffer, err := createDefaultData(args[0])
 				if err != nil {
-					return errors.Wrap(err, "error reading new instance template")
-				}
-				template, err := template.New("new_instance.yml.tpl").Parse(string(templateData))
-				if err != nil {
-					return errors.Wrap(err, "error parsing new instance template")
-				}
-				match := regexp.MustCompile(`^([a-z0-9]+)-([a-z]+)$`).FindStringSubmatch(args[0])
-				if match == nil {
-					return errors.Errorf("unable to parse instance name %s", args[0])
-				}
-				buffer := &bytes.Buffer{}
-				err = template.Execute(buffer, struct {
-					Name      string
-					Namespace string
-				}{Name: match[1], Namespace: match[2]})
-				if err != nil {
-					return errors.Wrap(err, "error rendering new instance template")
+					return errors.Wrap(err, "error creating default data")
 				}
 				inStream = buffer
 			} else {
@@ -137,15 +119,16 @@ var editCmd = &cobra.Command{
 		}
 
 		// Pull out the EncryptedSecret objects.
-		secrets := []encryptedSecretContext{}
-		inEverythingElse := []runtime.Object{}
+		objects := make([]encryptedSecretContext, 0, len(inObjs))
 		for _, obj := range inObjs {
+			ctx := encryptedSecretContext{}
 			enc, ok := obj.(*secretsv1beta1.EncryptedSecret)
 			if ok {
-				secrets = append(secrets, encryptedSecretContext{origEnc: enc})
+				ctx.origEnc = enc
 			} else {
-				inEverythingElse = append(inEverythingElse, obj)
+				ctx.other = obj
 			}
+			objects = append(objects, ctx)
 		}
 
 		// Create a KMS session
@@ -156,79 +139,71 @@ var editCmd = &cobra.Command{
 		kmsService := kms.New(sess)
 
 		// Decrypt all the encrypted secrets.
-		objectsToEdit := []runtime.Object{}
-		for _, sec := range secrets {
-			dec, err := decryptSecret(sec.origEnc, kmsService)
-			if err != nil {
-				return errors.Wrapf(err, "error decrypting %s/%s", sec.origEnc.Namespace, sec.origEnc.Name)
+		for _, ctx := range objects {
+			if ctx.origEnc == nil {
+				continue
 			}
-			sec.origDec = dec
-			objectsToEdit = append(objectsToEdit, dec)
-		}
-		objectsToEdit = append(objectsToEdit, inEverythingElse...)
-
-		// Make the YAML to show in the editor.
-		tmpfile, err := ioutil.TempFile("", ".*.yml")
-		if err != nil {
-			return errors.Wrap(err, "error making tempfile")
-		}
-		defer os.Remove(tmpfile.Name())
-		encodeYaml(tmpfile, objectsToEdit)
-
-		// Show the editor.
-		err = runEditor(tmpfile.Name())
-		if err != nil {
-			return errors.Wrap(err, "error running editor")
+			dec, err := decryptSecret(ctx.origEnc, kmsService)
+			if err != nil {
+				return errors.Wrapf(err, "error decrypting %s/%s", ctx.origEnc.Namespace, ctx.origEnc.Name)
+			}
+			ctx.origDec = dec
 		}
 
-		// Re-read the edited file.
-		tmpfile.Seek(0, 0)
-		afterObjs, err := decodeYaml(tmpfile)
+		// Make the list of objects to edit.
+		objectsToEdit := make([]runtime.Object, 0, len(objects))
+		for _, ctx := range objects {
+			if ctx.origDec != nil {
+				objectsToEdit = append(objectsToEdit, ctx.origDec)
+			} else if ctx.other != nil {
+				objectsToEdit = append(objectsToEdit, ctx.other)
+			} else {
+				panic("invalid context")
+			}
+		}
+
+		// Edit!
+		afterObjs, err := editObjects(objectsToEdit, "")
 		if err != nil {
-			// TODO this should re-open the editor and show the error.
-			return errors.Wrap(err, "error decoding edited YAML")
+			return errors.Wrap(err, "error editing objects")
 		}
 
 		// Match up the new objects with the existing state.
-		afterEverythingElse := []runtime.Object{}
+		afterCtxs := make([]encryptedSecretContext, 0, len(afterObjs))
 		for _, afterObj := range afterObjs {
+			afterCtx := encryptedSecretContext{}
+
 			dec, ok := afterObj.(*edit.DecryptedSecret)
 			if ok {
-				found := false
-				for _, sec := range secrets {
-					if sec.origDec.Name == dec.Name && sec.origDec.Namespace == dec.Namespace {
-						sec.afterDec = dec
-						found = true
+				afterCtx.afterDec = dec
+				for _, ctx := range objects {
+					if ctx.origDec != nil && ctx.origDec.Name == dec.Name && ctx.origDec.Namespace == dec.Namespace {
+						afterCtx.origDec = ctx.origDec
+						afterCtx.origEnc = ctx.origEnc
 						break
 					}
 				}
-				// No match, must be new.
-				if !found {
-					secrets = append(secrets, encryptedSecretContext{afterDec: dec})
-				}
 			} else {
-				afterEverythingElse = append(afterEverythingElse, afterObj)
+				afterCtx.other = afterObj
 			}
+			afterCtxs = append(afterCtxs, afterCtx)
 		}
 
 		// Re-encrypt anything that needs it.
 		// TODO real key logic
 		keyId := os.Getenv("KEY")
-		for _, sec := range secrets {
-			enc, err := encryptSecret(sec.afterDec, sec.origDec, sec.origEnc, keyId, kmsService)
-			if err != nil {
-				return errors.Wrapf(err, "error encrypting %s/%s", sec.afterDec.Namespace, sec.afterDec.Name)
+		outObjs := make([]runtime.Object, 0, len(afterCtxs))
+		for _, ctx := range afterCtxs {
+			if ctx.afterDec != nil {
+				enc, err := encryptSecret(ctx.afterDec, ctx.origDec, ctx.origEnc, keyId, kmsService)
+				if err != nil {
+					return errors.Wrapf(err, "error encrypting %s/%s", ctx.afterDec.Namespace, ctx.afterDec.Name)
+				}
+				outObjs = append(outObjs, enc)
+			} else {
+				outObjs = append(outObjs, ctx.other)
 			}
-			sec.afterEnc = enc
 		}
-
-		// Try to rebuild things in the same order as it was originally.
-		orderedObjects := []runtime.Object{}
-		for _, sec := range secrets {
-			orderedObjects = append(orderedObjects, sec.afterEnc)
-		}
-		orderedObjects = append(orderedObjects, afterEverythingElse...)
-		sortObjects(orderedObjects, inObjs, afterObjs)
 
 		// Write out the file again.
 		// TODO make sure the file is writable before doing all this.
@@ -237,7 +212,7 @@ var editCmd = &cobra.Command{
 			return errors.Wrapf(err, "error opening %s for writing", filename)
 		}
 		defer outFile.Close()
-		encodeYaml(outFile, orderedObjects)
+		encodeYaml(outFile, outObjs)
 
 		return nil
 	},
@@ -271,13 +246,25 @@ func decodeYaml(in io.Reader) ([]runtime.Object, error) {
 }
 
 func encodeYaml(out io.Writer, objs []runtime.Object) error {
-	encoder := yaml.NewEncoder(out)
+	first := true
 	for _, obj := range objs {
-		err := encoder.Encode(obj)
+		if !first {
+			out.Write([]byte("---\n"))
+		}
+		first = false
+
+		groupVersion := obj.GetObjectKind().GroupVersionKind().GroupVersion()
+		info, ok := runtime.SerializerInfoForMediaType(scheme.Codecs.SupportedMediaTypes(), "application/yaml")
+		if !ok {
+			return errors.New("unable to find serializer info")
+		}
+		encoder := scheme.Codecs.EncoderForVersion(info.Serializer, groupVersion)
+		err := encoder.Encode(obj, out)
 		if err != nil {
 			return errors.Wrap(err, "error encoding object")
 		}
 	}
+
 	return nil
 }
 
@@ -305,9 +292,9 @@ func decryptSecret(enc *secretsv1beta1.EncryptedSecret, kmsService kmsiface.KMSA
 
 func encryptSecret(dec *edit.DecryptedSecret, origDec *edit.DecryptedSecret, origEnc *secretsv1beta1.EncryptedSecret, defaultKeyId string, kmsService kmsiface.KMSAPI) (*secretsv1beta1.EncryptedSecret, error) {
 	// Work out which key to use.
-	keyId := origDec.KeyId
-	if keyId == "" {
-		keyId = defaultKeyId
+	keyId := defaultKeyId
+	if origDec != nil && origDec.KeyId != "" {
+		keyId = origDec.KeyId
 	}
 
 	enc := &secretsv1beta1.EncryptedSecret{ObjectMeta: dec.ObjectMeta}
@@ -351,59 +338,83 @@ func runEditor(filename string) error {
 	return nil
 }
 
-type orderedObjects struct {
-	orig  map[string]int
-	after map[string]int
-	out   []runtime.Object
-}
-
-func (o orderedObjects) Len() int      { return len(o.out) }
-func (o orderedObjects) Swap(i, j int) { o.out[i], o.out[j] = o.out[j], o.out[i] }
-func (o orderedObjects) Less(i, j int) bool {
-	iKey := o.objKey(o.out[i])
-	jKey := o.objKey(o.out[j])
-	iOrig, iOk := o.orig[iKey]
-	jOrig, jOk := o.orig[jKey]
-	if iOk && jOk {
-		// Both in orig.
-		return iOrig < jOrig
-	} else if iOk {
-		// i in orig, j not (so assumed at infinity).
-		return true
-	} else if jOk {
-		// j in orig, i not (so assumed at infinity).
-		return false
-	} else {
-		// Neither in orig, check after.
-		iAfter, iOk := o.after[iKey]
-		jAfter, jOk := o.after[jKey]
-		if iOk && jOk {
-			// Both in orig.
-			return iAfter < jAfter
-		} else if iOk {
-			// i in after, j not (so assumed at infinity).
-			return true
-		} else if jOk {
-			// j in after, i not (so assumed at infinity).
-			return false
+func editObjects(objects []runtime.Object, comment string) ([]runtime.Object, error) {
+	objectBuf := bytes.Buffer{}
+	err := encodeYaml(&objectBuf, objects)
+	if err != nil {
+		return nil, errors.Wrap(err, "error encoding objects to YAML")
+	}
+	for {
+		// Make the YAML to show in the editor.
+		outBuf := bytes.Buffer{}
+		if comment != "" {
+			for _, line := range strings.Split(comment, "\n") {
+				outBuf.WriteString("# ")
+				outBuf.WriteString(line)
+				outBuf.WriteString("\n")
+			}
+			outBuf.WriteString("#\n")
 		}
+		outBuf.Write(objectBuf.Bytes())
+
+		// Open a temporary file.
+		tmpfile, err := ioutil.TempFile("", ".*.yml")
+		if err != nil {
+			return nil, errors.Wrap(err, "error making tempfile")
+		}
+		defer os.Remove(tmpfile.Name())
+		tmpfile.Write(outBuf.Bytes())
+
+		// Show the editor.
+		err = runEditor(tmpfile.Name())
+		if err != nil {
+			return nil, errors.Wrap(err, "error running editor")
+		}
+
+		// Re-read the edited file.
+		tmpfile.Seek(0, 0)
+		objectBuf.Reset()
+		_, err = objectBuf.ReadFrom(tmpfile)
+		if err != nil {
+			return nil, errors.Wrapf(err, "error reading tempfile %s", tmpfile.Name())
+		}
+
+		// Check if the file was edited at all.
+		if bytes.Equal(objectBuf.Bytes(), outBuf.Bytes()) {
+			return nil, errors.New("tempfile not edited, aborting")
+		}
+
+		outObjects, err := decodeYaml(&objectBuf)
+		if err == nil {
+			// Decode success, we're done!
+			return outObjects, nil
+		}
+
+		// Some kind decoding error, probably bad syntax, show the editor again.
+		comment = fmt.Sprintf("Error parsing file:\n%s", err)
 	}
-	panic("unable to compare")
-}
-func (_ orderedObjects) objKey(obj runtime.Object) string {
-	gvk := obj.GetObjectKind().GroupVersionKind()
-	meta := obj.(metav1.Object)
-	return fmt.Sprintf("%s/%s/%s/%s/%s", gvk.Group, gvk.Version, gvk.Kind, meta.GetNamespace(), meta.GetName())
 }
 
-func sortObjects(all []runtime.Object, orig []runtime.Object, after []runtime.Object) error {
-	o := orderedObjects{out: all}
-	for n, obj := range orig {
-		o.orig[o.objKey(obj)] = n
+func createDefaultData(instance string) (io.Reader, error) {
+	templateData, err := vfsutil.ReadFile(Templates, "new_instance.yml.tpl")
+	if err != nil {
+		return nil, errors.Wrap(err, "error reading new instance template")
 	}
-	for n, obj := range after {
-		o.after[o.objKey(obj)] = n
+	template, err := template.New("new_instance.yml.tpl").Parse(string(templateData))
+	if err != nil {
+		return nil, errors.Wrap(err, "error parsing new instance template")
 	}
-	sort.Sort(o)
-	return nil
+	match := regexp.MustCompile(`^([a-z0-9]+)-([a-z]+)$`).FindStringSubmatch(instance)
+	if match == nil {
+		return nil, errors.Errorf("unable to parse instance name %s", instance)
+	}
+	buffer := &bytes.Buffer{}
+	err = template.Execute(buffer, struct {
+		Name      string
+		Namespace string
+	}{Name: match[1], Namespace: match[2]})
+	if err != nil {
+		return nil, errors.Wrap(err, "error rendering new instance template")
+	}
+	return buffer, nil
 }
