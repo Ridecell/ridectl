@@ -29,16 +29,17 @@ import (
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/util/yaml"
 	"k8s.io/client-go/kubernetes/scheme"
 )
 
+var emptyRegexp *regexp.Regexp
 var dataRegexp *regexp.Regexp
 var keyRegexp *regexp.Regexp
 
 func init() {
-	dataRegexp = regexp.MustCompile(`(?ms)kind: (EncryptedSecret|DecryptedSecret).*?(^data:.*?)(?:---|\z)`)
-	keyRegexp = regexp.MustCompile(`^\s*(?:[^:]+):\s*?(.*)$`)
+	emptyRegexp = regexp.MustCompile(`(?m)\A(^(\s*#.*|\s*)$\s*)*\z`)
+	dataRegexp = regexp.MustCompile(`(?ms)kind: (EncryptedSecret|DecryptedSecret).*?(^data:.*?)\z`)
+	keyRegexp = regexp.MustCompile(`(?m)^[ \t]+([^:\n\r]+):[ \t]*([^ \t]+)[ \t]*$`)
 }
 
 type Manifest []*Object
@@ -78,24 +79,20 @@ type KeysLocation struct {
 }
 
 func NewManifest(in io.Reader) (Manifest, error) {
+	// Read in the whole file.
+	buf := bytes.Buffer{}
+	_, err := buf.ReadFrom(in)
+	if err != nil {
+		return nil, errors.Wrap(err, "error reading manifest")
+	}
+
 	objects := []*Object{}
-	// Code based on https://github.com/kubernetes/kubernetes/blob/0f93328c7a051e28a097270daaf7a7ff6f90bae0/staging/src/k8s.io/cli-runtime/pkg/genericclioptions/resource/visitor.go#L534-L561
-	decoder := yaml.NewYAMLOrJSONDecoder(in, 4096)
-	for {
-		ext := runtime.RawExtension{}
-		err := decoder.Decode(&ext)
-		if err != nil {
-			if err == io.EOF {
-				break
-			}
-			return nil, errors.Wrap(err, "error parsing YAML")
-		}
-		ext.Raw = bytes.TrimSpace(ext.Raw)
-		if len(ext.Raw) == 0 || bytes.Equal(ext.Raw, []byte("null")) {
+	for _, chunk := range bytes.Split(buf.Bytes(), []byte("---\n")) {
+		fmt.Printf("%#v\n", string(chunk))
+		if emptyRegexp.Match(chunk) {
 			continue
 		}
-		// Ignored return value is a GVK.
-		obj, err := NewObject(ext.Raw)
+		obj, err := NewObject(chunk)
 		if err != nil {
 			return nil, errors.Wrap(err, "error decoding object")
 		}
@@ -179,6 +176,7 @@ func NewObject(raw []byte) (*Object, error) {
 
 		// A safety check for now.
 		if len(o.Data) != len(o.KeyLocs) {
+			fmt.Printf("%#v\n%#v\n", o.Data, o.KeyLocs)
 			panic("key count mismatch")
 		}
 	}
@@ -186,6 +184,7 @@ func NewObject(raw []byte) (*Object, error) {
 }
 
 func newKeysLocations(raw []byte, offset int) ([]KeysLocation, error) {
+	fmt.Printf("%#v\n", string(raw))
 	matches := keyRegexp.FindAllSubmatchIndex(raw, -1)
 	if matches == nil {
 		return nil, errors.New("unable to parse keys")
@@ -196,13 +195,21 @@ func newKeysLocations(raw []byte, offset int) ([]KeysLocation, error) {
 		keyEnd := match[3]
 		valueLoc := TextLocation{Start: match[4] + offset, End: match[5] + offset}
 		key := string(raw[keyStart:keyEnd])
+		if key[0] == '#' {
+			// Go doesn't do negative lookaheads to easier to filter comments out here.
+			continue
+		}
 		locs = append(locs, KeysLocation{TextLocation: valueLoc, Key: key})
 	}
 	return locs, nil
 }
 
 func (o *Object) Decrypt(kmsService kmsiface.KMSAPI) error {
-	dec := &DecryptedSecret{ObjectMeta: o.OrigEnc.ObjectMeta}
+	if o.OrigEnc == nil {
+		return nil
+	}
+
+	dec := &DecryptedSecret{ObjectMeta: o.OrigEnc.ObjectMeta, Data: map[string]string{}}
 	for key, value := range o.OrigEnc.Data {
 		decodedValue := make([]byte, base64.StdEncoding.DecodedLen(len(value)))
 		_, err := base64.StdEncoding.Decode(decodedValue, []byte(value))
