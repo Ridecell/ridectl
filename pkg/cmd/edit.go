@@ -38,8 +38,6 @@ import (
 	"github.com/shurcooL/httpfs/vfsutil"
 	"github.com/spf13/cobra"
 	"k8s.io/apimachinery/pkg/runtime"
-	kyaml "k8s.io/apimachinery/pkg/util/yaml"
-	"k8s.io/client-go/kubernetes/scheme"
 
 	secretsv1beta1 "github.com/Ridecell/ridecell-operator/pkg/apis/secrets/v1beta1"
 )
@@ -113,22 +111,9 @@ var editCmd = &cobra.Command{
 		}
 
 		// Parse the input file to objects.
-		inObjs, err := decodeYaml(inStream)
+		inManifest, err := edit.NewManifest(inStream)
 		if err != nil {
 			return errors.Wrap(err, "error decoding input YAML")
-		}
-
-		// Pull out the EncryptedSecret objects.
-		objects := make([]encryptedSecretContext, 0, len(inObjs))
-		for _, obj := range inObjs {
-			ctx := encryptedSecretContext{}
-			enc, ok := obj.(*secretsv1beta1.EncryptedSecret)
-			if ok {
-				ctx.origEnc = enc
-			} else {
-				ctx.other = obj
-			}
-			objects = append(objects, ctx)
 		}
 
 		// Create a KMS session
@@ -139,155 +124,65 @@ var editCmd = &cobra.Command{
 		kmsService := kms.New(sess)
 
 		// Decrypt all the encrypted secrets.
-		for _, ctx := range objects {
-			if ctx.origEnc == nil {
-				continue
-			}
-			dec, err := decryptSecret(ctx.origEnc, kmsService)
-			if err != nil {
-				return errors.Wrapf(err, "error decrypting %s/%s", ctx.origEnc.Namespace, ctx.origEnc.Name)
-			}
-			ctx.origDec = dec
-		}
-
-		// Make the list of objects to edit.
-		objectsToEdit := make([]runtime.Object, 0, len(objects))
-		for _, ctx := range objects {
-			if ctx.origDec != nil {
-				objectsToEdit = append(objectsToEdit, ctx.origDec)
-			} else if ctx.other != nil {
-				objectsToEdit = append(objectsToEdit, ctx.other)
-			} else {
-				panic("invalid context")
-			}
+		err = inManifest.Decrypt(kmsService)
+		if err != nil {
+			return errors.Wrap(err, "error decrypting input manifest")
 		}
 
 		// Edit!
-		afterObjs, err := editObjects(objectsToEdit, "")
+		_, err = editObjects(inManifest, "")
 		if err != nil {
 			return errors.Wrap(err, "error editing objects")
 		}
 
-		// Match up the new objects with the existing state.
-		afterCtxs := make([]encryptedSecretContext, 0, len(afterObjs))
-		for _, afterObj := range afterObjs {
-			afterCtx := encryptedSecretContext{}
+		// // Match up the new objects with the existing state.
+		// afterCtxs := make([]encryptedSecretContext, 0, len(afterObjs))
+		// for _, afterObj := range afterObjs {
+		// 	afterCtx := encryptedSecretContext{}
 
-			dec, ok := afterObj.(*edit.DecryptedSecret)
-			if ok {
-				afterCtx.afterDec = dec
-				for _, ctx := range objects {
-					if ctx.origDec != nil && ctx.origDec.Name == dec.Name && ctx.origDec.Namespace == dec.Namespace {
-						afterCtx.origDec = ctx.origDec
-						afterCtx.origEnc = ctx.origEnc
-						break
-					}
-				}
-			} else {
-				afterCtx.other = afterObj
-			}
-			afterCtxs = append(afterCtxs, afterCtx)
-		}
+		// 	dec, ok := afterObj.(*edit.DecryptedSecret)
+		// 	if ok {
+		// 		afterCtx.afterDec = dec
+		// 		for _, ctx := range objects {
+		// 			if ctx.origDec != nil && ctx.origDec.Name == dec.Name && ctx.origDec.Namespace == dec.Namespace {
+		// 				afterCtx.origDec = ctx.origDec
+		// 				afterCtx.origEnc = ctx.origEnc
+		// 				break
+		// 			}
+		// 		}
+		// 	} else {
+		// 		afterCtx.other = afterObj
+		// 	}
+		// 	afterCtxs = append(afterCtxs, afterCtx)
+		// }
 
-		// Re-encrypt anything that needs it.
-		// TODO real key logic
-		keyId := os.Getenv("KEY")
-		outObjs := make([]runtime.Object, 0, len(afterCtxs))
-		for _, ctx := range afterCtxs {
-			if ctx.afterDec != nil {
-				enc, err := encryptSecret(ctx.afterDec, ctx.origDec, ctx.origEnc, keyId, kmsService)
-				if err != nil {
-					return errors.Wrapf(err, "error encrypting %s/%s", ctx.afterDec.Namespace, ctx.afterDec.Name)
-				}
-				outObjs = append(outObjs, enc)
-			} else {
-				outObjs = append(outObjs, ctx.other)
-			}
-		}
+		// // Re-encrypt anything that needs it.
+		// // TODO real key logic
+		// keyId := os.Getenv("KEY")
+		// outObjs := make([]runtime.Object, 0, len(afterCtxs))
+		// for _, ctx := range afterCtxs {
+		// 	if ctx.afterDec != nil {
+		// 		enc, err := encryptSecret(ctx.afterDec, ctx.origDec, ctx.origEnc, keyId, kmsService)
+		// 		if err != nil {
+		// 			return errors.Wrapf(err, "error encrypting %s/%s", ctx.afterDec.Namespace, ctx.afterDec.Name)
+		// 		}
+		// 		outObjs = append(outObjs, enc)
+		// 	} else {
+		// 		outObjs = append(outObjs, ctx.other)
+		// 	}
+		// }
 
-		// Write out the file again.
-		// TODO make sure the file is writable before doing all this.
-		outFile, err := os.Create(filename)
-		if err != nil {
-			return errors.Wrapf(err, "error opening %s for writing", filename)
-		}
-		defer outFile.Close()
-		encodeYaml(outFile, outObjs)
+		// // Write out the file again.
+		// // TODO make sure the file is writable before doing all this.
+		// outFile, err := os.Create(filename)
+		// if err != nil {
+		// 	return errors.Wrapf(err, "error opening %s for writing", filename)
+		// }
+		// defer outFile.Close()
+		// encodeYaml(outFile, outObjs)
 
 		return nil
 	},
-}
-
-func decodeYaml(in io.Reader) ([]runtime.Object, error) {
-	objects := []runtime.Object{}
-	// Code based on https://github.com/kubernetes/kubernetes/blob/0f93328c7a051e28a097270daaf7a7ff6f90bae0/staging/src/k8s.io/cli-runtime/pkg/genericclioptions/resource/visitor.go#L534-L561
-	decoder := kyaml.NewYAMLOrJSONDecoder(in, 4096)
-	for {
-		ext := runtime.RawExtension{}
-		err := decoder.Decode(&ext)
-		if err != nil {
-			if err == io.EOF {
-				break
-			}
-			return nil, errors.Wrap(err, "error parsing YAML")
-		}
-		ext.Raw = bytes.TrimSpace(ext.Raw)
-		if len(ext.Raw) == 0 || bytes.Equal(ext.Raw, []byte("null")) {
-			continue
-		}
-		// Ignored return value is a GVK.
-		obj, _, err := scheme.Codecs.UniversalDeserializer().Decode(ext.Raw, nil, nil)
-		if err != nil {
-			return nil, errors.Wrap(err, "error decoding object")
-		}
-		objects = append(objects, obj)
-	}
-	return objects, nil
-}
-
-func encodeYaml(out io.Writer, objs []runtime.Object) error {
-	first := true
-	for _, obj := range objs {
-		if !first {
-			out.Write([]byte("---\n"))
-		}
-		first = false
-
-		groupVersion := obj.GetObjectKind().GroupVersionKind().GroupVersion()
-		info, ok := runtime.SerializerInfoForMediaType(scheme.Codecs.SupportedMediaTypes(), "application/yaml")
-		if !ok {
-			return errors.New("unable to find serializer info")
-		}
-		encoder := scheme.Codecs.EncoderForVersion(info.Serializer, groupVersion)
-		err := encoder.Encode(obj, out)
-		if err != nil {
-			return errors.Wrap(err, "error encoding object")
-		}
-	}
-
-	return nil
-}
-
-func decryptSecret(enc *secretsv1beta1.EncryptedSecret, kmsService kmsiface.KMSAPI) (*edit.DecryptedSecret, error) {
-	dec := &edit.DecryptedSecret{ObjectMeta: enc.ObjectMeta}
-	for key, value := range enc.Data {
-		decodedValue := make([]byte, base64.StdEncoding.DecodedLen(len(value)))
-		_, err := base64.StdEncoding.Decode(decodedValue, []byte(value))
-		if err != nil {
-			return nil, errors.Wrapf(err, "error base64 decoding value for %s", key)
-		}
-		decryptedValue, err := kmsService.Decrypt(&kms.DecryptInput{CiphertextBlob: decodedValue})
-		if err != nil {
-			return nil, errors.Wrapf(err, "error decrypting value for %s", key)
-		}
-		// Check if values in this secret were encrypted with more than one key.
-		if dec.KeyId != "" && dec.KeyId != *decryptedValue.KeyId {
-			return nil, errors.Errorf("key mismatch between %s and %s for %s", dec.KeyId, *decryptedValue.KeyId, key)
-		}
-		dec.KeyId = *decryptedValue.KeyId
-		dec.Data[key] = string(decryptedValue.Plaintext)
-	}
-	return dec, nil
 }
 
 func encryptSecret(dec *edit.DecryptedSecret, origDec *edit.DecryptedSecret, origEnc *secretsv1beta1.EncryptedSecret, defaultKeyId string, kmsService kmsiface.KMSAPI) (*secretsv1beta1.EncryptedSecret, error) {
@@ -338,9 +233,9 @@ func runEditor(filename string) error {
 	return nil
 }
 
-func editObjects(objects []runtime.Object, comment string) ([]runtime.Object, error) {
+func editObjects(manifest edit.Manifest, comment string) (edit.Manifest, error) {
 	objectBuf := bytes.Buffer{}
-	err := encodeYaml(&objectBuf, objects)
+	err := manifest.Serialize(&objectBuf)
 	if err != nil {
 		return nil, errors.Wrap(err, "error encoding objects to YAML")
 	}
@@ -384,10 +279,10 @@ func editObjects(objects []runtime.Object, comment string) ([]runtime.Object, er
 			return nil, errors.New("tempfile not edited, aborting")
 		}
 
-		outObjects, err := decodeYaml(&objectBuf)
+		outManifest, err := edit.NewManifest(&objectBuf)
 		if err == nil {
 			// Decode success, we're done!
-			return outObjects, nil
+			return outManifest, nil
 		}
 
 		// Some kind decoding error, probably bad syntax, show the editor again.
