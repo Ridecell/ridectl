@@ -25,6 +25,8 @@ import (
 	"github.com/mitchellh/go-homedir"
 	"github.com/spf13/cobra"
 	"k8s.io/client-go/kubernetes/scheme"
+
+	hackapis "github.com/Ridecell/ridectl/pkg/apis"
 )
 
 var kubeconfigFlag string
@@ -43,6 +45,7 @@ func init() {
 
 	// Register all types from ridecell-operator.
 	apis.AddToScheme(scheme.Scheme)
+	hackapis.AddToScheme(scheme.Scheme)
 }
 
 func Execute() {
