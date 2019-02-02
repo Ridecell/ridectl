@@ -18,7 +18,6 @@ package cmd
 
 import (
 	"bytes"
-	"encoding/base64"
 	"fmt"
 	"html/template"
 	"io"
@@ -30,10 +29,8 @@ import (
 	"strings"
 
 	"github.com/Ridecell/ridectl/pkg/cmd/edit"
-	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/kms"
-	"github.com/aws/aws-sdk-go/service/kms/kmsiface"
 	"github.com/pkg/errors"
 	"github.com/shurcooL/httpfs/vfsutil"
 	"github.com/spf13/cobra"
@@ -129,94 +126,39 @@ var editCmd = &cobra.Command{
 			return errors.Wrap(err, "error decrypting input manifest")
 		}
 
+		// err = inManifest.Serialize(os.Stdout)
+		// if err != nil {
+		// 	return err
+		// }
+
 		// Edit!
-		_, err = editObjects(inManifest, "")
+		afterManifest, err := editObjects(inManifest, "")
 		if err != nil {
 			return errors.Wrap(err, "error editing objects")
 		}
 
-		// // Match up the new objects with the existing state.
-		// afterCtxs := make([]encryptedSecretContext, 0, len(afterObjs))
-		// for _, afterObj := range afterObjs {
-		// 	afterCtx := encryptedSecretContext{}
+		// Match up the new objects with the old.
+		afterManifest.CorrelateWith(inManifest)
 
-		// 	dec, ok := afterObj.(*edit.DecryptedSecret)
-		// 	if ok {
-		// 		afterCtx.afterDec = dec
-		// 		for _, ctx := range objects {
-		// 			if ctx.origDec != nil && ctx.origDec.Name == dec.Name && ctx.origDec.Namespace == dec.Namespace {
-		// 				afterCtx.origDec = ctx.origDec
-		// 				afterCtx.origEnc = ctx.origEnc
-		// 				break
-		// 			}
-		// 		}
-		// 	} else {
-		// 		afterCtx.other = afterObj
-		// 	}
-		// 	afterCtxs = append(afterCtxs, afterCtx)
-		// }
+		// Re-encrypt anything that needs it.
+		// TODO real key logic
+		keyId := os.Getenv("KEY")
+		err = afterManifest.Encrypt(kmsService, keyId)
+		if err != nil {
+			return errors.Wrap(err, "error encrypting after manifest")
+		}
 
-		// // Re-encrypt anything that needs it.
-		// // TODO real key logic
-		// keyId := os.Getenv("KEY")
-		// outObjs := make([]runtime.Object, 0, len(afterCtxs))
-		// for _, ctx := range afterCtxs {
-		// 	if ctx.afterDec != nil {
-		// 		enc, err := encryptSecret(ctx.afterDec, ctx.origDec, ctx.origEnc, keyId, kmsService)
-		// 		if err != nil {
-		// 			return errors.Wrapf(err, "error encrypting %s/%s", ctx.afterDec.Namespace, ctx.afterDec.Name)
-		// 		}
-		// 		outObjs = append(outObjs, enc)
-		// 	} else {
-		// 		outObjs = append(outObjs, ctx.other)
-		// 	}
-		// }
-
-		// // Write out the file again.
-		// // TODO make sure the file is writable before doing all this.
-		// outFile, err := os.Create(filename)
-		// if err != nil {
-		// 	return errors.Wrapf(err, "error opening %s for writing", filename)
-		// }
-		// defer outFile.Close()
-		// encodeYaml(outFile, outObjs)
+		// Write out the file again.
+		// TODO make sure the file is writable before doing all this.
+		outFile, err := os.Create(filename)
+		if err != nil {
+			return errors.Wrapf(err, "error opening %s for writing", filename)
+		}
+		defer outFile.Close()
+		afterManifest.Serialize(outFile)
 
 		return nil
 	},
-}
-
-func encryptSecret(dec *edit.DecryptedSecret, origDec *edit.DecryptedSecret, origEnc *secretsv1beta1.EncryptedSecret, defaultKeyId string, kmsService kmsiface.KMSAPI) (*secretsv1beta1.EncryptedSecret, error) {
-	// Work out which key to use.
-	keyId := defaultKeyId
-	if origDec != nil && origDec.KeyId != "" {
-		keyId = origDec.KeyId
-	}
-
-	enc := &secretsv1beta1.EncryptedSecret{ObjectMeta: dec.ObjectMeta}
-	for key, value := range dec.Data {
-		// Check if this key has changed.
-		if origDec != nil && origEnc != nil {
-			origDecValue, ok := origDec.Data[key]
-			if ok && value == origDecValue {
-				// Key was not changed, reuse the old encrypted value.
-				enc.Data[key] = origEnc.Data[key]
-				continue
-			}
-		}
-		// Encrypt the new value.
-		encryptedValue, err := kmsService.Encrypt(&kms.EncryptInput{
-			KeyId:     aws.String(keyId),
-			Plaintext: []byte(value),
-			EncryptionContext: map[string]*string{
-				"RidecellOperator": aws.String("true"),
-			},
-		})
-		if err != nil {
-			return nil, errors.Wrapf(err, "error encrypting value for %s", key)
-		}
-		enc.Data[key] = base64.StdEncoding.EncodeToString(encryptedValue.CiphertextBlob)
-	}
-	return enc, nil
 }
 
 func runEditor(filename string) error {

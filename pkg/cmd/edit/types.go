@@ -24,6 +24,7 @@ import (
 	"regexp"
 
 	secretsv1beta1 "github.com/Ridecell/ridecell-operator/pkg/apis/secrets/v1beta1"
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/kms"
 	"github.com/aws/aws-sdk-go/service/kms/kmsiface"
 	"github.com/pkg/errors"
@@ -39,7 +40,7 @@ var keyRegexp *regexp.Regexp
 func init() {
 	emptyRegexp = regexp.MustCompile(`(?m)\A(^(\s*#.*|\s*)$\s*)*\z`)
 	dataRegexp = regexp.MustCompile(`(?ms)kind: (EncryptedSecret|DecryptedSecret).*?(^data:.*?)\z`)
-	keyRegexp = regexp.MustCompile(`(?m)^[ \t]+([^:\n\r]+):[ \t]*([^ \t]+)[ \t]*$`)
+	keyRegexp = regexp.MustCompile(`(?m)^[ \t]+([^:\n\r]+):[ \t]*(.+?)[ \t]*$`)
 }
 
 type Manifest []*Object
@@ -55,6 +56,7 @@ type Object struct {
 	OrigEnc  *secretsv1beta1.EncryptedSecret
 	OrigDec  *DecryptedSecret
 	AfterDec *DecryptedSecret
+	AfterEnc *secretsv1beta1.EncryptedSecret
 	Kind     string
 	Data     map[string]string
 
@@ -88,7 +90,6 @@ func NewManifest(in io.Reader) (Manifest, error) {
 
 	objects := []*Object{}
 	for _, chunk := range bytes.Split(buf.Bytes(), []byte("---\n")) {
-		fmt.Printf("%#v\n", string(chunk))
 		if emptyRegexp.Match(chunk) {
 			continue
 		}
@@ -111,6 +112,16 @@ func (m Manifest) Decrypt(kmsService kmsiface.KMSAPI) error {
 	return nil
 }
 
+func (m Manifest) Encrypt(kmsService kmsiface.KMSAPI, defaultKeyId string) error {
+	for _, obj := range m {
+		err := obj.Encrypt(kmsService, defaultKeyId)
+		if err != nil {
+			return errors.Wrapf(err, "error encrypting %s/%s", obj.Meta.GetNamespace(), obj.Meta.GetName())
+		}
+	}
+	return nil
+}
+
 func (m Manifest) Serialize(out io.Writer) error {
 	first := true
 	for _, obj := range m {
@@ -121,6 +132,30 @@ func (m Manifest) Serialize(out io.Writer) error {
 		err := obj.Serialize(out)
 		if err != nil {
 			return errors.Wrapf(err, "error serializing %s/%s", obj.Meta.GetNamespace(), obj.Meta.GetName())
+		}
+	}
+	return nil
+}
+
+func (m Manifest) CorrelateWith(origManifest Manifest) error {
+	// Build a map of the input secrets.
+	origByName := map[string]*Object{}
+	for _, obj := range origManifest {
+		if obj.Kind == "" {
+			continue
+		}
+		origByName[fmt.Sprintf("%s/%s", obj.Meta.GetNamespace(), obj.Meta.GetName())] = obj
+	}
+
+	// Find the original objects.
+	for _, obj := range m {
+		if obj.Kind == "" {
+			continue
+		}
+		origObj, ok := origByName[fmt.Sprintf("%s/%s", obj.Meta.GetNamespace(), obj.Meta.GetName())]
+		if ok {
+			obj.OrigEnc = origObj.OrigEnc
+			obj.OrigDec = origObj.OrigDec
 		}
 	}
 	return nil
@@ -159,7 +194,6 @@ func NewObject(raw []byte) (*Object, error) {
 		match := dataRegexp.FindSubmatchIndex(raw)
 		if match == nil {
 			// This shouldn't happen.
-			fmt.Printf("%s\n", raw)
 			panic("EncryptedSecret or DecryptedSecret didn't match dataRegexp")
 		}
 		// match[0] and [1] are for the whole regexp, we don't need that.
@@ -176,7 +210,6 @@ func NewObject(raw []byte) (*Object, error) {
 
 		// A safety check for now.
 		if len(o.Data) != len(o.KeyLocs) {
-			fmt.Printf("%#v\n%#v\n", o.Data, o.KeyLocs)
 			panic("key count mismatch")
 		}
 	}
@@ -184,7 +217,6 @@ func NewObject(raw []byte) (*Object, error) {
 }
 
 func newKeysLocations(raw []byte, offset int) ([]KeysLocation, error) {
-	fmt.Printf("%#v\n", string(raw))
 	matches := keyRegexp.FindAllSubmatchIndex(raw, -1)
 	if matches == nil {
 		return nil, errors.New("unable to parse keys")
@@ -205,18 +237,23 @@ func newKeysLocations(raw []byte, offset int) ([]KeysLocation, error) {
 }
 
 func (o *Object) Decrypt(kmsService kmsiface.KMSAPI) error {
-	if o.OrigEnc == nil {
+	if o.Kind == "" {
 		return nil
 	}
 
 	dec := &DecryptedSecret{ObjectMeta: o.OrigEnc.ObjectMeta, Data: map[string]string{}}
 	for key, value := range o.OrigEnc.Data {
 		decodedValue := make([]byte, base64.StdEncoding.DecodedLen(len(value)))
-		_, err := base64.StdEncoding.Decode(decodedValue, []byte(value))
+		l, err := base64.StdEncoding.Decode(decodedValue, []byte(value))
 		if err != nil {
 			return errors.Wrapf(err, "error base64 decoding value for %s", key)
 		}
-		decryptedValue, err := kmsService.Decrypt(&kms.DecryptInput{CiphertextBlob: decodedValue})
+		decryptedValue, err := kmsService.Decrypt(&kms.DecryptInput{
+			CiphertextBlob: decodedValue[:l],
+			EncryptionContext: map[string]*string{
+				"RidecellOperator": aws.String("true"),
+			},
+		})
 		if err != nil {
 			return errors.Wrapf(err, "error decrypting value for %s", key)
 		}
@@ -230,6 +267,48 @@ func (o *Object) Decrypt(kmsService kmsiface.KMSAPI) error {
 	o.OrigDec = dec
 	o.Kind = "DecryptedSecret"
 	o.Data = dec.Data
+	return nil
+}
+
+func (o *Object) Encrypt(kmsService kmsiface.KMSAPI, defaultKeyId string) error {
+	if o.Kind == "" {
+		return nil
+	}
+
+	// Work out which key to use.
+	keyId := defaultKeyId
+	if o.KeyId != "" {
+		keyId = o.KeyId
+	}
+
+	enc := &secretsv1beta1.EncryptedSecret{ObjectMeta: o.AfterDec.ObjectMeta, Data: map[string]string{}}
+	for key, value := range o.AfterDec.Data {
+		// Check if this key has changed.
+		if o.OrigDec != nil && o.OrigEnc != nil {
+			origDecValue, ok := o.OrigDec.Data[key]
+			if ok && value == origDecValue {
+				// Key was not changed, reuse the old encrypted value.
+				enc.Data[key] = o.OrigEnc.Data[key]
+				continue
+			}
+		}
+		// Encrypt the new value.
+		encryptedValue, err := kmsService.Encrypt(&kms.EncryptInput{
+			KeyId:     aws.String(keyId),
+			Plaintext: []byte(value),
+			// This encryption context is used for access control policies.
+			EncryptionContext: map[string]*string{
+				"RidecellOperator": aws.String("true"),
+			},
+		})
+		if err != nil {
+			return errors.Wrapf(err, "error encrypting value for %s", key)
+		}
+		enc.Data[key] = base64.StdEncoding.EncodeToString(encryptedValue.CiphertextBlob)
+	}
+	o.AfterEnc = enc
+	o.Kind = "EncryptedSecret"
+	o.Data = enc.Data
 	return nil
 }
 
