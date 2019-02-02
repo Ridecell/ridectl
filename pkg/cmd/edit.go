@@ -46,9 +46,12 @@ func init() {
 const Root = "/Users/coderanger/src/rc/kubernetes-summon"
 
 var filenameFlag string
+var whitespaceRegexp *regexp.Regexp
 
 func init() {
 	editCmd.Flags().StringVarP(&filenameFlag, "file", "f", "", "(optional) Path to the file to edit")
+
+	whitespaceRegexp = regexp.MustCompile(`\s+`)
 }
 
 type encryptedSecretContext struct {
@@ -167,11 +170,17 @@ func runEditor(filename string) error {
 		return errors.New("No $EDITOR set")
 	}
 
-	cmd := exec.Command(editor, filename)
+	// Deal with an editor that has options.
+	editorParts := whitespaceRegexp.Split(editor, -1)
+	executable := editorParts[0]
+	executable, err := exec.LookPath(executable)
+
+	editorParts = append(editorParts, filename)
+	cmd := exec.Command(executable, editorParts[1:]...)
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	err := cmd.Run()
+	err = cmd.Run()
 	if err != nil {
 		return errors.Wrap(err, "error running editor")
 	}
