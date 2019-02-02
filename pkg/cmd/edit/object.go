@@ -18,6 +18,7 @@ package edit
 
 import (
 	"encoding/base64"
+	"fmt"
 	"io"
 	"regexp"
 
@@ -34,10 +35,12 @@ import (
 
 var dataRegexp *regexp.Regexp
 var keyRegexp *regexp.Regexp
+var nonStringRegexp *regexp.Regexp
 
 func init() {
 	dataRegexp = regexp.MustCompile(`(?ms)kind: (EncryptedSecret|DecryptedSecret).*?(^data:.*?)\z`)
 	keyRegexp = regexp.MustCompile(`(?m)^[ \t]+([^:\n\r]+):[ \t]*(.+?)[ \t]*$`)
+	nonStringRegexp = regexp.MustCompile(`^(\d+(\.\d+)?|true|false|null)$`)
 }
 
 func NewObject(raw []byte) (*Object, error) {
@@ -212,6 +215,12 @@ func (o *Object) Serialize(out io.Writer) error {
 	carry := o.KindLoc.End
 	for _, keyLoc := range o.KeyLocs {
 		newValue, ok := o.Data[keyLoc.Key]
+
+		// Check for things that YAML thinks aren't strings that might show up in the value.
+		if nonStringRegexp.MatchString(newValue) {
+			newValue = fmt.Sprintf(`"%s"`, newValue)
+		}
+
 		if !ok {
 			panic("key from location not found in data")
 		}
