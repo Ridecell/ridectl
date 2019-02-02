@@ -120,7 +120,7 @@ func (o *Object) Decrypt(kmsService kmsiface.KMSAPI) error {
 		return nil
 	}
 
-	dec := &DecryptedSecret{ObjectMeta: o.OrigEnc.ObjectMeta, Data: map[string]string{}}
+	dec := &hacksecretsv1beta1.DecryptedSecret{ObjectMeta: o.OrigEnc.ObjectMeta, Data: map[string]string{}}
 	for key, value := range o.OrigEnc.Data {
 		decodedValue := make([]byte, base64.StdEncoding.DecodedLen(len(value)))
 		l, err := base64.StdEncoding.Decode(decodedValue, []byte(value))
