@@ -14,31 +14,19 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package edit
+package v1beta1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/client-go/kubernetes/scheme"
-	crscheme "sigs.k8s.io/controller-runtime/pkg/runtime/scheme"
 )
 
-// Generate deepcopy for DecryptedSecret
-//go:generate go run ../../../vendor/k8s.io/code-generator/cmd/deepcopy-gen/main.go -O zz_generated.deepcopy -i ./...
-
-var (
-	// SchemeGroupVersion is group version used to register these objects
-	SchemeGroupVersion = schema.GroupVersion{Group: "secrets.ridecell.io", Version: "v1beta1"}
-
-	// SchemeBuilder is used to add go types to the GroupVersionKind scheme
-	SchemeBuilder = &crscheme.Builder{GroupVersion: SchemeGroupVersion}
-)
-
-// +k8s:deepcopy-gen=true
+// +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // DecryptedSecret is a holding bucket for decrypted secrets so they are in
 // a format that looks like a normal Secret but can't be accidentally uploaded.
+// +k8s:openapi-gen=true
+// +kubebuilder:subresource:status
 type DecryptedSecret struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -59,5 +47,4 @@ type DecryptedSecretList struct {
 
 func init() {
 	SchemeBuilder.Register(&DecryptedSecret{}, &DecryptedSecretList{})
-	SchemeBuilder.AddToScheme(scheme.Scheme)
 }
