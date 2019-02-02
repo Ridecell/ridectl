@@ -12,7 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-required = ["k8s.io/code-generator/cmd/deepcopy-gen"]
+required = [
+  "k8s.io/code-generator/cmd/deepcopy-gen",
+  # A slightly hacky workaround because unused-packages is stripping out the group-level packages.
+  "github.com/Ridecell/ridecell-operator/pkg/apis",
+  "github.com/Ridecell/ridecell-operator/pkg/apis/aws",
+  "github.com/Ridecell/ridecell-operator/pkg/apis/db",
+  "github.com/Ridecell/ridecell-operator/pkg/apis/secrets",
+  "github.com/Ridecell/ridecell-operator/pkg/apis/summon",
+]
 
 [prune]
 go-tests = true

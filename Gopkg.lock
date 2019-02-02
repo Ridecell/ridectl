@@ -11,14 +11,18 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:490a95df29db17a91125d0298a1579c1f51cc57d5af23d3226c4735e10114646"
+  digest = "1:d59eed30fac736da7e42214e89ed0fd3c1570089c2978b5098ff64a4b3f5fce1"
   name = "github.com/Ridecell/ridecell-operator"
   packages = [
     "pkg/apis",
+    "pkg/apis/aws",
     "pkg/apis/aws/v1beta1",
+    "pkg/apis/db",
     "pkg/apis/db/v1beta1",
     "pkg/apis/helpers",
+    "pkg/apis/secrets",
     "pkg/apis/secrets/v1beta1",
+    "pkg/apis/summon",
     "pkg/apis/summon/v1beta1",
     "pkg/components",
     "pkg/templates",
@@ -956,7 +960,11 @@
   analyzer-version = 1
   input-imports = [
     "github.com/Ridecell/ridecell-operator/pkg/apis",
+    "github.com/Ridecell/ridecell-operator/pkg/apis/aws",
+    "github.com/Ridecell/ridecell-operator/pkg/apis/db",
+    "github.com/Ridecell/ridecell-operator/pkg/apis/secrets",
     "github.com/Ridecell/ridecell-operator/pkg/apis/secrets/v1beta1",
+    "github.com/Ridecell/ridecell-operator/pkg/apis/summon",
     "github.com/aws/aws-sdk-go/aws",
     "github.com/aws/aws-sdk-go/aws/session",
     "github.com/aws/aws-sdk-go/service/kms",

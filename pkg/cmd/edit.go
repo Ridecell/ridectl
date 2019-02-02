@@ -34,9 +34,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/shurcooL/httpfs/vfsutil"
 	"github.com/spf13/cobra"
-	"k8s.io/apimachinery/pkg/runtime"
-
-	secretsv1beta1 "github.com/Ridecell/ridecell-operator/pkg/apis/secrets/v1beta1"
 )
 
 func init() {
@@ -52,13 +49,6 @@ func init() {
 	editCmd.Flags().StringVarP(&filenameFlag, "file", "f", "", "(optional) Path to the file to edit")
 
 	whitespaceRegexp = regexp.MustCompile(`\s+`)
-}
-
-type encryptedSecretContext struct {
-	origEnc  *secretsv1beta1.EncryptedSecret
-	origDec  *edit.DecryptedSecret
-	afterDec *edit.DecryptedSecret
-	other    runtime.Object
 }
 
 var editCmd = &cobra.Command{
@@ -128,11 +118,6 @@ var editCmd = &cobra.Command{
 		if err != nil {
 			return errors.Wrap(err, "error decrypting input manifest")
 		}
-
-		// err = inManifest.Serialize(os.Stdout)
-		// if err != nil {
-		// 	return err
-		// }
 
 		// Edit!
 		afterManifest, err := editObjects(inManifest, "")
