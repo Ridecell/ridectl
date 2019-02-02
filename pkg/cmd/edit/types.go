@@ -23,6 +23,7 @@ import (
 	"io"
 	"regexp"
 
+	_ "github.com/Ridecell/ridecell-operator/pkg/apis"
 	secretsv1beta1 "github.com/Ridecell/ridecell-operator/pkg/apis/secrets/v1beta1"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/kms"

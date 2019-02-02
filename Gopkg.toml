@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-required = ["k8s.io/code-generator/cmd/deepcopy-gen", "github.com/Ridecell/ridecell-operator/pkg/apis"]
+required = ["k8s.io/code-generator/cmd/deepcopy-gen"]
 
 [prune]
 go-tests = true
