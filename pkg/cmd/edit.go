@@ -171,28 +171,37 @@ func runEditor(filename string) error {
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	cmd.Run()
+	err := cmd.Run()
+	if err != nil {
+		return errors.Wrap(err, "error running editor")
+	}
 	return nil
 }
 
 func editObjects(manifest edit.Manifest, comment string) (edit.Manifest, error) {
-	objectBuf := bytes.Buffer{}
-	err := manifest.Serialize(&objectBuf)
+	manifestBuf := bytes.Buffer{}
+	err := manifest.Serialize(&manifestBuf)
 	if err != nil {
 		return nil, errors.Wrap(err, "error encoding objects to YAML")
 	}
 	for {
-		// Make the YAML to show in the editor.
-		outBuf := bytes.Buffer{}
+		// Format the comment.
+		commentBuf := bytes.Buffer{}
 		if comment != "" {
 			for _, line := range strings.Split(comment, "\n") {
-				outBuf.WriteString("# ")
-				outBuf.WriteString(line)
-				outBuf.WriteString("\n")
+				commentBuf.WriteString("# ")
+				commentBuf.WriteString(line)
+				commentBuf.WriteString("\n")
 			}
-			outBuf.WriteString("#\n")
+			commentBuf.WriteString("#\n")
 		}
-		outBuf.Write(objectBuf.Bytes())
+		commentReader := bytes.NewReader(commentBuf.Bytes())
+
+		// Make the YAML to show in the editor.
+		editorBuf := bytes.Buffer{}
+		commentReader.WriteTo(&editorBuf)
+		manifestBuf.WriteTo(&editorBuf)
+		editorReader := bytes.NewReader(editorBuf.Bytes())
 
 		// Open a temporary file.
 		tmpfile, err := ioutil.TempFile("", ".*.yml")
@@ -200,7 +209,8 @@ func editObjects(manifest edit.Manifest, comment string) (edit.Manifest, error) 
 			return nil, errors.Wrap(err, "error making tempfile")
 		}
 		defer os.Remove(tmpfile.Name())
-		tmpfile.Write(outBuf.Bytes())
+		editorReader.WriteTo(tmpfile)
+		tmpfile.Sync()
 
 		// Show the editor.
 		err = runEditor(tmpfile.Name())
@@ -210,18 +220,26 @@ func editObjects(manifest edit.Manifest, comment string) (edit.Manifest, error) 
 
 		// Re-read the edited file.
 		tmpfile.Seek(0, 0)
-		objectBuf.Reset()
-		_, err = objectBuf.ReadFrom(tmpfile)
+		afterBuf := bytes.Buffer{}
+		_, err = afterBuf.ReadFrom(tmpfile)
 		if err != nil {
 			return nil, errors.Wrapf(err, "error reading tempfile %s", tmpfile.Name())
 		}
 
 		// Check if the file was edited at all.
-		if bytes.Equal(objectBuf.Bytes(), outBuf.Bytes()) {
+		if bytes.Equal(editorBuf.Bytes(), afterBuf.Bytes()) {
 			return nil, errors.New("tempfile not edited, aborting")
 		}
 
-		outManifest, err := edit.NewManifest(&objectBuf)
+		// Try strip off the comment.
+		afterReader := bytes.NewReader(afterBuf.Bytes())
+		seekPos := int64(0)
+		if bytes.Equal(commentBuf.Bytes(), afterBuf.Bytes()[:commentBuf.Len()]) {
+			seekPos = int64(commentBuf.Len())
+		}
+		afterReader.Seek(seekPos, 0)
+
+		outManifest, err := edit.NewManifest(afterReader)
 		if err == nil {
 			// Decode success, we're done!
 			return outManifest, nil
@@ -229,6 +247,9 @@ func editObjects(manifest edit.Manifest, comment string) (edit.Manifest, error) 
 
 		// Some kind decoding error, probably bad syntax, show the editor again.
 		comment = fmt.Sprintf("Error parsing file:\n%s", err)
+		manifestBuf.Reset()
+		afterReader.Seek(seekPos, 0)
+		afterReader.WriteTo(&manifestBuf)
 	}
 }
 
