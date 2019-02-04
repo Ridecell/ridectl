@@ -59,6 +59,7 @@ jobs:
   build_docker:
     docker:
     - image: us.gcr.io/ridecell-public/docker-gcloud:2018-09-17
+    working_directory: /go/src/github.com/Ridecell/ridectl
     steps:
     - checkout
     - setup_remote_docker
