@@ -41,6 +41,7 @@ vet:
 
 # Generate code
 generate:
+	go run ./vendor/k8s.io/code-generator/cmd/deepcopy-gen/main.go -O zz_generated.deepcopy -i github.com/Ridecell/ridecell-operator/pkg/apis/...
 	go generate ./pkg/... ./cmd/...
 
 # Install tools

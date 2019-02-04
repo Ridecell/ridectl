@@ -21,8 +21,12 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/Ridecell/ridecell-operator/pkg/apis"
 	"github.com/mitchellh/go-homedir"
 	"github.com/spf13/cobra"
+	"k8s.io/client-go/kubernetes/scheme"
+
+	hackapis "github.com/Ridecell/ridectl/pkg/apis"
 )
 
 var kubeconfigFlag string
@@ -38,6 +42,10 @@ func init() {
 		panic(err)
 	}
 	rootCmd.PersistentFlags().StringVar(&kubeconfigFlag, "kubeconfig", filepath.Join(home, ".kube", "config"), "(optional) absolute path to the kubeconfig file")
+
+	// Register all types from ridecell-operator.
+	apis.AddToScheme(scheme.Scheme)
+	hackapis.AddToScheme(scheme.Scheme)
 }
 
 func Execute() {
