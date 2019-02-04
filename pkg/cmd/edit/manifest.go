@@ -64,9 +64,9 @@ func (m Manifest) Decrypt(kmsService kmsiface.KMSAPI) error {
 	return nil
 }
 
-func (m Manifest) Encrypt(kmsService kmsiface.KMSAPI, defaultKeyId string) error {
+func (m Manifest) Encrypt(kmsService kmsiface.KMSAPI, defaultKeyId string, forceKeyId bool) error {
 	for _, obj := range m {
-		err := obj.Encrypt(kmsService, defaultKeyId)
+		err := obj.Encrypt(kmsService, defaultKeyId, forceKeyId)
 		if err != nil {
 			return errors.Wrapf(err, "error encrypting %s/%s", obj.Meta.GetNamespace(), obj.Meta.GetName())
 		}

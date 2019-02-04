@@ -40,13 +40,14 @@ func init() {
 	rootCmd.AddCommand(editCmd)
 }
 
-const Root = "/Users/coderanger/src/rc/kubernetes-summon"
-
 var filenameFlag string
+var keyIdFlag string
+
 var whitespaceRegexp *regexp.Regexp
 
 func init() {
 	editCmd.Flags().StringVarP(&filenameFlag, "file", "f", "", "(optional) Path to the file to edit")
+	editCmd.Flags().StringVarP(&keyIdFlag, "key", "k", "", "(optional) KMS key ID to use for encrypting")
 
 	whitespaceRegexp = regexp.MustCompile(`\s+`)
 }
@@ -78,7 +79,7 @@ var editCmd = &cobra.Command{
 			if match == nil {
 				return errors.Errorf("unable to parse instance name %s", args[0])
 			}
-			filename = filepath.Join(Root, match[2], match[1]+".yml")
+			filename = filepath.Join(".", match[2], match[1]+".yml")
 		}
 
 		// Read the file in.
@@ -129,9 +130,14 @@ var editCmd = &cobra.Command{
 		afterManifest.CorrelateWith(inManifest)
 
 		// Re-encrypt anything that needs it.
-		// TODO real key logic
-		keyId := os.Getenv("KEY")
-		err = afterManifest.Encrypt(kmsService, keyId)
+		keyId := keyIdFlag
+		if keyId == "" {
+			keyId, err = edit.FindKeyId(filename)
+			if err != nil {
+				return errors.Wrap(err, "error finding key ID")
+			}
+		}
+		err = afterManifest.Encrypt(kmsService, keyId, keyIdFlag != "")
 		if err != nil {
 			return errors.Wrap(err, "error encrypting after manifest")
 		}

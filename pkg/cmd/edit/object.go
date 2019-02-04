@@ -62,14 +62,14 @@ func NewObject(raw []byte) (*Object, error) {
 		o.Data = enc.Data
 	}
 	// or a DecryptedSecret.
-	dec, ok2 := obj.(*hacksecretsv1beta1.DecryptedSecret)
-	if ok2 {
+	dec, ok := obj.(*hacksecretsv1beta1.DecryptedSecret)
+	if ok {
 		o.AfterDec = dec
 		o.Kind = "DecryptedSecret"
 		o.Data = dec.Data
 	}
 
-	if ok || ok2 {
+	if o.Kind != "" {
 		// Run the regex parse. If you are reading this code, I am sorry and yes I
 		// feel bad about it. This is used when re-encoding to allow output that
 		// preserves comments, whitespace, key ordering, etc.
@@ -83,12 +83,14 @@ func NewObject(raw []byte) (*Object, error) {
 		o.KindLoc.End = match[3]
 		o.DataLoc.Start = match[4]
 		o.DataLoc.End = match[5]
-		locs, err := newKeysLocations(raw[o.DataLoc.Start:o.DataLoc.End], o.DataLoc.Start)
-		if err != nil {
-			// Also shouldn't happen.
-			panic(err.Error())
+		if len(o.Data) > 0 {
+			locs, err := newKeysLocations(raw[o.DataLoc.Start:o.DataLoc.End], o.DataLoc.Start)
+			if err != nil {
+				// Also shouldn't happen.
+				panic(err.Error())
+			}
+			o.KeyLocs = locs
 		}
-		o.KeyLocs = locs
 
 		// A safety check for now.
 		if len(o.Data) != len(o.KeyLocs) {
@@ -152,15 +154,18 @@ func (o *Object) Decrypt(kmsService kmsiface.KMSAPI) error {
 	return nil
 }
 
-func (o *Object) Encrypt(kmsService kmsiface.KMSAPI, defaultKeyId string) error {
+func (o *Object) Encrypt(kmsService kmsiface.KMSAPI, defaultKeyId string, forceKeyId bool) error {
 	if o.Kind == "" {
 		return nil
 	}
 
 	// Work out which key to use.
 	keyId := defaultKeyId
-	if o.KeyId != "" {
+	if o.KeyId != "" && !forceKeyId {
 		keyId = o.KeyId
+	}
+	if keyId == "" {
+		return errors.New("Key ID cannot be blank")
 	}
 
 	enc := &secretsv1beta1.EncryptedSecret{ObjectMeta: o.AfterDec.ObjectMeta, Data: map[string]string{}}
