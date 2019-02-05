@@ -28,6 +28,10 @@ func FindKeyId(manifestPath string) (string, error) {
 	keysPath := path.Join(manifestPath, "..", ".keys.yml")
 	keysF, err := os.Open(keysPath)
 	if err != nil {
+		if err == os.ErrNotExist {
+			// If the file doesn't exist, the key ID from the file is "".
+			return "", nil
+		}
 		return "", errors.Wrapf(err, "error loading key settings file %s", keysPath)
 	}
 	decoder := yaml.NewDecoder(keysF)
