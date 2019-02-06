@@ -52,6 +52,21 @@ func init() {
 	whitespaceRegexp = regexp.MustCompile(`\s+`)
 }
 
+/*
+
+An explanation of the overall edit process:
+
+1. The existing file is loaded and parsed.
+2. That parsed data is decrypted using KMS.
+3. A new YAML document is written to a tempfile with the decrypted data.
+4. The tempfile is opened in $EDITOR.
+5. The tempfile is re-read and parsed.
+6. The old and new data is correlated to match up any objects that exist in both.
+6. The parsed data is encrypted using KMS if the value changed.
+7. A new YAML document is written to the original file.
+
+*/
+
 var editCmd = &cobra.Command{
 	Use:   "edit [flags] <cluster_name>",
 	Short: "Edit an instance manifest",
