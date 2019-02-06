@@ -29,6 +29,7 @@ import (
 	"strings"
 
 	"github.com/Ridecell/ridectl/pkg/cmd/edit"
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/kms"
 	"github.com/pkg/errors"
@@ -126,6 +127,9 @@ var editCmd = &cobra.Command{
 		// TODO error handling for AWS creds
 		sess := session.Must(session.NewSessionWithOptions(session.Options{
 			SharedConfigState: session.SharedConfigEnable,
+			Config: aws.Config{
+				Region: aws.String("us-west-1"),
+			},
 		}))
 		kmsService := kms.New(sess)
 
