@@ -146,7 +146,11 @@ func (o *Object) Decrypt(kmsService kmsiface.KMSAPI) error {
 			return errors.Errorf("key mismatch between %s and %s for %s", o.KeyId, *decryptedValue.KeyId, key)
 		}
 		o.KeyId = *decryptedValue.KeyId
-		dec.Data[key] = string(decryptedValue.Plaintext)
+		decryptedString := string(decryptedValue.Plaintext)
+		if decryptedString == secretsv1beta1.EncryptedSecretEmptyKey {
+			decryptedString = ""
+		}
+		dec.Data[key] = decryptedString
 	}
 	o.OrigDec = dec
 	o.Kind = "DecryptedSecret"
@@ -179,6 +183,12 @@ func (o *Object) Encrypt(kmsService kmsiface.KMSAPI, defaultKeyId string, forceK
 				continue
 			}
 		}
+
+		// Handle the magic empty value.
+		if value == "" {
+			value = secretsv1beta1.EncryptedSecretEmptyKey
+		}
+
 		// Encrypt the new value.
 		encryptedValue, err := kmsService.Encrypt(&kms.EncryptInput{
 			KeyId:     aws.String(keyId),
