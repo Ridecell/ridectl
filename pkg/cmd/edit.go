@@ -62,8 +62,8 @@ An explanation of the overall edit process:
 4. The tempfile is opened in $EDITOR.
 5. The tempfile is re-read and parsed.
 6. The old and new data is correlated to match up any objects that exist in both.
-6. The parsed data is encrypted using KMS if the value changed.
-7. A new YAML document is written to the original file.
+7. The parsed data is encrypted using KMS if the value changed.
+8. A new YAML document is written to the original file.
 
 */
 
