@@ -11,7 +11,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:6ffeebffdb8b14548bd823df5e1006f9add621dd37621804751dc8a96e203573"
+  digest = "1:de4dca6302ec3536d46e0404e017a0cae24043d27e097d377ca528137fdb401f"
   name = "github.com/Ridecell/ridecell-operator"
   packages = [
     "pkg/apis",
@@ -28,7 +28,7 @@
     "pkg/templates",
   ]
   pruneopts = "UT"
-  revision = "83cf44b9c78bcf9f69916dc648ebd73f4d878e55"
+  revision = "e3c418feae1c01a2ed41dcb89a78352e26eeed09"
 
 [[projects]]
   digest = "1:464aef731a5f82ded547c62e249a2e9ec59fbbc9ddab53cda7b9857852630a61"
