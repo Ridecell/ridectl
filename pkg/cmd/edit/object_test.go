@@ -218,4 +218,44 @@ data:
 			Expect(buf.String()).To(Equal(complexEncryptedContent))
 		})
 	})
+
+	Context("with complex encryped content", func() {
+		It("loads the data", func() {
+			obj, err := edit.NewObject([]byte(complexEncryptedContent))
+			Expect(err).ToNot(HaveOccurred())
+			Expect(obj.Kind).To(Equal("EncryptedSecret"))
+			Expect(obj.Data).To(HaveKeyWithValue("MYKEY", "a21zbXl2YWx1ZQ=="))
+			Expect(obj.Data).To(HaveKeyWithValue("RANDOM_VALUE", "a21zNA=="))
+			Expect(obj.Data).To(HaveKeyWithValue("tls.key", "a21zLS0tLS1CRUdJTiBQUklWQVRFIEtFWS0tLS0tCk1JSUV2QUlCQURBTmFzZGZhc2RmYXNkZmFzZGZhc2RmYXNkZgpxd2VycXdlcnF3ZXJxd2VycXdlcnF3ZXJxd2VycXdlcnF3ZXIKLS0tLS1FTkQgUFJJVkFURSBLRVktLS0tLQo="))
+		})
+
+		It("serializes the data", func() {
+			obj, err := edit.NewObject([]byte(complexEncryptedContent))
+			Expect(err).ToNot(HaveOccurred())
+			var buf strings.Builder
+			err = obj.Serialize(&buf)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(buf.String()).To(Equal(complexEncryptedContent))
+		})
+
+		It("decrypts the data", func() {
+			obj, err := edit.NewObject([]byte(complexEncryptedContent))
+			Expect(err).ToNot(HaveOccurred())
+			err = obj.Decrypt(kmsMock())
+			Expect(obj.Kind).To(Equal("DecryptedSecret"))
+			Expect(obj.Data).To(HaveKeyWithValue("MYKEY", "myvalue"))
+			Expect(obj.Data).To(HaveKeyWithValue("RANDOM_VALUE", "4"))
+			Expect(obj.Data).To(HaveKeyWithValue("tls.key", "-----BEGIN PRIVATE KEY-----\nMIIEvAIBADANasdfasdfasdfasdfasdfasdf\nqwerqwerqwerqwerqwerqwerqwerqwerqwer\n-----END PRIVATE KEY-----\n"))
+		})
+
+		It("serializes the data after decryption", func() {
+			obj, err := edit.NewObject([]byte(complexEncryptedContent))
+			Expect(err).ToNot(HaveOccurred())
+			err = obj.Decrypt(kmsMock())
+			var buf strings.Builder
+			err = obj.Serialize(&buf)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(buf.String()).To(Equal(complexMixedContext))
+		})
+	})
 })
