@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"io"
 	"regexp"
+	"strings"
 
 	secretsv1beta1 "github.com/Ridecell/ridecell-operator/pkg/apis/secrets/v1beta1"
 	"github.com/aws/aws-sdk-go/aws"
@@ -39,7 +40,27 @@ var nonStringRegexp *regexp.Regexp
 
 func init() {
 	dataRegexp = regexp.MustCompile(`(?ms)kind: (EncryptedSecret|DecryptedSecret).*?(^data:.*?)\z`)
-	keyRegexp = regexp.MustCompile(`(?m)^[ \t]+([^:\n\r]+):[ \t]*(.+?)[ \t]*$`)
+	keyRegexp = regexp.MustCompile("" +
+		// Turn on multiline mode for the whole pattern, ^ and $ will match on lines rather than start and end of whole string.
+		`(?m)` +
+		// Look for the key, some whitespace, then some non-space-or-:, then :
+		`^[ \t]+([^:\n\r]+):` +
+		// Whitespace between the key's : and the value
+		`[ \t]+` +
+		// Start an alternation for block scalars and normal values.
+		`(?:` +
+		// Match block scalars first because they would otherwise match the normal value pattern.
+		// Looks for the | or >, optional flags, then lines with 4 spaces of indentation. A better version of this
+		// would look more like ([|>]\n([ \t]+).+?\n(?:\3.+?\n)*) and would use a backreference instead of hardwiring
+		// things but Go, or rather RE2, refuses to support backrefs because they can be slow. Blaaaaaaah.
+		`([|>]\n(?:    .+?\n)+)` +
+		// Alternation between block scalar and normal values.
+		`|` +
+		// Look for a normal value, something on a single line with optional trailing whitespace.
+		`(.+?)[ \t]*$` +
+		// Close the block vs. normal alternation.
+		`)`,
+	)
 	nonStringRegexp = regexp.MustCompile(`^(\d+(\.\d+)?|true|false|null)$`)
 }
 
@@ -109,7 +130,21 @@ func newKeysLocations(raw []byte, offset int) ([]KeysLocation, error) {
 	for _, match := range matches {
 		keyStart := match[2]
 		keyEnd := match[3]
-		valueLoc := TextLocation{Start: match[4] + offset, End: match[5] + offset}
+		blockValueStart := match[4]
+		blockValueEnd := match[5]
+		normalValueStart := match[6]
+		normalValueEnd := match[7]
+		var valueLoc TextLocation
+		if normalValueStart == -1 {
+			if raw[blockValueStart] != '|' {
+				return nil, errors.New("only | block scalars are supported")
+			}
+			valueLoc.Start = blockValueStart + offset
+			valueLoc.End = blockValueEnd + offset
+		} else {
+			valueLoc.Start = normalValueStart + offset
+			valueLoc.End = normalValueEnd + offset
+		}
 		key := string(raw[keyStart:keyEnd])
 		if key[0] == '#' {
 			// Go doesn't do negative lookaheads to easier to filter comments out here.
@@ -230,14 +265,30 @@ func (o *Object) Serialize(out io.Writer) error {
 	carry := o.KindLoc.End
 	for _, keyLoc := range o.KeyLocs {
 		newValue, ok := o.Data[keyLoc.Key]
+		if !ok {
+			panic("key from location not found in data")
+		}
+
+		// Check for a multiline value.
+		if strings.ContainsRune(newValue, '\n') {
+			var buf strings.Builder
+			buf.WriteString("|\n")
+			lines := strings.SplitAfter(newValue, "\n")
+			if lines[len(lines)-1] == "" {
+				lines = lines[:len(lines)-1]
+			}
+			for _, line := range lines {
+				// Hardwire to 4 spaces of indentation, which assumes 2 spaces on the keys.
+				// I'll probably regret this when someone uses 8 space indents.
+				buf.WriteString("    ")
+				buf.WriteString(line)
+			}
+			newValue = buf.String()
+		}
 
 		// Check for things that YAML thinks aren't strings that might show up in the value.
 		if nonStringRegexp.MatchString(newValue) {
 			newValue = fmt.Sprintf(`"%s"`, newValue)
-		}
-
-		if !ok {
-			panic("key from location not found in data")
 		}
 		_, err = out.Write(o.Raw[carry:keyLoc.Start])
 		if err != nil {
