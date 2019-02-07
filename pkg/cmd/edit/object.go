@@ -53,7 +53,7 @@ func init() {
 		// Looks for the | or >, optional flags, then lines with 4 spaces of indentation. A better version of this
 		// would look more like ([|>]\n([ \t]+).+?\n(?:\3.+?\n)*) and would use a backreference instead of hardwiring
 		// things but Go, or rather RE2, refuses to support backrefs because they can be slow. Blaaaaaaah.
-		`([|>]\n(?:    .+?\n)+)` +
+		`([|>](?:\n    .+?$)+)` +
 		// Alternation between block scalar and normal values.
 		`|` +
 		// Look for a normal value, something on a single line with optional trailing whitespace.
@@ -272,15 +272,16 @@ func (o *Object) Serialize(out io.Writer) error {
 		// Check for a multiline value.
 		if strings.ContainsRune(newValue, '\n') {
 			var buf strings.Builder
-			buf.WriteString("|\n")
-			lines := strings.SplitAfter(newValue, "\n")
+			buf.WriteString("|")
+			lines := strings.Split(newValue, "\n")
+			// Trim the trailing newline, basically.
 			if lines[len(lines)-1] == "" {
 				lines = lines[:len(lines)-1]
 			}
 			for _, line := range lines {
 				// Hardwire to 4 spaces of indentation, which assumes 2 spaces on the keys.
 				// I'll probably regret this when someone uses 8 space indents.
-				buf.WriteString("    ")
+				buf.WriteString("\n    ")
 				buf.WriteString(line)
 			}
 			newValue = buf.String()
