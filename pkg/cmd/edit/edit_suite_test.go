@@ -17,15 +17,40 @@ limitations under the License.
 package edit_test
 
 import (
+	"bytes"
 	"testing"
 
 	"github.com/Ridecell/ridecell-operator/pkg/apis"
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/service/kms"
 	"github.com/onsi/ginkgo"
 	"github.com/onsi/gomega"
+	"github.com/pkg/errors"
 	"k8s.io/client-go/kubernetes/scheme"
 
 	hackapis "github.com/Ridecell/ridectl/pkg/apis"
 )
+
+// Sed is a workaround for https://github.com/matryer/moq/issues/86.
+//go:generate bash -c "moq -pkg edit_test ../../../vendor/github.com/aws/aws-sdk-go/service/kms/kmsiface KMSAPI | sed -e $'/^import/ a \\\n\\\t\"github.com/aws/aws-sdk-go/service/kms/kmsiface\"' > zz_generated.mock_kmsiface_test.go"
+func kmsMock() *KMSAPIMock {
+	return &KMSAPIMock{
+		DecryptFunc: func(in *kms.DecryptInput) (*kms.DecryptOutput, error) {
+			if !bytes.HasPrefix(in.CiphertextBlob, []byte("kms")) {
+				return nil, errors.Errorf("Value %s is not mack encrypted", in.CiphertextBlob)
+			}
+			return &kms.DecryptOutput{
+				Plaintext: in.CiphertextBlob[3:],
+				KeyId:     aws.String("12345"),
+			}, nil
+		},
+		EncryptFunc: func(in *kms.EncryptInput) (*kms.EncryptOutput, error) {
+			return &kms.EncryptOutput{
+				CiphertextBlob: append([]byte("kms"), in.Plaintext...),
+			}, nil
+		},
+	}
+}
 
 func TestEdit(t *testing.T) {
 	// Register all types from ridecell-operator.

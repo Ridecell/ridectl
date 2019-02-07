@@ -75,7 +75,7 @@ data:
 kind: DecryptedSecret
 metadata:
   # This name is important.
-  name: comments
+  name: mixedstuff
   namespace: commentsland
 data:
   # Critical secret.
@@ -88,6 +88,21 @@ data:
     -----END PRIVATE KEY-----
   # Determined by fair dice roll.
   RANDOM_VALUE: "4"
+`
+
+	complexEncryptedContent := `apiVersion: secrets.ridecell.io/v1beta1
+kind: EncryptedSecret
+metadata:
+  # This name is important.
+  name: mixedstuff
+  namespace: commentsland
+data:
+  # Critical secret.
+  MYKEY: a21zbXl2YWx1ZQ==
+  # HTTP key!
+  tls.key: a21zLS0tLS1CRUdJTiBQUklWQVRFIEtFWS0tLS0tCk1JSUV2QUlCQURBTmFzZGZhc2RmYXNkZmFzZGZhc2RmYXNkZgpxd2VycXdlcnF3ZXJxd2VycXdlcnF3ZXJxd2VycXdlcnF3ZXIKLS0tLS1FTkQgUFJJVkFURSBLRVktLS0tLQo=
+  # Determined by fair dice roll.
+  RANDOM_VALUE: a21zNA==
 `
 
 	Context("with a simple encrypted secret", func() {
@@ -181,6 +196,26 @@ data:
 			err = obj.Serialize(&buf)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(buf.String()).To(Equal(complexMixedContext))
+		})
+
+		It("encrypts the data", func() {
+			obj, err := edit.NewObject([]byte(complexMixedContext))
+			Expect(err).ToNot(HaveOccurred())
+			err = obj.Encrypt(kmsMock(), "12345", false)
+			Expect(obj.Kind).To(Equal("EncryptedSecret"))
+			Expect(obj.Data).To(HaveKeyWithValue("MYKEY", "a21zbXl2YWx1ZQ=="))
+			Expect(obj.Data).To(HaveKeyWithValue("RANDOM_VALUE", "a21zNA=="))
+			Expect(obj.Data).To(HaveKeyWithValue("tls.key", "a21zLS0tLS1CRUdJTiBQUklWQVRFIEtFWS0tLS0tCk1JSUV2QUlCQURBTmFzZGZhc2RmYXNkZmFzZGZhc2RmYXNkZgpxd2VycXdlcnF3ZXJxd2VycXdlcnF3ZXJxd2VycXdlcnF3ZXIKLS0tLS1FTkQgUFJJVkFURSBLRVktLS0tLQo="))
+		})
+
+		It("serializes the data after encryption", func() {
+			obj, err := edit.NewObject([]byte(complexMixedContext))
+			Expect(err).ToNot(HaveOccurred())
+			err = obj.Encrypt(kmsMock(), "12345", false)
+			var buf strings.Builder
+			err = obj.Serialize(&buf)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(buf.String()).To(Equal(complexEncryptedContent))
 		})
 	})
 })
