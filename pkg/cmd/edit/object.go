@@ -53,7 +53,7 @@ func init() {
 		// Looks for the | or >, optional flags, then lines with 4 spaces of indentation. A better version of this
 		// would look more like ([|>]\n([ \t]+).+?\n(?:\3.+?\n)*) and would use a backreference instead of hardwiring
 		// things but Go, or rather RE2, refuses to support backrefs because they can be slow. Blaaaaaaah.
-		`([|>](?:\n    .+?$)+)` +
+		`([|>].*?(?:\n    .+?$)+)` +
 		// Alternation between block scalar and normal values.
 		`|` +
 		// Look for a normal value, something on a single line with optional trailing whitespace.
