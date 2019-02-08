@@ -17,7 +17,6 @@ limitations under the License.
 package edit_test
 
 import (
-	"fmt"
 	"strings"
 
 	. "github.com/onsi/ginkgo"
@@ -119,7 +118,6 @@ data:
 			var buf strings.Builder
 			err = obj.Serialize(&buf)
 			Expect(err).ToNot(HaveOccurred())
-			fmt.Println(buf.String())
 			Expect(buf.String()).To(Equal(simpleEncryptedSecret))
 		})
 	})
