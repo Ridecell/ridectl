@@ -27,9 +27,11 @@ import (
 )
 
 var emptyRegexp *regexp.Regexp
+var splitRegexp *regexp.Regexp
 
 func init() {
 	emptyRegexp = regexp.MustCompile(`(?m)\A(^(\s*#.*|\s*)$\s*)*\z`)
+	splitRegexp = regexp.MustCompile(`(?m)^---$(\n)?`)
 }
 
 func NewManifest(in io.Reader) (Manifest, error) {
@@ -41,11 +43,11 @@ func NewManifest(in io.Reader) (Manifest, error) {
 	}
 
 	objects := []*Object{}
-	for _, chunk := range bytes.Split(buf.Bytes(), []byte("---\n")) {
-		if emptyRegexp.Match(chunk) {
+	for _, chunk := range splitRegexp.Split(buf.String(), -1) {
+		if emptyRegexp.MatchString(chunk) {
 			continue
 		}
-		obj, err := NewObject(chunk)
+		obj, err := NewObject([]byte(chunk))
 		if err != nil {
 			return nil, errors.Wrap(err, "error decoding object")
 		}
