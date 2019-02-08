@@ -53,6 +53,8 @@ var shellCmd = &cobra.Command{
 			return errors.Wrap(err, "unable to find pod")
 		}
 		fmt.Printf("Connecting to %s/%s\n", pod.Namespace, pod.Name)
+		// Warn people that this is a container.
+		fmt.Printf("Remember that this is a container and most changes will have no effect\n")
 
 		// Spawn kubectl exec.
 		kubectlArgs := []string{"kubectl", "exec", "-it", "-n", pod.Namespace, pod.Name, "--", "bash", "-l"}
