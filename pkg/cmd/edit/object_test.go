@@ -89,6 +89,8 @@ data:
   RANDOM_VALUE: "4"
   # Might look like an array, but it's not.
   FAKE_ARRAY: "[1234]"
+  # No value!
+  Empty: ""
 `
 
 	complexEncryptedContent := `apiVersion: secrets.ridecell.io/v1beta1
@@ -106,6 +108,8 @@ data:
   RANDOM_VALUE: a21zNA==
   # Might look like an array, but it's not.
   FAKE_ARRAY: a21zWzEyMzRd
+  # No value!
+  Empty: a21zX19fZW1wdHlfc3RyaW5nX19f
 `
 
 	Context("with a simple encrypted secret", func() {
