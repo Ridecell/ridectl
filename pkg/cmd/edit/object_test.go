@@ -87,6 +87,8 @@ data:
     -----END PRIVATE KEY-----
   # Determined by fair dice roll.
   RANDOM_VALUE: "4"
+  # Might look like an array, but it's not.
+  FAKE_ARRAY: "[1234]"
 `
 
 	complexEncryptedContent := `apiVersion: secrets.ridecell.io/v1beta1
@@ -102,6 +104,8 @@ data:
   tls.key: a21zLS0tLS1CRUdJTiBQUklWQVRFIEtFWS0tLS0tCk1JSUV2QUlCQURBTmFzZGZhc2RmYXNkZmFzZGZhc2RmYXNkZgpxd2VycXdlcnF3ZXJxd2VycXdlcnF3ZXJxd2VycXdlcnF3ZXIKLS0tLS1FTkQgUFJJVkFURSBLRVktLS0tLQo=
   # Determined by fair dice roll.
   RANDOM_VALUE: a21zNA==
+  # Might look like an array, but it's not.
+  FAKE_ARRAY: a21zWzEyMzRd
 `
 
 	Context("with a simple encrypted secret", func() {

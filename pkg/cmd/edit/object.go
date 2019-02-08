@@ -61,7 +61,7 @@ func init() {
 		// Close the block vs. normal alternation.
 		`)`,
 	)
-	nonStringRegexp = regexp.MustCompile(`^(\d+(\.\d+)?|true|false|null)$`)
+	nonStringRegexp = regexp.MustCompile(`^(\d+(\.\d+)?|true|false|null|\[.*\])$`)
 }
 
 func NewObject(raw []byte) (*Object, error) {
