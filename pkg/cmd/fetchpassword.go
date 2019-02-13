@@ -22,7 +22,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 
-	"github.com/Ridecell/ridectl/pkg/exec"
 	"github.com/Ridecell/ridectl/pkg/kubernetes"
 )
 
@@ -53,7 +52,7 @@ var passwordCmd = &cobra.Command{
 			return errors.Wrap(err, "unable to find secret")
 		}
 
-		cmdArgs := []string{"echo", fmt.Sprintf("Password for %s:", args[0]), string(secret.Data["password"])}
-		return exec.Exec(cmdArgs)
+		fmt.Printf("Password for %s: %s\n", args[0], string(secret.Data["password"]))
+		return nil
 	},
 }
