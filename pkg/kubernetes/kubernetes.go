@@ -61,3 +61,17 @@ func FindSummonPod(clientset *kubernetes.Clientset, instanceName string, labelSe
 	// It doesn't generally matter which we pick, so just use the first.
 	return &pods.Items[0], nil
 }
+
+func FindSecret(clientset *kubernetes.Clientset, instanceName string, secretName string) (*corev1.Secret, error) {
+	match := regexp.MustCompile(`^[a-z0-9]+-([a-z]+)$`).FindStringSubmatch(instanceName)
+	if match == nil {
+		return nil, errors.Errorf("unable to parse instance name %s", instanceName)
+	}
+
+	secret, err := clientset.CoreV1().Secrets(match[1]).Get(secretName, metav1.GetOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	return secret, nil
+}
