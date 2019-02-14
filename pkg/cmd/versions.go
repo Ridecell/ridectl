@@ -57,7 +57,7 @@ var versionsCmd = &cobra.Command{
 	},
 	RunE: func(_ *cobra.Command, args []string) error {
 		// Get a new GCloud access token.
-		cmd := exec.Command("gcloud", "config", "config-helper", "--force-auth-refresh", "--format=value(credential.access_token)")
+		cmd := exec.Command("gcloud", "config", "config-helper", "--format=value(credential.access_token)")
 		var out bytes.Buffer
 		cmd.Stdout = &out
 		err := cmd.Run()
