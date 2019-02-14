@@ -63,13 +63,13 @@ jobs:
     steps:
     - checkout
     - setup_remote_docker
-    - run: docker build -t us.gcr.io/ridecell-1/ridectl:${CIRCLE_TAG} -t us.gcr.io/ridecell-1/ridectl:latest .
+    - run: docker build -t us.gcr.io/ridecell-public/ridectl:${CIRCLE_TAG} -t us.gcr.io/ridecell-public/ridectl:latest .
     - run: echo ${GCP_SERVICE_ACCOUNT} > gcp-key.json
     - run: gcloud auth activate-service-account --key-file gcp-key.json
     - run: gcloud --quiet config set project ridecell-1
     - run: gcloud auth configure-docker
-    - run: docker push us.gcr.io/ridecell-1/ridectl:${CIRCLE_TAG}
-    - run: docker push us.gcr.io/ridecell-1/ridectl:latest
+    - run: docker push us.gcr.io/ridecell-public/ridectl:${CIRCLE_TAG}
+    - run: docker push us.gcr.io/ridecell-public/ridectl:latest
 
 
 workflows:
