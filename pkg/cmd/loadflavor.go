@@ -36,10 +36,10 @@ func init() {
 	rootCmd.AddCommand(loadflavorCmd)
 }
 
-var eraseDatabase bool
+var eraseDatabaseFlag bool
 
 func init() {
-	rootCmd.Flags().BoolVar(&eraseDatabase, "erase-database", false, "Erases database before loading flavor data.")
+	rootCmd.Flags().BoolVar(&eraseDatabaseFlag, "erase-database", false, "Erases database before loading flavor data.")
 }
 
 var loadflavorCmd = &cobra.Command{
@@ -97,9 +97,16 @@ var loadflavorCmd = &cobra.Command{
 }
 
 func getPresignedURL(flavorName string) (string, error) {
-	svc := s3.New(session.Must(session.NewSession(&aws.Config{
-		Region: aws.String("us-west-2"),
-	})))
+	sess, err := session.NewSessionWithOptions(session.Options{
+		Config: aws.Config{
+			Region: aws.String("us-west-2"),
+		},
+		SharedConfigState: session.SharedConfigEnable,
+	})
+	if err != nil {
+		return "", err
+	}
+	svc := s3.New(sess)
 	req, _ := svc.GetObjectRequest(&s3.GetObjectInput{
 		Bucket: aws.String("ridecell-flavors"),
 		Key:    aws.String(fmt.Sprintf("%s.json.bz2", flavorName)),
@@ -115,8 +122,8 @@ func getPresignedURL(flavorName string) (string, error) {
 
 func genCommand(input string, pod *corev1.Pod) *exec.Cmd {
 
-	cmdArgs := []string{"exec", "-i", "-n", pod.Namespace, pod.Name, "--", "bash", "-c", "python", "manage.py", "loadflavor", input}
-	if eraseDatabase {
+	cmdArgs := []string{"exec", "-i", "-n", pod.Namespace, pod.Name, "--", "python", "manage.py", "loadflavor", input}
+	if eraseDatabaseFlag {
 		cmdArgs = append(cmdArgs, "--erase-database")
 	}
 	cmd := exec.Command("kubectl", cmdArgs...)
