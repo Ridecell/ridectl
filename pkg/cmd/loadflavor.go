@@ -71,7 +71,6 @@ var loadflavorCmd = &cobra.Command{
 		if err != nil && !os.IsNotExist(err) {
 			return err
 		}
-		defer inFile.Close()
 
 		var cmd *exec.Cmd
 		if os.IsNotExist(err) {
@@ -86,6 +85,7 @@ var loadflavorCmd = &cobra.Command{
 			flavorString := "/dev/stdin"
 			cmd = genCommand(flavorString, pod)
 			cmd.Stdin = inFile
+			defer inFile.Close()
 		}
 
 		_, err = cmd.CombinedOutput()
