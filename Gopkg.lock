@@ -61,19 +61,24 @@
     "aws/session",
     "aws/signer/v4",
     "internal/ini",
+    "internal/s3err",
     "internal/sdkio",
     "internal/sdkrand",
     "internal/sdkuri",
     "internal/shareddefaults",
     "private/protocol",
+    "private/protocol/eventstream",
+    "private/protocol/eventstream/eventstreamapi",
     "private/protocol/json/jsonutil",
     "private/protocol/jsonrpc",
     "private/protocol/query",
     "private/protocol/query/queryutil",
     "private/protocol/rest",
+    "private/protocol/restxml",
     "private/protocol/xml/xmlutil",
     "service/kms",
     "service/kms/kmsiface",
+    "service/s3",
     "service/sts",
   ]
   pruneopts = "T"
@@ -95,6 +100,29 @@
   pruneopts = "T"
   revision = "8991bc29aa16c548c550c7ff78260e27b9ab7c73"
   version = "v1.1.1"
+
+[[projects]]
+  digest = "1:d4f83648c3259dd3d07b0f98d505d3e2d2fd0c9388671a76d0e54041b8006338"
+  name = "github.com/docker/distribution"
+  packages = [
+    ".",
+    "digestset",
+    "manifest",
+    "manifest/schema1",
+    "manifest/schema2",
+    "reference",
+  ]
+  pruneopts = "T"
+  revision = "2461543d988979529609e8cb6fca9ca190dc48da"
+  version = "v2.7.1"
+
+[[projects]]
+  branch = "master"
+  digest = "1:46cb138b11721830161dd8293356e3dc5dd7ec774825b7fc5f2bf2fbbf2bed33"
+  name = "github.com/docker/libtrust"
+  packages = ["."]
+  pruneopts = "T"
+  revision = "aabc10ec26b754e797f9028f4589c5b7bd90dc20"
 
 [[projects]]
   digest = "1:90171b862cb6ec187304a593e4d78bfcbcf0f4394870eb66e0eb62cc06b144ad"
@@ -218,6 +246,14 @@
   pruneopts = "T"
   revision = "20f1fb78b0740ba8c3cb143a61e86ba5c8669768"
   version = "v0.5.0"
+
+[[projects]]
+  branch = "master"
+  digest = "1:252e4aae631611c8cb18f75a0ec12c6f21c333ac98f83d14b490c3b76a256899"
+  name = "github.com/heroku/docker-registry-client"
+  packages = ["registry"]
+  pruneopts = "T"
+  revision = "47ecf50fd8d4fba87593c00ca0959029c7d6b95c"
 
 [[projects]]
   digest = "1:8f20c8dd713564fa97299fbcb77d729c6de9c33f3222812a76e6ecfaef80fd61"
@@ -351,6 +387,25 @@
   pruneopts = "T"
   revision = "65fb64232476ad9046e57c26cd0bff3d3a8dc6cd"
   version = "v1.4.3"
+
+[[projects]]
+  digest = "1:ee4d4af67d93cc7644157882329023ce9a7bcfce956a079069a9405521c7cc8d"
+  name = "github.com/opencontainers/go-digest"
+  packages = ["."]
+  pruneopts = "T"
+  revision = "279bed98673dd5bef374d3b6e4b09e2af76183bf"
+  version = "v1.0.0-rc1"
+
+[[projects]]
+  digest = "1:eb47da2fdabb69f64ce3a42a1790ec0ed9da6718c8378f3fdc41cbe6af184519"
+  name = "github.com/opencontainers/image-spec"
+  packages = [
+    "specs-go",
+    "specs-go/v1",
+  ]
+  pruneopts = "T"
+  revision = "d60099175f88c47cd379c4738d158884749ed235"
+  version = "v1.0.1"
 
 [[projects]]
   digest = "1:e5d0bd87abc2781d14e274807a470acd180f0499f8bf5bb18606e9ec22ad9de9"
@@ -965,10 +1020,14 @@
     "github.com/Ridecell/ridecell-operator/pkg/apis/secrets",
     "github.com/Ridecell/ridecell-operator/pkg/apis/secrets/v1beta1",
     "github.com/Ridecell/ridecell-operator/pkg/apis/summon",
+    "github.com/Ridecell/ridecell-operator/pkg/apis/summon/v1beta1",
     "github.com/aws/aws-sdk-go/aws",
+    "github.com/aws/aws-sdk-go/aws/request",
     "github.com/aws/aws-sdk-go/aws/session",
     "github.com/aws/aws-sdk-go/service/kms",
     "github.com/aws/aws-sdk-go/service/kms/kmsiface",
+    "github.com/aws/aws-sdk-go/service/s3",
+    "github.com/heroku/docker-registry-client/registry",
     "github.com/mitchellh/go-homedir",
     "github.com/onsi/ginkgo",
     "github.com/onsi/gomega",
