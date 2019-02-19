@@ -88,10 +88,11 @@ var loadflavorCmd = &cobra.Command{
 			defer inFile.Close()
 		}
 
-		_, err = cmd.CombinedOutput()
+		err = cmd.Run()
 		if err != nil {
 			return err
 		}
+
 		return nil
 	},
 }
@@ -127,5 +128,7 @@ func genCommand(input string, pod *corev1.Pod) *exec.Cmd {
 		cmdArgs = append(cmdArgs, "--erase-database")
 	}
 	cmd := exec.Command("kubectl", cmdArgs...)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
 	return cmd
 }
