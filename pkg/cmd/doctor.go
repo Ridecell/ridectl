@@ -17,14 +17,17 @@ limitations under the License.
 package cmd
 
 import (
-	"bufio"
 	"fmt"
 	"os"
 	"os/exec"
 	"runtime"
 	"strings"
 
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/fatih/color"
+	"github.com/manifoldco/promptui"
 	"github.com/mattn/go-shellwords"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -54,13 +57,21 @@ var doctorCmd = &cobra.Command{
 			return errors.New("Interactive mode is only supported on macOS for now")
 		}
 
+		//tests := []*doctorTest{
+		//	doctorTestKubectlContext,
+		//}
+
 		tests := []*doctorTest{
+			doctorTestEditorEnvVar,
 			doctorTestHomebrew,
 			doctorTestCaskroom,
 			doctorTestGcloud,
 			doctorTestKubectl,
+			doctorTestKubectlCommand,
 			doctorTestGoogleCredentials,
-			doctorTestAsdf,
+			doctorTestKubectlContext,
+			doctorTestAWSCredentials,
+			doctorTestS3Access,
 		}
 
 		for _, test := range tests {
@@ -144,19 +155,22 @@ func (t *doctorTest) tryFix() error {
 		if t.fixCmd != "" {
 			buf.WriteString(fmt.Sprintf(" (%s)", t.fixCmd))
 		}
-		buf.WriteString("? [y/n] ")
+		buf.WriteString("?\n")
 		t.fixMsg = buf.String()
 	}
 	fmt.Print(t.fixMsg)
-	reader := bufio.NewReader(os.Stdin)
-	char, _, err := reader.ReadRune()
+
+	prompt := promptui.Prompt{
+		Label: "[y/n] ",
+	}
+	input, err := prompt.Run()
 	if err != nil {
 		return err
 	}
-	if char != 'y' && char != 'Y' {
-		// Assume everything else is a no
+	if input != "y" && input != "Y" {
 		return nil
 	}
+
 	if t.fixFn != nil {
 		return t.fixFn()
 	} else {
@@ -169,6 +183,14 @@ func (t *doctorTest) tryFix() error {
 		cmd.Stderr = os.Stderr
 		return cmd.Run()
 	}
+}
+
+// Check if EDITOR environment variable is set for the edit command
+var doctorTestEditorEnvVar = &doctorTest{
+	subject: "$EDITOR Environment Variable",
+	checkFn: func() bool {
+		return os.Getenv("EDITOR") != ""
+	},
 }
 
 // Check for Homebrew.
@@ -217,19 +239,159 @@ var doctorTestGoogleCredentials = &doctorTest{
 		}
 		return !strings.HasPrefix(buf.String(), "(unset)")
 	},
+	fixCmd: `gcloud auth login`,
 }
 
 // Check for Kubernetes context for noah-test.
+var doctorTestKubectlContext = &doctorTest{
+	subject: `Kubenerets Config "noah-test"`,
+	checkFn: func() bool {
+		cmd := exec.Command("kubectl", "config", "current-context")
+		var buf strings.Builder
+		cmd.Stdout = &buf
+		err := cmd.Run()
+		if err != nil {
+			return false
+		}
+		return strings.Contains(buf.String(), "noah-test")
+	},
+}
 
 // Check example Kubernetes command.
+var doctorTestKubectlCommand = &doctorTest{
+	subject: "",
+	checkFn: func() bool {
+		cmd := exec.Command("kubctl", "version")
+		cmd.Stderr = os.Stderr
+		err := cmd.Run()
+		if err != nil {
+			return false
+		}
+		return true
+	},
+}
 
 // Check for AWS credentials.
+var doctorTestAWSCredentials = &doctorTest{
+	subject: "AWS Credentials",
+	checkFn: func() bool {
+		sess, err := session.NewSessionWithOptions(session.Options{
+			SharedConfigState: session.SharedConfigEnable,
+		})
+		if err != nil {
+			return false
+		}
+		_, err = sess.Config.Credentials.Get()
+		if err != nil {
+			return false
+		}
+		return true
+	},
+	fixFn: func() error {
+		prompt := promptui.Prompt{Label: "[y/n] "}
+		fmt.Println("Do you have an AWS Access Key?")
+		input, err := prompt.Run()
+		if err != nil {
+			return err
+		}
+		if input != "y" && input != "Y" {
+			fmt.Println("Please contact devops/infra team for assistance.")
+			return nil
+		}
+
+		awsDir := fmt.Sprintf(`%s/.aws`, os.Getenv("HOME"))
+		credentialsPath := fmt.Sprintf("%s/credentials", awsDir)
+		// Check if the credentials file exists
+		_, err = os.Stat(credentialsPath)
+		if err != nil && !os.IsNotExist(err) {
+			return err
+		}
+		// If the credentials file exists exit, we aren't editing that.
+		if !os.IsNotExist(err) {
+			fmt.Printf("%s Already exists. This file should be configured manually.\n", credentialsPath)
+			return err
+		}
+
+		// Get credentials from user input.
+		newCredentials := map[string]string{
+			"aws_access_key_id":     "",
+			"aws_secret_access_key": "",
+		}
+		for k := range newCredentials {
+			prompt = promptui.Prompt{
+				Label: fmt.Sprintf("Enter %#v ", k),
+				Validate: func(input string) error {
+					if len(input) < 16 {
+						return errors.New("must be at least 16 characters in length")
+					}
+					return nil
+				},
+				Mask: 'x',
+			}
+			input, err := prompt.Run()
+			if err != nil {
+				return err
+			}
+			newCredentials[k] = string(input)
+		}
+
+		// Make sure our .aws directory exists
+		_, err = os.Stat(awsDir)
+		if err != nil && !os.IsNotExist(err) {
+			return err
+		}
+		// Directory doesn't exist, create it.
+		if os.IsNotExist(err) {
+			err = os.Mkdir(awsDir, 0755)
+			if err != nil {
+				return err
+			}
+		}
+
+		// This will not error if the file exists, we need to check before we get here.
+		file, err := os.Create(credentialsPath)
+		if err != nil {
+			return err
+		}
+		defer file.Close()
+
+		// Write our new credentials to the file.
+		_, err = file.WriteString("[default]\n")
+		if err != nil {
+			return err
+		}
+		for k, v := range newCredentials {
+			_, err = file.WriteString(fmt.Sprintf("%s = %s\n", k, v))
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	},
+}
 
 // Check for access to the flavors S3 bucket.
+var doctorTestS3Access = &doctorTest{
+	subject: "S3 Flavors Access",
+	checkFn: func() bool {
+		sess, err := session.NewSessionWithOptions(session.Options{
+			Config: aws.Config{
+				Region: aws.String("us-west-2"),
+			},
+			SharedConfigState: session.SharedConfigEnable,
+		})
+		if err != nil {
+			return false
+		}
+		svc := s3.New(sess)
 
-// Check for test.
-var doctorTestAsdf = &doctorTest{
-	subject:  "asdf",
-	checkCmd: "qwerasdf",
-	fixCmd:   `brew help`,
+		_, err = svc.ListObjects(&s3.ListObjectsInput{
+			Bucket:  aws.String("ridecell-flavors"),
+			MaxKeys: aws.Int64(1),
+		})
+		if err != nil {
+			return false
+		}
+		return true
+	},
 }
