@@ -24,8 +24,10 @@ import (
 	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
+	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/fatih/color"
 	"github.com/manifoldco/promptui"
 	"github.com/mattn/go-shellwords"
@@ -155,34 +157,29 @@ func (t *doctorTest) tryFix() error {
 		if t.fixCmd != "" {
 			buf.WriteString(fmt.Sprintf(" (%s)", t.fixCmd))
 		}
-		buf.WriteString("?\n")
+		buf.WriteString("? ")
 		t.fixMsg = buf.String()
 	}
-	fmt.Print(t.fixMsg)
-
-	prompt := promptui.Prompt{
-		Label: "[y/n] ",
-	}
-	input, err := prompt.Run()
+	yes, err := getUserConfirmation(t.fixMsg)
 	if err != nil {
 		return err
 	}
-	if input != "y" && input != "Y" {
+	if !yes {
 		return nil
 	}
 
 	if t.fixFn != nil {
 		return t.fixFn()
-	} else {
-		words, err := shellwords.Parse(t.fixCmd)
-		if err != nil {
-			return err
-		}
-		cmd := exec.Command(words[0], words[1:]...)
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-		return cmd.Run()
 	}
+	words, err := shellwords.Parse(t.fixCmd)
+	if err != nil {
+		return err
+	}
+	cmd := exec.Command(words[0], words[1:]...)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	return cmd.Run()
+
 }
 
 // Check if EDITOR environment variable is set for the edit command
@@ -259,9 +256,9 @@ var doctorTestKubectlContext = &doctorTest{
 
 // Check example Kubernetes command.
 var doctorTestKubectlCommand = &doctorTest{
-	subject: "",
+	subject: "Kubernetes Test",
 	checkFn: func() bool {
-		cmd := exec.Command("kubctl", "version")
+		cmd := exec.Command("kubectl", "version")
 		cmd.Stderr = os.Stderr
 		err := cmd.Run()
 		if err != nil {
@@ -288,13 +285,11 @@ var doctorTestAWSCredentials = &doctorTest{
 		return true
 	},
 	fixFn: func() error {
-		prompt := promptui.Prompt{Label: "[y/n] "}
-		fmt.Println("Do you have an AWS Access Key?")
-		input, err := prompt.Run()
+		yes, err := getUserConfirmation("Do you have an AWS Access Key ")
 		if err != nil {
 			return err
 		}
-		if input != "y" && input != "Y" {
+		if !yes {
 			fmt.Println("Please contact devops/infra team for assistance.")
 			return nil
 		}
@@ -312,27 +307,53 @@ var doctorTestAWSCredentials = &doctorTest{
 			return err
 		}
 
-		// Get credentials from user input.
-		newCredentials := map[string]string{
-			"aws_access_key_id":     "",
-			"aws_secret_access_key": "",
+		accessKeyPrompt := promptui.Prompt{
+			Label: "Enter aws_access_key_id: ",
+			Validate: func(input string) error {
+				if !strings.HasPrefix(input, "AKIA") {
+					return errors.New("Access key must have prefix of AKIA")
+				}
+				if len(input) < 16 {
+					return errors.New("Access Key must be at least 16 digits long")
+				}
+				return nil
+			},
 		}
-		for k := range newCredentials {
-			prompt = promptui.Prompt{
-				Label: fmt.Sprintf("Enter %#v ", k),
-				Validate: func(input string) error {
-					if len(input) < 16 {
-						return errors.New("must be at least 16 characters in length")
-					}
-					return nil
-				},
-				Mask: 'x',
-			}
-			input, err := prompt.Run()
-			if err != nil {
-				return err
-			}
-			newCredentials[k] = string(input)
+		accessKey, err := accessKeyPrompt.Run()
+		if err != nil {
+			return err
+		}
+
+		secretKeyPrompt := promptui.Prompt{
+			Label: "Enter aws_secret_access_key: ",
+			Validate: func(input string) error {
+				if len(input) < 16 {
+					return errors.New("Secret key must be at least 16 digits long")
+				}
+				return nil
+			},
+			Mask: 'X',
+		}
+		secretKey, err := secretKeyPrompt.Run()
+		if err != nil {
+			return err
+		}
+
+		// Test that credentials are valid before we write them to file.
+		sess, err := session.NewSessionWithOptions(session.Options{
+			Config: aws.Config{
+				Credentials: credentials.NewStaticCredentials(accessKey, secretKey, ""),
+			},
+		})
+		if err != nil {
+			return err
+		}
+		svc := sts.New(sess)
+		// This call will succeed with valid credntials regardless of permissions.
+		_, err = svc.GetCallerIdentity(&sts.GetCallerIdentityInput{})
+		if err != nil {
+			fmt.Println("Provided AWS credentials are not valid.")
+			return err
 		}
 
 		// Make sure our .aws directory exists
@@ -356,15 +377,9 @@ var doctorTestAWSCredentials = &doctorTest{
 		defer file.Close()
 
 		// Write our new credentials to the file.
-		_, err = file.WriteString("[default]\n")
+		_, err = file.WriteString(fmt.Sprintf("[default]\naws_access_key_id = %s\naws_secret_access_key = %s\n", accessKey, secretKey))
 		if err != nil {
 			return err
-		}
-		for k, v := range newCredentials {
-			_, err = file.WriteString(fmt.Sprintf("%s = %s\n", k, v))
-			if err != nil {
-				return err
-			}
 		}
 		return nil
 	},
@@ -394,4 +409,21 @@ var doctorTestS3Access = &doctorTest{
 		}
 		return true
 	},
+}
+
+// Ask user [y/n] return [true/false]
+func getUserConfirmation(label string) (bool, error) {
+	prompt := promptui.Prompt{
+		Label:     label,
+		IsConfirm: true,
+	}
+	_, err := prompt.Run()
+	if err != nil {
+		// ErrAbort = N, do not return err
+		if err == promptui.ErrAbort {
+			return false, nil
+		}
+		return false, err
+	}
+	return true, nil
 }
