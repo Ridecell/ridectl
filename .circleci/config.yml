@@ -52,8 +52,8 @@ jobs:
     steps:
     - attach_workspace:
         at: workspace
-    - run: cp workspace/bin/ridectl.macos workspace/bin/ridectl && zip -jrm workspace/bin/ridectl_macos.zip workspace/bin/ridectl
-    - run: cp workspace/bin/ridectl.linux workspace/bin/ridectl && zip -jrm workspace/bin/ridectl_linux.zip workspace/bin/ridectl
+    - run: mv workspace/bin/ridectl.macos workspace/bin/ridectl && zip -jrm workspace/bin/ridectl_macos.zip workspace/bin/ridectl
+    - run: mv workspace/bin/ridectl.linux workspace/bin/ridectl && zip -jrm workspace/bin/ridectl_linux.zip workspace/bin/ridectl
     - run: go get github.com/tcnksm/ghr
     - run: ghr -u ${CIRCLE_PROJECT_USERNAME} -r ${CIRCLE_PROJECT_REPONAME} -c ${CIRCLE_SHA1} ${CIRCLE_TAG} workspace/bin/
 
