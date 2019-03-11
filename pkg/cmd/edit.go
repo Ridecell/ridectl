@@ -227,6 +227,7 @@ func editObjects(manifest edit.Manifest, comment string) (edit.Manifest, error) 
 		if err != nil {
 			return nil, errors.Wrap(err, "error making tempfile")
 		}
+		defer tmpfile.Close()
 		defer os.Remove(tmpfile.Name())
 		editorReader.WriteTo(tmpfile)
 		tmpfile.Sync()
@@ -238,9 +239,13 @@ func editObjects(manifest edit.Manifest, comment string) (edit.Manifest, error) 
 		}
 
 		// Re-read the edited file.
-		tmpfile.Seek(0, 0)
+		afterTmpfile, err := os.Open(tmpfile.Name())
+		if err != nil {
+			return nil, errors.Wrapf(err, "error re-opening tempfile %s", tmpfile.Name())
+		}
+		defer afterTmpfile.Close()
 		afterBuf := bytes.Buffer{}
-		_, err = afterBuf.ReadFrom(tmpfile)
+		_, err = afterBuf.ReadFrom(afterTmpfile)
 		if err != nil {
 			return nil, errors.Wrapf(err, "error reading tempfile %s", tmpfile.Name())
 		}
