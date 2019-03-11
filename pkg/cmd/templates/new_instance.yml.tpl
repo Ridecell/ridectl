@@ -6,7 +6,7 @@ metadata:
 spec:
   version: fill_in_version
 ---
-apiversion: secrets.ridecell.io/v1beta1
+apiVersion: secrets.ridecell.io/v1beta1
 kind: EncryptedSecret
 metadata:
   name: {{ .Name }}-{{ .Namespace }}
