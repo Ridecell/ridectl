@@ -90,7 +90,7 @@ var dbShellCmd = &cobra.Command{
 			}
 			fmt.Printf("Connecting to %s/%s\n", pod.Namespace, pod.Name)
 			// Spawn kubectl exec.
-			kubectlArgs := []string{"kubectl", "exec", "-it", "-n", pod.Namespace, pod.Name, "--", "bash", "-l", "-c", "psql -U summon summon"}
+			kubectlArgs := []string{"kubectl", "exec", "-it", "-n", pod.Namespace, pod.Name, "--", "bash", "-c", "psql -U summon summon"}
 			return exec.Exec(kubectlArgs)
 		}
 
