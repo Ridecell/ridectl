@@ -18,13 +18,18 @@ package kubernetes
 
 import (
 	"regexp"
+	"strings"
 
 	"github.com/pkg/errors"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/tools/clientcmd"
+
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
-	"k8s.io/client-go/tools/clientcmd"
 )
 
 func GetClient(kubeconfig string) (*kubernetes.Clientset, error) {
@@ -40,6 +45,20 @@ func GetClient(kubeconfig string) (*kubernetes.Clientset, error) {
 	}
 
 	return clientset, nil
+}
+
+func GetDynamicClient(kubeconfig string) (dynamic.Interface, error) {
+	config, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
+	if err != nil {
+		return nil, err
+	}
+
+	dynamicClient, err := dynamic.NewForConfig(config)
+	if err != nil {
+		return nil, err
+	}
+
+	return dynamicClient, nil
 }
 
 func FindSummonPod(clientset *kubernetes.Clientset, instanceName string, labelSelector string) (*corev1.Pod, error) {
@@ -60,6 +79,43 @@ func FindSummonPod(clientset *kubernetes.Clientset, instanceName string, labelSe
 	}
 	// It doesn't generally matter which we pick, so just use the first.
 	return &pods.Items[0], nil
+}
+
+func GetPod(clientset *kubernetes.Clientset, namespace string, podRegex string, labelSelector string) (*corev1.Pod, error) {
+	listOptions := metav1.ListOptions{
+		LabelSelector: labelSelector,
+	}
+	pods, err := clientset.CoreV1().Pods(namespace).List(listOptions)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, pod := range pods.Items {
+		match := regexp.MustCompile(podRegex).Match([]byte(pod.Name))
+		if match {
+			return &pod, nil
+		}
+	}
+	return nil, errors.New("unable to find pod")
+}
+
+func FindSummonObject(dynamicClient dynamic.Interface, instanceName string) (*unstructured.Unstructured, error) {
+	match := regexp.MustCompile(`^[a-z0-9]+-([a-z]+)$`).FindStringSubmatch(instanceName)
+	if match == nil {
+		return &unstructured.Unstructured{}, errors.Errorf("unable to parse instance name %s", instanceName)
+	}
+
+	env := strings.Split(instanceName, "-")[1]
+
+	summonObjects, err := dynamicClient.Resource(schema.GroupVersionResource{
+		Group:    "summon.ridecell.io",
+		Version:  "v1beta1",
+		Resource: "summonplatforms",
+	}).Namespace(env).Get(instanceName, metav1.GetOptions{}, "")
+	if err != nil {
+		return &unstructured.Unstructured{}, err
+	}
+	return summonObjects, nil
 }
 
 func FindSecret(clientset *kubernetes.Clientset, instanceName string, secretName string) (*corev1.Secret, error) {
