@@ -107,7 +107,7 @@ func lintFile(filename string) error {
 	}
 
 	// Make sure the directory name is valid
-	match = regexp.MustCompile(`^[a-z]+$`).Match([]byte(clusterEnv))
+	match = regexp.MustCompile(`^[a-z]+-[a-z]+|[a-z]+$`).Match([]byte(clusterEnv))
 	if !match {
 		return fmt.Errorf("%s: got invalid directory name %s", filename, clusterEnv)
 	}
