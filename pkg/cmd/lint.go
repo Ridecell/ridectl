@@ -97,6 +97,9 @@ func lintFile(filename string) error {
 	clusterName := strings.Split(file, ".")[0]
 
 	// Our expected name should be filename-foldername
+	if strings.Contains(clusterEnv, "-") {
+		clusterEnv = strings.Split(clusterEnv, "-")[1]
+	}
 	expectedName := fmt.Sprintf("%s-%s", clusterName, clusterEnv)
 
 	// Check our filename against expected values
@@ -138,7 +141,7 @@ func lintFile(filename string) error {
 		if object.Meta.GetName() != expectedName {
 			return fmt.Errorf("%s: %s name %s did not match expected value %s", filename, object.Kind, object.Meta.GetName(), expectedName)
 		}
-		if object.Meta.GetNamespace() != clusterEnv {
+		if object.Meta.GetNamespace() != clusterEnv && object.Meta.GetNamespace() != fmt.Sprintf("summon-%s", clusterEnv) {
 			return fmt.Errorf("%s: %s namespace %s did not match expected value %s", filename, object.Kind, object.Meta.GetNamespace(), clusterEnv)
 		}
 	}

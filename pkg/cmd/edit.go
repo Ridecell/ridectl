@@ -95,7 +95,18 @@ var editCmd = &cobra.Command{
 			if match == nil {
 				return errors.Errorf("unable to parse instance name %s", args[0])
 			}
-			filename = filepath.Join(".", match[2], match[1]+".yml")
+
+			filenames, err := filepath.Glob(fmt.Sprintf(`*%s/%s.yml`, match[2], match[1]))
+			if len(filenames) > 1 {
+				return errors.New("found multiple matches for filepath")
+			}
+			if filenames == nil {
+				return errors.New("Unable to find file")
+			}
+			if err != nil {
+				return err
+			}
+			filename = filenames[0]
 		}
 
 		// Read the file in.
