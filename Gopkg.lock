@@ -10,8 +10,32 @@
   version = "v0.35.1"
 
 [[projects]]
+  digest = "1:3b10c6fd33854dc41de2cf78b7bae105da94c2789b6fa5b9ac9e593ea43484ac"
+  name = "github.com/Masterminds/goutils"
+  packages = ["."]
+  pruneopts = "T"
+  revision = "41ac8693c5c10a92ea1ff5ac3a7f95646f6123b0"
+  version = "v1.1.0"
+
+[[projects]]
+  digest = "1:55388fd080150b9a072912f97b1f5891eb0b50df43401f8b75fb4273d3fec9fc"
+  name = "github.com/Masterminds/semver"
+  packages = ["."]
+  pruneopts = "T"
+  revision = "c7af12943936e8c39859482e61f0574c2fd7fc75"
+  version = "v1.4.2"
+
+[[projects]]
+  digest = "1:80093fe1c34f3fab2e25b4da07427b829b1604c6414727117cebd0a080461de4"
+  name = "github.com/Masterminds/sprig"
+  packages = ["."]
+  pruneopts = "T"
+  revision = "9f8fceff796fb9f4e992cd2bece016be0121ab74"
+  version = "2.19.0"
+
+[[projects]]
   branch = "master"
-  digest = "1:de4dca6302ec3536d46e0404e017a0cae24043d27e097d377ca528137fdb401f"
+  digest = "1:7683157ad836e852d8003de999277b324c60b4f50982cb3f8cb66fb7ab78e027"
   name = "github.com/Ridecell/ridecell-operator"
   packages = [
     "pkg/apis",
@@ -28,7 +52,7 @@
     "pkg/templates",
   ]
   pruneopts = "UT"
-  revision = "e3c418feae1c01a2ed41dcb89a78352e26eeed09"
+  revision = "ba4837b57e93af0fdfe3b009f3cb14dc8c32cc38"
 
 [[projects]]
   digest = "1:6f18f1375352bc9eac3e6b03ad67ddfab971c9a90163bdf377fee5d1fb459faa"
@@ -338,6 +362,14 @@
   pruneopts = "T"
   revision = "a30252cb686a21eb2d0b98132633053ec2f7f1e5"
   version = "v1.0.0"
+
+[[projects]]
+  digest = "1:f9a5e090336881be43cfc1cf468330c1bdd60abdc9dd194e0b1ab69f4b94dd7c"
+  name = "github.com/huandu/xstrings"
+  packages = ["."]
+  pruneopts = "T"
+  revision = "f02667b379e2fb5916c3cda2cf31e0eb885d79f8"
+  version = "v1.2.0"
 
 [[projects]]
   digest = "1:f53ef9250fa86a357d164aa5188ff02762a6b0ee5129671ad231ed6ba986b4c5"
@@ -729,7 +761,11 @@
   branch = "master"
   digest = "1:eb5b910ca0953d88451895190c80fb2bbfb12b91ac73684200be391997eaa132"
   name = "golang.org/x/crypto"
-  packages = ["ssh/terminal"]
+  packages = [
+    "pbkdf2",
+    "scrypt",
+    "ssh/terminal",
+  ]
   pruneopts = "T"
   revision = "ccddf3741a0cfcee0a62d34c18c2c5417a3761af"
 
@@ -1184,11 +1220,13 @@
     "github.com/Ridecell/ridecell-operator/pkg/apis/summon",
     "github.com/Ridecell/ridecell-operator/pkg/apis/summon/v1beta1",
     "github.com/aws/aws-sdk-go/aws",
+    "github.com/aws/aws-sdk-go/aws/credentials",
     "github.com/aws/aws-sdk-go/aws/request",
     "github.com/aws/aws-sdk-go/aws/session",
     "github.com/aws/aws-sdk-go/service/kms",
     "github.com/aws/aws-sdk-go/service/kms/kmsiface",
     "github.com/aws/aws-sdk-go/service/s3",
+    "github.com/aws/aws-sdk-go/service/sts",
     "github.com/fatih/color",
     "github.com/heroku/docker-registry-client/registry",
     "github.com/manifoldco/promptui",
@@ -1203,8 +1241,10 @@
     "gopkg.in/yaml.v2",
     "k8s.io/api/core/v1",
     "k8s.io/apimachinery/pkg/apis/meta/v1",
+    "k8s.io/apimachinery/pkg/apis/meta/v1/unstructured",
     "k8s.io/apimachinery/pkg/runtime",
     "k8s.io/apimachinery/pkg/runtime/schema",
+    "k8s.io/client-go/dynamic",
     "k8s.io/client-go/kubernetes",
     "k8s.io/client-go/kubernetes/scheme",
     "k8s.io/client-go/plugin/pkg/client/auth/gcp",
