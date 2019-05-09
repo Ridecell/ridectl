@@ -70,7 +70,7 @@ var doctorCmd = &cobra.Command{
 			doctorTestCaskroom,
 			doctorTestKubectl,
 			doctorTestKubectlCommand,
-			ddoctorTestKubectlConfig,
+			doctorTestKubectlConfig,
 			doctorTestKubectlContext,
 			doctorTestAWSCredentials,
 			doctorTestS3Access,
@@ -215,7 +215,7 @@ var doctorTestKubectl = &doctorTest{
 	fixCmd:   `brew install kubernetes-cli`,
 }
 
-var ddoctorTestKubectlConfig = &doctorTest{
+var doctorTestKubectlConfig = &doctorTest{
 	subject: `Kubernetes config`,
 	checkFn: func() bool {
 		var clusterBuf strings.Builder
