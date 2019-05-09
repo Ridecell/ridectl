@@ -67,10 +67,8 @@ var doctorCmd = &cobra.Command{
 			doctorTestEditorEnvVar,
 			doctorTestHomebrew,
 			doctorTestCaskroom,
-			doctorTestGcloud,
 			doctorTestKubectl,
 			doctorTestKubectlCommand,
-			doctorTestGoogleCredentials,
 			doctorTestKubectlContext,
 			doctorTestAWSCredentials,
 			doctorTestS3Access,
@@ -208,13 +206,6 @@ var doctorTestCaskroom = &doctorTest{
 	fixCmd: `brew tap caskroom/cask`,
 }
 
-// Check for gcloud CLI.
-var doctorTestGcloud = &doctorTest{
-	subject:  "Google Cloud CLI",
-	checkCmd: "gcloud",
-	fixCmd:   `brew cask install google-cloud-sdk`,
-}
-
 // Check for kubectl.
 var doctorTestKubectl = &doctorTest{
 	subject:  "Kubectl CLI",
@@ -222,26 +213,9 @@ var doctorTestKubectl = &doctorTest{
 	fixCmd:   `brew install kubernetes-cli`,
 }
 
-// Check for gcloud credentials.
-var doctorTestGoogleCredentials = &doctorTest{
-	subject: "Google Cloud CLI credentials",
-	checkFn: func() bool {
-		cmd := exec.Command("gcloud", "config", "get-value", "account")
-		var buf strings.Builder
-		cmd.Stdout = &buf
-		cmd.Stderr = os.Stderr
-		err := cmd.Run()
-		if err != nil {
-			return false
-		}
-		return !strings.HasPrefix(buf.String(), "(unset)")
-	},
-	fixCmd: `gcloud auth login`,
-}
-
-// Check for Kubernetes context for noah-test.
+// Check for Kubernetes context for ridecell-aws-us-sandbox.
 var doctorTestKubectlContext = &doctorTest{
-	subject: `Kubenerets Config "noah-test"`,
+	subject: `Kubenerets Config "ridecell-aws-us-sandbox"`,
 	checkFn: func() bool {
 		cmd := exec.Command("kubectl", "config", "current-context")
 		var buf strings.Builder
@@ -250,7 +224,7 @@ var doctorTestKubectlContext = &doctorTest{
 		if err != nil {
 			return false
 		}
-		return strings.Contains(buf.String(), "noah-test")
+		return strings.Contains(buf.String(), "ridecell-aws-us-sandbox")
 	},
 }
 
