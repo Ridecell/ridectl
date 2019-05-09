@@ -17,6 +17,7 @@ limitations under the License.
 package kubernetes
 
 import (
+	"fmt"
 	"regexp"
 	"strings"
 
@@ -70,7 +71,7 @@ func FindSummonPod(clientset *kubernetes.Clientset, instanceName string, labelSe
 	listOptions := metav1.ListOptions{
 		LabelSelector: labelSelector,
 	}
-	pods, err := clientset.CoreV1().Pods(match[1]).List(listOptions)
+	pods, err := clientset.CoreV1().Pods(fmt.Sprintf("summon-%s", match[1])).List(listOptions)
 	if err != nil {
 		return nil, err
 	}
@@ -85,7 +86,7 @@ func GetPod(clientset *kubernetes.Clientset, namespace string, podRegex string, 
 	listOptions := metav1.ListOptions{
 		LabelSelector: labelSelector,
 	}
-	pods, err := clientset.CoreV1().Pods(namespace).List(listOptions)
+	pods, err := clientset.CoreV1().Pods(fmt.Sprintf("summon-%s", namespace)).List(listOptions)
 	if err != nil {
 		return nil, err
 	}
@@ -106,12 +107,13 @@ func FindSummonObject(dynamicClient dynamic.Interface, instanceName string) (*un
 	}
 
 	env := strings.Split(instanceName, "-")[1]
+	namespace := fmt.Sprintf("summon-%s", env)
 
 	summonObjects, err := dynamicClient.Resource(schema.GroupVersionResource{
 		Group:    "summon.ridecell.io",
 		Version:  "v1beta1",
 		Resource: "summonplatforms",
-	}).Namespace(env).Get(instanceName, metav1.GetOptions{}, "")
+	}).Namespace(namespace).Get(instanceName, metav1.GetOptions{}, "")
 	if err != nil {
 		return &unstructured.Unstructured{}, err
 	}
@@ -124,7 +126,7 @@ func FindSecret(clientset *kubernetes.Clientset, instanceName string, secretName
 		return nil, errors.Errorf("unable to parse instance name %s", instanceName)
 	}
 
-	secret, err := clientset.CoreV1().Secrets(match[1]).Get(secretName, metav1.GetOptions{})
+	secret, err := clientset.CoreV1().Secrets(fmt.Sprintf("summon-%s", match[1])).Get(secretName, metav1.GetOptions{})
 	if err != nil {
 		return nil, err
 	}
