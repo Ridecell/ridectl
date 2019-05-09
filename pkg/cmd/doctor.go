@@ -31,6 +31,7 @@ import (
 	"github.com/fatih/color"
 	"github.com/manifoldco/promptui"
 	"github.com/mattn/go-shellwords"
+	"github.com/pkg/browser"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
@@ -69,6 +70,7 @@ var doctorCmd = &cobra.Command{
 			doctorTestCaskroom,
 			doctorTestKubectl,
 			doctorTestKubectlCommand,
+			doctorTestKubectlConfig,
 			doctorTestKubectlContext,
 			doctorTestAWSCredentials,
 			doctorTestS3Access,
@@ -213,6 +215,86 @@ var doctorTestKubectl = &doctorTest{
 	fixCmd:   `brew install kubernetes-cli`,
 }
 
+var doctorTestKubectlConfig = &doctorTest{
+	subject: `Kubernetes config`,
+	checkFn: func() bool {
+		var clusterBuf strings.Builder
+		clusters := []string{"ridecell-aws-us-sandbox", "ridecell-aws-us-prod", "ridecell-aws-eu-prod", "ridecell-aws-in-prod"}
+		cmd := exec.Command("kubectl", "config", "get-clusters")
+		cmd.Stdout = &clusterBuf
+		err := cmd.Run()
+		if err != nil {
+			return false
+		}
+		clustersOutput := clusterBuf.String()
+
+		var contextBuf strings.Builder
+		cmd = exec.Command("kubectl", "config", "get-contexts")
+		cmd.Stdout = &contextBuf
+		err = cmd.Run()
+		if err != nil {
+			return false
+		}
+		contextsOutput := contextBuf.String()
+		for _, cluster := range clusters {
+			if !strings.Contains(clustersOutput, cluster) {
+				fmt.Printf("Cluster not found: %s\n", cluster)
+				return false
+			}
+			if !strings.Contains(contextsOutput, cluster) {
+				fmt.Printf("Context not found: %s\n", cluster)
+				return false
+			}
+		}
+
+		return true
+
+	},
+	fixFn: func() error {
+		err := browser.OpenURL("https://github.com/settings/tokens/new")
+		if err != nil {
+			return err
+		}
+		fmt.Println("Make a new personal github token with only read:org permissions.")
+		githubTokenPrompt := promptui.Prompt{
+			Label: "Enter github token: ",
+			Validate: func(input string) error {
+				if len(input) < 10 {
+					return errors.New("Token must be at least 10 digits long")
+				}
+				return nil
+			},
+			Mask: 'X',
+		}
+		githubToken, err := githubTokenPrompt.Run()
+		if err != nil {
+			return err
+		}
+
+		commands := []*exec.Cmd{
+			exec.Command(`kubectl`, `config`, `set-credentials`, `github`, fmt.Sprintf(`--token=%s`, githubToken)),
+			exec.Command(`kubectl`, `config`, `set-cluster`, `ridecell-aws-us-sandbox`, `--server=https://api.us-sandbox.kops.ridecell.io`),
+			exec.Command(`kubectl`, `config`, `set-context`, `ridecell-aws-us-sandbox`, `--cluster=ridecell-aws-us-sandbox`, `--user=github`),
+			exec.Command(`kubectl`, `config`, `set-cluster`, `ridecell-aws-us-prod`, `--server=https://api.us-prod.kops.ridecell.io`),
+			exec.Command(`kubectl`, `config`, `set-context`, `ridecell-aws-us-prod`, `--cluster=ridecell-aws-us-prod`, `--user=github`),
+			exec.Command(`kubectl`, `config`, `set-cluster`, `ridecell-aws-eu-prod`, `--server=https://api.eu-prod.kops.ridecell.io`),
+			exec.Command(`kubectl`, `config`, `set-context`, `ridecell-aws-eu-prod`, `--cluster=ridecell-aws-eu-prod`, `--user=github`),
+			exec.Command(`kubectl`, `config`, `set-cluster`, `ridecell-aws-in-prod`, `--server=https://api.in-prod.kops.ridecell.io`),
+			exec.Command(`kubectl`, `config`, `set-context`, `ridecell-aws-in-prod`, `--cluster=ridecell-aws-in-prod`, `--user=github`),
+		}
+
+		for _, cmd := range commands {
+			cmd.Stderr = os.Stderr
+			cmd.Stdout = os.Stdout
+			err = cmd.Run()
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	},
+}
+
 // Check for Kubernetes context for ridecell-aws-us-sandbox.
 var doctorTestKubectlContext = &doctorTest{
 	subject: `Kubenerets Config "ridecell-aws-us-sandbox"`,
@@ -226,6 +308,7 @@ var doctorTestKubectlContext = &doctorTest{
 		}
 		return strings.Contains(buf.String(), "ridecell-aws-us-sandbox")
 	},
+	fixCmd: `kubectl config use-context ridecell-aws-us-sandbox`,
 }
 
 // Check example Kubernetes command.
