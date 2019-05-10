@@ -17,21 +17,29 @@ limitations under the License.
 package kubernetes
 
 import (
+	"context"
 	"fmt"
 	"regexp"
 	"strings"
 
+	"github.com/Ridecell/ridecell-operator/pkg/apis"
 	"github.com/pkg/errors"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/clientcmd"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
+	"sigs.k8s.io/controller-runtime/pkg/client/config"
 
+	summonv1beta1 "github.com/Ridecell/ridecell-operator/pkg/apis/summon/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 )
+
+const namespacePrefix = "summon-"
 
 func GetClient(kubeconfig string) (*kubernetes.Clientset, error) {
 	config, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
@@ -71,7 +79,7 @@ func FindSummonPod(clientset *kubernetes.Clientset, instanceName string, labelSe
 	listOptions := metav1.ListOptions{
 		LabelSelector: labelSelector,
 	}
-	pods, err := clientset.CoreV1().Pods(fmt.Sprintf("summon-%s", match[1])).List(listOptions)
+	pods, err := clientset.CoreV1().Pods(fmt.Sprintf("%s%s", namespacePrefix, match[1])).List(listOptions)
 	if err != nil {
 		return nil, err
 	}
@@ -86,7 +94,7 @@ func GetPod(clientset *kubernetes.Clientset, namespace string, podRegex string, 
 	listOptions := metav1.ListOptions{
 		LabelSelector: labelSelector,
 	}
-	pods, err := clientset.CoreV1().Pods(fmt.Sprintf("summon-%s", namespace)).List(listOptions)
+	pods, err := clientset.CoreV1().Pods(fmt.Sprintf("%s%s", namespacePrefix, namespace)).List(listOptions)
 	if err != nil {
 		return nil, err
 	}
@@ -100,24 +108,42 @@ func GetPod(clientset *kubernetes.Clientset, namespace string, podRegex string, 
 	return nil, errors.New("unable to find pod")
 }
 
-func FindSummonObject(dynamicClient dynamic.Interface, instanceName string) (*unstructured.Unstructured, error) {
+func FindSummonObject(instanceName string) (*summonv1beta1.SummonPlatform, error) {
+
 	match := regexp.MustCompile(`^[a-z0-9]+-([a-z]+)$`).FindStringSubmatch(instanceName)
 	if match == nil {
-		return &unstructured.Unstructured{}, errors.Errorf("unable to parse instance name %s", instanceName)
+		return nil, errors.Errorf("unable to parse instance name %s", instanceName)
 	}
-
 	env := strings.Split(instanceName, "-")[1]
 	namespace := fmt.Sprintf("summon-%s", env)
 
-	summonObjects, err := dynamicClient.Resource(schema.GroupVersionResource{
-		Group:    "summon.ridecell.io",
-		Version:  "v1beta1",
-		Resource: "summonplatforms",
-	}).Namespace(namespace).Get(instanceName, metav1.GetOptions{}, "")
+	err := apis.AddToScheme(scheme.Scheme)
 	if err != nil {
-		return &unstructured.Unstructured{}, err
+		return nil, err
 	}
-	return summonObjects, nil
+
+	cfg, err := config.GetConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	mapper, err := apiutil.NewDiscoveryRESTMapper(cfg)
+	if err != nil {
+		return nil, err
+	}
+
+	client, err := client.New(cfg, client.Options{Scheme: scheme.Scheme, Mapper: mapper})
+	if err != nil {
+		return nil, err
+	}
+
+	instance := &summonv1beta1.SummonPlatform{}
+	err = client.Get(context.Background(), types.NamespacedName{Name: instanceName, Namespace: namespace}, instance)
+	if err != nil {
+		return nil, err
+	}
+
+	return instance, nil
 }
 
 func FindSecret(clientset *kubernetes.Clientset, instanceName string, secretName string) (*corev1.Secret, error) {
@@ -126,7 +152,7 @@ func FindSecret(clientset *kubernetes.Clientset, instanceName string, secretName
 		return nil, errors.Errorf("unable to parse instance name %s", instanceName)
 	}
 
-	secret, err := clientset.CoreV1().Secrets(fmt.Sprintf("summon-%s", match[1])).Get(secretName, metav1.GetOptions{})
+	secret, err := clientset.CoreV1().Secrets(fmt.Sprintf("%s%s", namespacePrefix, match[1])).Get(secretName, metav1.GetOptions{})
 	if err != nil {
 		return nil, err
 	}
