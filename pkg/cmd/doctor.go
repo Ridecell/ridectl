@@ -60,14 +60,11 @@ var doctorCmd = &cobra.Command{
 			return errors.New("Interactive mode is only supported on macOS for now")
 		}
 
-		//tests := []*doctorTest{
-		//	doctorTestKubectlContext,
-		//}
-
 		tests := []*doctorTest{
 			doctorTestEditorEnvVar,
 			doctorTestHomebrew,
 			doctorTestCaskroom,
+			doctorTestPostgresql,
 			doctorTestKubectl,
 			doctorTestKubectlCommand,
 			doctorTestKubectlConfig,
@@ -206,6 +203,12 @@ var doctorTestCaskroom = &doctorTest{
 		return !os.IsNotExist(err)
 	},
 	fixCmd: `brew tap caskroom/cask`,
+}
+
+var doctorTestPostgresql = &doctorTest{
+	subject:  "Postgresql CLI",
+	checkCmd: "psql --version",
+	fixCmd:   `brew install postgresql`,
 }
 
 // Check for kubectl.
