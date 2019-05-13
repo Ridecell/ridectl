@@ -33,6 +33,8 @@ func init() {
 	rootCmd.AddCommand(lintCmd)
 }
 
+var foundNames map[string]string
+
 var lintCmd = &cobra.Command{
 	Use:   "lint [flags] <path>...",
 	Short: "Lints SummonPlatform manifest files",
@@ -40,6 +42,7 @@ var lintCmd = &cobra.Command{
 	Args:  func(_ *cobra.Command, args []string) error { return nil },
 	RunE: func(_ *cobra.Command, args []string) error {
 
+		foundNames = make(map[string]string)
 		var fileNames []string
 		var err error
 		if len(args) > 0 {
@@ -128,10 +131,15 @@ func lintFile(filename string) error {
 		return fmt.Errorf("%s: expected two objects in file got %v", filename, len(manifest))
 	}
 
-	_, ok := manifest[0].Object.(*summonv1beta1.SummonPlatform)
+	summonObj, ok := manifest[0].Object.(*summonv1beta1.SummonPlatform)
 	if !ok {
 		return fmt.Errorf("%s: SummonPlatform is required to be the first object in manifest", filename)
 	}
+	existingFilename, ok := foundNames[summonObj.Name]
+	if ok {
+		return fmt.Errorf("Duplicate SummonPlatform names not supported: %s found in %s and %s", summonObj.Name, existingFilename, filename)
+	}
+	foundNames[summonObj.Name] = filename
 
 	if manifest[1].Kind != "EncryptedSecret" {
 		return fmt.Errorf("%s: EncryptedSecret is required to be the second object in manifest", filename)

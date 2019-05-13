@@ -18,12 +18,14 @@ package cmd
 
 import (
 	"fmt"
-	//"strings"
+	"io/ioutil"
+	"os"
+	"path/filepath"
 
-	//"github.com/pkg/errors"
+	"github.com/Ridecell/ridectl/pkg/exec"
+	"github.com/Ridecell/ridectl/pkg/kubernetes"
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
-	//"github.com/Ridecell/ridectl/pkg/exec"
-	//"github.com/Ridecell/ridectl/pkg/kubernetes"
 )
 
 func init() {
@@ -44,64 +46,48 @@ var dbShellCmd = &cobra.Command{
 		return nil
 	},
 	RunE: func(_ *cobra.Command, args []string) error {
-		fmt.Println("This feature is currently disabled.")
-		return nil
-
 		//namespace := strings.Split(args[0], "-")[1]
-		//
-		//clientset, err := kubernetes.GetClient(kubeconfigFlag)
-		//if err != nil {
-		//	return errors.Wrap(err, "unable to load Kubernetes configuration")
-		//}
-		//
-		//// dynamicClient is needed to retrieve custom resources (for now)
-		//dynamicClient, err := kubernetes.GetDynamicClient(kubeconfigFlag)
-		//if err != nil {
-		//	return err
-		//}
-		//// Retrieve our SummonPlatform object for specified cluster
-		//summonObject, err := kubernetes.FindSummonObject(dynamicClient, args[0])
-		//if err != nil {
-		//	return err
-		//}
-		//
-		//// Check if datbaseSpec exists in our summon object
-		//var exclusiveDatabase bool
-		//var sharedDatabaseName string
-		//// Messy hack to grab just the things we care about
-		//databaseSpec, ok := summonObject.Object["spec"].(map[string]interface{})["database"].(map[string]interface{})
-		//if ok {
-		//	exclusiveDatabase, ok = databaseSpec["exclusiveDatabase"].(bool)
-		//	if !ok {
-		//		exclusiveDatabase = false
-		//	}
-		//	sharedDatabaseName, ok = databaseSpec["sharedDatabaseName"].(string)
-		//	if !ok {
-		//		sharedDatabaseName = namespace
-		//	}
-		//} else {
-		//	exclusiveDatabase = false
-		//	sharedDatabaseName = namespace
-		//}
-		//
-		//if exclusiveDatabase {
-		//	pod, err := kubernetes.FindSummonPod(clientset, args[0], "application=spilo,spilo-role=master")
-		//	if err != nil {
-		//		return errors.Wrap(err, "unable to find pod")
-		//	}
-		//	fmt.Printf("Connecting to %s/%s\n", pod.Namespace, pod.Name)
-		//	// Spawn kubectl exec.
-		//	kubectlArgs := []string{"kubectl", "exec", "-it", "-n", pod.Namespace, pod.Name, "--", "bash", "-c", "psql -U summon summon"}
-		//	return exec.Exec(kubectlArgs)
-		//}
-		//
-		//// If we got here we're using a shared database
-		//pod, err := kubernetes.GetPod(clientset, namespace, fmt.Sprintf(`^%s-database-[0-9]+`, sharedDatabaseName), "application=spilo,spilo-role=master")
-		//if err != nil {
-		//	return errors.Wrap(err, "unable to find pod")
-		//}
-		//dbUsername := strings.Replace(args[0], "-", "_", -1)
-		//kubectlArgs := []string{"kubectl", "exec", "-it", "-n", pod.Namespace, pod.Name, "--", "bash", "-c", fmt.Sprintf("psql -U %s", dbUsername)}
-		//return exec.Exec(kubectlArgs)
+
+		clientset, err := kubernetes.GetClient(kubeconfigFlag)
+		if err != nil {
+			return errors.Wrap(err, "unable to load Kubernetes configuration")
+		}
+
+		// Retrieve our SummonPlatform object for specified cluster
+		summonObject, err := kubernetes.FindSummonObject(args[0])
+		if err != nil {
+			return err
+		}
+
+		postgresConnection := summonObject.Status.PostgresConnection
+
+		secret, err := kubernetes.FindSecret(clientset, args[0], postgresConnection.PasswordSecretRef.Name)
+		if err != nil {
+			return err
+		}
+
+		tempfile, err := ioutil.TempFile("", "")
+		if err != nil {
+			return errors.Wrap(err, "failed to create tempfile")
+		}
+		defer os.Remove(tempfile.Name())
+
+		tempfilepath, err := filepath.Abs(tempfile.Name())
+		if err != nil {
+			return err
+		}
+
+		password := secret.Data[postgresConnection.PasswordSecretRef.Key]
+
+		// hostname:port:database:username:password
+		passwordFileString := fmt.Sprintf("%s:%s:%s:%s:%s", postgresConnection.Host, "*", postgresConnection.Database, postgresConnection.Username, password)
+		_, err = tempfile.Write([]byte(passwordFileString))
+		if err != nil {
+			return errors.Wrap(err, "failed to write password to tempfile")
+		}
+
+		psqlCmd := []string{"psql", "-h", postgresConnection.Host, "-U", postgresConnection.Username, postgresConnection.Database}
+		os.Setenv("PGPASSFILE", tempfilepath)
+		return exec.Exec(psqlCmd)
 	},
 }

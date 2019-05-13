@@ -60,14 +60,11 @@ var doctorCmd = &cobra.Command{
 			return errors.New("Interactive mode is only supported on macOS for now")
 		}
 
-		//tests := []*doctorTest{
-		//	doctorTestKubectlContext,
-		//}
-
 		tests := []*doctorTest{
 			doctorTestEditorEnvVar,
 			doctorTestHomebrew,
 			doctorTestCaskroom,
+			doctorTestPostgresql,
 			doctorTestKubectl,
 			doctorTestKubectlCommand,
 			doctorTestKubectlConfig,
@@ -208,6 +205,12 @@ var doctorTestCaskroom = &doctorTest{
 	fixCmd: `brew tap caskroom/cask`,
 }
 
+var doctorTestPostgresql = &doctorTest{
+	subject:  "Postgresql CLI",
+	checkCmd: "psql",
+	fixCmd:   `brew install postgresql`,
+}
+
 // Check for kubectl.
 var doctorTestKubectl = &doctorTest{
 	subject:  "Kubectl CLI",
@@ -238,11 +241,9 @@ var doctorTestKubectlConfig = &doctorTest{
 		contextsOutput := contextBuf.String()
 		for _, cluster := range clusters {
 			if !strings.Contains(clustersOutput, cluster) {
-				fmt.Printf("Cluster not found: %s\n", cluster)
 				return false
 			}
 			if !strings.Contains(contextsOutput, cluster) {
-				fmt.Printf("Context not found: %s\n", cluster)
 				return false
 			}
 		}
@@ -251,11 +252,14 @@ var doctorTestKubectlConfig = &doctorTest{
 
 	},
 	fixFn: func() error {
-		err := browser.OpenURL("https://github.com/settings/tokens/new")
+		yes, err := getUserConfirmation("This will direct you to github, you will need to create a personal github token with only read:org permissions. Continue")
+		if !yes || err != nil {
+			return err
+		}
+		err = browser.OpenURL("https://github.com/settings/tokens/new")
 		if err != nil {
 			return err
 		}
-		fmt.Println("Make a new personal github token with only read:org permissions.")
 		githubTokenPrompt := promptui.Prompt{
 			Label: "Enter github token: ",
 			Validate: func(input string) error {
