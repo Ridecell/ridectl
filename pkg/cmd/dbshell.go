@@ -20,9 +20,9 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"os/exec"
 	"path/filepath"
 
+	"github.com/Ridecell/ridectl/pkg/exec"
 	"github.com/Ridecell/ridectl/pkg/kubernetes"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -90,16 +90,8 @@ var dbShellCmd = &cobra.Command{
 			return err
 		}
 
-		cmd := exec.Command("psql", "-h", postgresConnection.Host, "-U", postgresConnection.Username, postgresConnection.Database)
-		cmd.Stdin = os.Stdin
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-		cmd.Env = append(os.Environ(), fmt.Sprintf("PGPASSFILE=%s", tempfilepath))
-
-		err = cmd.Run()
-		if err != nil {
-			return err
-		}
-		return nil
+		psqlCmd := []string{"psql", "-h", postgresConnection.Host, "-U", postgresConnection.Username, postgresConnection.Database}
+		os.Setenv("PGPASSFILE", tempfilepath)
+		return exec.Exec(psqlCmd)
 	},
 }
