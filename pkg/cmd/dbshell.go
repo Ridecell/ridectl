@@ -85,10 +85,6 @@ var dbShellCmd = &cobra.Command{
 		if err != nil {
 			return errors.Wrap(err, "failed to write password to tempfile")
 		}
-		err = tempfile.Chmod(0600)
-		if err != nil {
-			return err
-		}
 
 		psqlCmd := []string{"psql", "-h", postgresConnection.Host, "-U", postgresConnection.Username, postgresConnection.Database}
 		os.Setenv("PGPASSFILE", tempfilepath)
