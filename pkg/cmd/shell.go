@@ -65,7 +65,7 @@ var shellCmd = &cobra.Command{
 		fmt.Printf("Remember that this is a container and most changes will have no effect\n")
 
 		// Spawn kubectl exec.
-		kubectlArgs := []string{"kubectl", "exec", fmt.Sprintf("--context=%s", fetchObject.Context.Name), "-it", "-n", pod.Namespace, pod.Name, "--", "bash", "-l"}
+		kubectlArgs := []string{"kubectl", "exec", "--context", fetchObject.Context.Name, "-it", "-n", pod.Namespace, pod.Name, "--", "bash", "-l"}
 		return exec.Exec(kubectlArgs)
 	},
 }

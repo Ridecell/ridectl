@@ -62,7 +62,7 @@ var pyShellCmd = &cobra.Command{
 		fmt.Printf("Connecting to %s/%s\n", pod.Namespace, pod.Name)
 
 		// Spawn kubectl exec.
-		kubectlArgs := []string{"kubectl", "exec", "-it", "-n", pod.Namespace, pod.Name, fmt.Sprintf("--context=%s", fetchObject.Context.Name), "--", "bash", "-l", "-c", "python manage.py shell"}
+		kubectlArgs := []string{"kubectl", "exec", "-it", "-n", pod.Namespace, pod.Name, "--context", fetchObject.Context.Name, "--", "bash", "-l", "-c", "python manage.py shell"}
 		return exec.Exec(kubectlArgs)
 	},
 }
