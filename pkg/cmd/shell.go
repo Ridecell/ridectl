@@ -24,6 +24,8 @@ import (
 
 	"github.com/Ridecell/ridectl/pkg/exec"
 	"github.com/Ridecell/ridectl/pkg/kubernetes"
+
+	corev1 "k8s.io/api/core/v1"
 )
 
 func init() {
@@ -44,20 +46,26 @@ var shellCmd = &cobra.Command{
 		return nil
 	},
 	RunE: func(_ *cobra.Command, args []string) error {
-		clientset, err := kubernetes.GetClient(kubeconfigFlag)
-		if err != nil {
-			return errors.Wrap(err, "unable to load Kubernetes configuration")
-		}
-		pod, err := kubernetes.FindSummonPod(clientset, args[0], fmt.Sprintf("app.kubernetes.io/instance=%s-web", args[0]))
+		namespace := kubernetes.ParseNamespace(args[0])
+		labelSelector := fmt.Sprintf("app.kubernetes.io/instance=%s-web", args[0])
+
+		fetchObject := &kubernetes.KubeObject{}
+		err := kubernetes.GetPod(nil, &labelSelector, namespace, fetchObject)
 		if err != nil {
 			return errors.Wrap(err, "unable to find pod")
 		}
+
+		pod, ok := fetchObject.Top.(*corev1.Pod)
+		if !ok {
+			return errors.New("unable to convert runtime.object to corev1.pod")
+		}
+
 		fmt.Printf("Connecting to %s/%s\n", pod.Namespace, pod.Name)
 		// Warn people that this is a container.
 		fmt.Printf("Remember that this is a container and most changes will have no effect\n")
 
 		// Spawn kubectl exec.
-		kubectlArgs := []string{"kubectl", "exec", "-it", "-n", pod.Namespace, pod.Name, "--", "bash", "-l"}
+		kubectlArgs := []string{"kubectl", "exec", fmt.Sprintf("--context=%s", fetchObject.Context.Name), "-it", "-n", pod.Namespace, pod.Name, "--", "bash", "-l"}
 		return exec.Exec(kubectlArgs)
 	},
 }

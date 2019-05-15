@@ -23,6 +23,8 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/Ridecell/ridectl/pkg/kubernetes"
+
+	corev1 "k8s.io/api/core/v1"
 )
 
 func init() {
@@ -43,13 +45,17 @@ var passwordCmd = &cobra.Command{
 		return nil
 	},
 	RunE: func(_ *cobra.Command, args []string) error {
-		clientset, err := kubernetes.GetClient(kubeconfigFlag)
-		if err != nil {
-			return errors.Wrap(err, "unable to load Kubernetes configuration")
-		}
-		secret, err := kubernetes.FindSecret(clientset, args[0], fmt.Sprintf("%s-dispatcher.django-password", args[0]))
+		secretName := fmt.Sprintf("%s-dispatcher.django-password", args[0])
+		namespace := kubernetes.ParseNamespace(args[0])
+
+		fetchObject := &kubernetes.KubeObject{Top: &corev1.Secret{}}
+		err := kubernetes.GetObject(secretName, namespace, fetchObject)
 		if err != nil {
 			return errors.Wrap(err, "unable to find secret")
+		}
+		secret, ok := fetchObject.Top.(*corev1.Secret)
+		if !ok {
+			return errors.New("unable to convert to secret object")
 		}
 
 		fmt.Printf("Password for %s: %s\n", args[0], string(secret.Data["password"]))

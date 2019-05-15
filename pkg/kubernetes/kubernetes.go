@@ -24,107 +24,212 @@ import (
 
 	"github.com/Ridecell/ridecell-operator/pkg/apis"
 	"github.com/pkg/errors"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/dynamic"
-	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/client-go/tools/clientcmd/api"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
-	"sigs.k8s.io/controller-runtime/pkg/client/config"
 
-	summonv1beta1 "github.com/Ridecell/ridecell-operator/pkg/apis/summon/v1beta1"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 )
 
 const namespacePrefix = "summon-"
 
-func GetClient(kubeconfig string) (*kubernetes.Clientset, error) {
-	config, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
-	if err != nil {
-		return nil, err
-	}
-
-	// create the clientset
-	clientset, err := kubernetes.NewForConfig(config)
-	if err != nil {
-		return nil, err
-	}
-
-	return clientset, nil
+type KubeObject struct {
+	Top     runtime.Object
+	Client  client.Client
+	Context *kubeContext
 }
 
-func GetDynamicClient(kubeconfig string) (dynamic.Interface, error) {
-	config, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
-	if err != nil {
-		return nil, err
-	}
-
-	dynamicClient, err := dynamic.NewForConfig(config)
-	if err != nil {
-		return nil, err
-	}
-
-	return dynamicClient, nil
+type kubeContext struct {
+	Name    string
+	Context *api.Context
 }
 
-func FindSummonPod(clientset *kubernetes.Clientset, instanceName string, labelSelector string) (*corev1.Pod, error) {
-	match := regexp.MustCompile(`^[a-z0-9]+-([a-z]+)$`).FindStringSubmatch(instanceName)
-	if match == nil {
-		return nil, errors.Errorf("unable to parse instance name %s", instanceName)
-	}
-
-	listOptions := metav1.ListOptions{
-		LabelSelector: labelSelector,
-	}
-	pods, err := clientset.CoreV1().Pods(fmt.Sprintf("%s%s", namespacePrefix, match[1])).List(listOptions)
-	if err != nil {
-		return nil, err
-	}
-	if len(pods.Items) == 0 {
-		return nil, errors.Errorf("no pods found for %s", listOptions.LabelSelector)
-	}
-	// It doesn't generally matter which we pick, so just use the first.
-	return &pods.Items[0], nil
-}
-
-func GetPod(clientset *kubernetes.Clientset, namespace string, podRegex string, labelSelector string) (*corev1.Pod, error) {
-	listOptions := metav1.ListOptions{
-		LabelSelector: labelSelector,
-	}
-	pods, err := clientset.CoreV1().Pods(fmt.Sprintf("%s%s", namespacePrefix, namespace)).List(listOptions)
-	if err != nil {
-		return nil, err
-	}
-
-	for _, pod := range pods.Items {
-		match := regexp.MustCompile(podRegex).Match([]byte(pod.Name))
-		if match {
-			return &pod, nil
-		}
-	}
-	return nil, errors.New("unable to find pod")
-}
-
-func FindSummonObject(instanceName string) (*summonv1beta1.SummonPlatform, error) {
-
-	match := regexp.MustCompile(`^[a-z0-9]+-([a-z]+)$`).FindStringSubmatch(instanceName)
-	if match == nil {
-		return nil, errors.Errorf("unable to parse instance name %s", instanceName)
-	}
-	env := strings.Split(instanceName, "-")[1]
-	namespace := fmt.Sprintf("summon-%s", env)
-
+func init() {
 	err := apis.AddToScheme(scheme.Scheme)
 	if err != nil {
-		return nil, err
+		// Panic cause this should not happen.
+		panic(err)
+	}
+}
+
+func listPodsWithContext(contextObj *kubeContext, listOptions *client.ListOptions, podList chan *KubeObject) {
+	contextClient, err := getClientByContext(contextObj.Context)
+	if err != nil {
+		// User may have an invalid context that causes this to fail. Just return nil and continue.
+		podList <- nil
+		return
 	}
 
-	cfg, err := config.GetConfig()
+	fetchPodList := &corev1.PodList{}
+	err = contextClient.List(context.Background(), listOptions, fetchPodList)
+	if err != nil {
+		podList <- nil
+		return
+	}
+
+	if len(fetchPodList.Items) == 0 {
+		podList <- nil
+		return
+	}
+
+	newKubeObject := &KubeObject{
+		Top:     fetchPodList,
+		Client:  contextClient,
+		Context: contextObj,
+	}
+	podList <- newKubeObject
+}
+
+func GetPod(nameRegex *string, labelSelector *string, namespace string, fetchObject *KubeObject) error {
+	listOptions := &client.ListOptions{
+		Namespace: namespace,
+	}
+
+	if labelSelector != nil {
+		listOptions.SetLabelSelector(*labelSelector)
+	}
+
+	kubeContexts, err := getKubeContexts()
+	if err != nil {
+		return err
+	}
+
+	ch := make(chan *KubeObject, len(kubeContexts))
+	for contextName, contextObj := range kubeContexts {
+		kubeContextObj := &kubeContext{
+			Name:    contextName,
+			Context: contextObj,
+		}
+		go listPodsWithContext(kubeContextObj, listOptions, ch)
+	}
+
+	fails := 0
+	found := false
+	for !found {
+		select {
+		case s := <-ch:
+			if s == nil {
+				fails++
+				if fails >= len(kubeContexts) {
+					return errors.New("unable to locate object")
+				}
+			} else {
+				fetchObject.Top = s.Top
+				fetchObject.Client = s.Client
+				fetchObject.Context = s.Context
+				found = true
+				break
+			}
+		}
+	}
+
+	podList, ok := fetchObject.Top.(*corev1.PodList)
+	if !ok {
+		return errors.New("unable to convert top object to podlist")
+	}
+
+	if nameRegex != nil {
+		for _, pod := range podList.Items {
+			match := regexp.MustCompile(*nameRegex).Match([]byte(pod.Name))
+			if match {
+				fetchObject.Top = &pod
+				return nil
+			}
+		}
+		return errors.New("unable to find pod matching regex")
+	}
+
+	fetchObject.Top = &podList.Items[0]
+	return nil
+}
+
+func GetObject(name string, namespace string, fetchObject *KubeObject) error {
+	kubeContexts, err := getKubeContexts()
+	if err != nil {
+		return err
+	}
+
+	ch := make(chan *KubeObject, len(kubeContexts))
+	for contextName, contextObj := range kubeContexts {
+		kubeContextObj := &kubeContext{
+			Name:    contextName,
+			Context: contextObj,
+		}
+		go getObjectWithContext(fetchObject.Top, name, namespace, kubeContextObj, ch)
+	}
+
+	fails := 0
+	for {
+		select {
+		case s := <-ch:
+			if s == nil {
+				fails++
+				if fails >= len(kubeContexts) {
+					return errors.New("unable to locate object")
+				}
+			} else {
+				fetchObject.Top = s.Top
+				fetchObject.Client = s.Client
+				return nil
+			}
+		}
+	}
+}
+
+func GetObjectWithClient(contextClient client.Client, name string, namespace string, runtimeObj runtime.Object) error {
+	err := contextClient.Get(context.Background(), types.NamespacedName{Name: name, Namespace: namespace}, runtimeObj)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func getObjectWithContext(runtimeObj runtime.Object, name string, namespace string, contextObj *kubeContext, fetchObject chan *KubeObject) {
+
+	contextClient, err := getClientByContext(contextObj.Context)
+	if err != nil {
+		// User may have an invalid context that causes this to fail. Just return nil and continue.
+		fetchObject <- nil
+		return
+	}
+
+	err = contextClient.Get(context.Background(), types.NamespacedName{Name: name, Namespace: namespace}, runtimeObj)
+	if err != nil {
+		fetchObject <- nil
+		return
+	}
+
+	newKubeObject := &KubeObject{
+		Top:     runtimeObj,
+		Client:  contextClient,
+		Context: contextObj,
+	}
+	fetchObject <- newKubeObject
+}
+
+func getKubeContexts() (map[string]*api.Context, error) {
+	config := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
+		clientcmd.NewDefaultClientConfigLoadingRules(),
+		&clientcmd.ConfigOverrides{})
+	rawConfig, err := config.RawConfig()
 	if err != nil {
 		return nil, err
+	}
+	return rawConfig.Contexts, nil
+}
+
+func getClientByContext(kubeContext *api.Context) (client.Client, error) {
+	config := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
+		clientcmd.NewDefaultClientConfigLoadingRules(),
+		&clientcmd.ConfigOverrides{Context: *kubeContext})
+	cfg, err := config.ClientConfig()
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get client with context")
 	}
 
 	mapper, err := apiutil.NewDiscoveryRESTMapper(cfg)
@@ -137,25 +242,11 @@ func FindSummonObject(instanceName string) (*summonv1beta1.SummonPlatform, error
 		return nil, err
 	}
 
-	instance := &summonv1beta1.SummonPlatform{}
-	err = client.Get(context.Background(), types.NamespacedName{Name: instanceName, Namespace: namespace}, instance)
-	if err != nil {
-		return nil, err
-	}
-
-	return instance, nil
+	return client, nil
 }
 
-func FindSecret(clientset *kubernetes.Clientset, instanceName string, secretName string) (*corev1.Secret, error) {
-	match := regexp.MustCompile(`^[a-z0-9]+-([a-z]+)$`).FindStringSubmatch(instanceName)
-	if match == nil {
-		return nil, errors.Errorf("unable to parse instance name %s", instanceName)
-	}
-
-	secret, err := clientset.CoreV1().Secrets(fmt.Sprintf("%s%s", namespacePrefix, match[1])).Get(secretName, metav1.GetOptions{})
-	if err != nil {
-		return nil, err
-	}
-
-	return secret, nil
+func ParseNamespace(instanceName string) string {
+	env := strings.Split(instanceName, "-")[1]
+	namespace := fmt.Sprintf("%s%s", namespacePrefix, env)
+	return namespace
 }

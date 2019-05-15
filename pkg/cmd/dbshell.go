@@ -26,6 +26,9 @@ import (
 	"github.com/Ridecell/ridectl/pkg/kubernetes"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
+
+	summonv1beta1 "github.com/Ridecell/ridecell-operator/pkg/apis/summon/v1beta1"
+	corev1 "k8s.io/api/core/v1"
 )
 
 func init() {
@@ -46,22 +49,22 @@ var dbShellCmd = &cobra.Command{
 		return nil
 	},
 	RunE: func(_ *cobra.Command, args []string) error {
-		//namespace := strings.Split(args[0], "-")[1]
 
-		clientset, err := kubernetes.GetClient(kubeconfigFlag)
-		if err != nil {
-			return errors.Wrap(err, "unable to load Kubernetes configuration")
-		}
-
-		// Retrieve our SummonPlatform object for specified cluster
-		summonObject, err := kubernetes.FindSummonObject(args[0])
+		fetchObject := &kubernetes.KubeObject{Top: &summonv1beta1.SummonPlatform{}}
+		namespace := kubernetes.ParseNamespace(args[0])
+		err := kubernetes.GetObject(args[0], namespace, fetchObject)
 		if err != nil {
 			return err
 		}
 
+		summonObject, ok := fetchObject.Top.(*summonv1beta1.SummonPlatform)
+		if !ok {
+			return errors.New("unable to convert to summonplatform object")
+		}
 		postgresConnection := summonObject.Status.PostgresConnection
 
-		secret, err := kubernetes.FindSecret(clientset, args[0], postgresConnection.PasswordSecretRef.Name)
+		fetchSecret := &corev1.Secret{}
+		err = kubernetes.GetObjectWithClient(fetchObject.Client, postgresConnection.PasswordSecretRef.Name, namespace, fetchSecret)
 		if err != nil {
 			return err
 		}
@@ -77,7 +80,7 @@ var dbShellCmd = &cobra.Command{
 			return err
 		}
 
-		password := secret.Data[postgresConnection.PasswordSecretRef.Key]
+		password := fetchSecret.Data[postgresConnection.PasswordSecretRef.Key]
 
 		// hostname:port:database:username:password
 		passwordFileString := fmt.Sprintf("%s:%s:%s:%s:%s", postgresConnection.Host, "*", postgresConnection.Database, postgresConnection.Username, password)
