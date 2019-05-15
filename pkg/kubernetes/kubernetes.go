@@ -211,6 +211,11 @@ func getClientByContext(kubeconfig string, kubeContext *api.Context) (client.Cli
 		return nil, errors.Wrap(err, "failed to get client with context")
 	}
 
+	// Return error to skip searching non-ridecell hosts
+	if !strings.Contains(cfg.Host, ".kops.ridecell.io") {
+		return nil, errors.New("hostname did not match, ignoring context")
+	}
+
 	mapper, err := apiutil.NewDiscoveryRESTMapper(cfg)
 	if err != nil {
 		return nil, err
