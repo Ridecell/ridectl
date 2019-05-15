@@ -49,7 +49,7 @@ var passwordCmd = &cobra.Command{
 		namespace := kubernetes.ParseNamespace(args[0])
 
 		fetchObject := &kubernetes.KubeObject{Top: &corev1.Secret{}}
-		err := kubernetes.GetObject(secretName, namespace, fetchObject)
+		err := kubernetes.GetObject(kubeconfigFlag, secretName, namespace, fetchObject)
 		if err != nil {
 			return errors.Wrap(err, "unable to find secret")
 		}

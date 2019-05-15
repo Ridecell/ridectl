@@ -57,8 +57,8 @@ func init() {
 	}
 }
 
-func listPodsWithContext(contextObj *kubeContext, listOptions *client.ListOptions, podList chan *KubeObject) {
-	contextClient, err := getClientByContext(contextObj.Context)
+func listPodsWithContext(kubeconfig string, contextObj *kubeContext, listOptions *client.ListOptions, podList chan *KubeObject) {
+	contextClient, err := getClientByContext(kubeconfig, contextObj.Context)
 	if err != nil {
 		// User may have an invalid context that causes this to fail. Just return nil and continue.
 		podList <- nil
@@ -85,7 +85,7 @@ func listPodsWithContext(contextObj *kubeContext, listOptions *client.ListOption
 	podList <- newKubeObject
 }
 
-func GetPod(nameRegex *string, labelSelector *string, namespace string, fetchObject *KubeObject) error {
+func GetPod(kubeconfig string, nameRegex *string, labelSelector *string, namespace string, fetchObject *KubeObject) error {
 	listOptions := &client.ListOptions{
 		Namespace: namespace,
 	}
@@ -105,7 +105,7 @@ func GetPod(nameRegex *string, labelSelector *string, namespace string, fetchObj
 			Name:    contextName,
 			Context: contextObj,
 		}
-		go listPodsWithContext(kubeContextObj, listOptions, ch)
+		go listPodsWithContext(kubeconfig, kubeContextObj, listOptions, ch)
 	}
 
 	tempObject, err := getChannelOutput(len(kubeContexts), ch)
@@ -134,7 +134,7 @@ func GetPod(nameRegex *string, labelSelector *string, namespace string, fetchObj
 	return nil
 }
 
-func GetObject(name string, namespace string, fetchObject *KubeObject) error {
+func GetObject(kubeconfig string, name string, namespace string, fetchObject *KubeObject) error {
 	kubeContexts, err := getKubeContexts()
 	if err != nil {
 		return err
@@ -146,7 +146,7 @@ func GetObject(name string, namespace string, fetchObject *KubeObject) error {
 			Name:    contextName,
 			Context: contextObj,
 		}
-		go getObjectWithContext(fetchObject.Top, name, namespace, kubeContextObj, ch)
+		go getObjectWithContext(kubeconfig, fetchObject.Top, name, namespace, kubeContextObj, ch)
 	}
 
 	tempObject, err := getChannelOutput(len(kubeContexts), ch)
@@ -167,8 +167,8 @@ func GetObjectWithClient(contextClient client.Client, name string, namespace str
 	return nil
 }
 
-func getObjectWithContext(runtimeObj runtime.Object, name string, namespace string, contextObj *kubeContext, fetchObject chan *KubeObject) {
-	contextClient, err := getClientByContext(contextObj.Context)
+func getObjectWithContext(kubeconfig string, runtimeObj runtime.Object, name string, namespace string, contextObj *kubeContext, fetchObject chan *KubeObject) {
+	contextClient, err := getClientByContext(kubeconfig, contextObj.Context)
 	if err != nil {
 		// User may have an invalid context that causes this to fail. Just return nil and continue.
 		fetchObject <- nil
@@ -200,9 +200,11 @@ func getKubeContexts() (map[string]*api.Context, error) {
 	return rawConfig.Contexts, nil
 }
 
-func getClientByContext(kubeContext *api.Context) (client.Client, error) {
+func getClientByContext(kubeconfig string, kubeContext *api.Context) (client.Client, error) {
+	loadingRules := clientcmd.NewDefaultClientConfigLoadingRules()
+	loadingRules.ExplicitPath = kubeconfig
 	config := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
-		clientcmd.NewDefaultClientConfigLoadingRules(),
+		loadingRules,
 		&clientcmd.ConfigOverrides{Context: *kubeContext})
 	cfg, err := config.ClientConfig()
 	if err != nil {

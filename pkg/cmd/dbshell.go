@@ -52,7 +52,7 @@ var dbShellCmd = &cobra.Command{
 
 		fetchObject := &kubernetes.KubeObject{Top: &summonv1beta1.SummonPlatform{}}
 		namespace := kubernetes.ParseNamespace(args[0])
-		err := kubernetes.GetObject(args[0], namespace, fetchObject)
+		err := kubernetes.GetObject(kubeconfigFlag, args[0], namespace, fetchObject)
 		if err != nil {
 			return err
 		}

@@ -50,7 +50,7 @@ var shellCmd = &cobra.Command{
 		labelSelector := fmt.Sprintf("app.kubernetes.io/instance=%s-web", args[0])
 
 		fetchObject := &kubernetes.KubeObject{}
-		err := kubernetes.GetPod(nil, &labelSelector, namespace, fetchObject)
+		err := kubernetes.GetPod(kubeconfigFlag, nil, &labelSelector, namespace, fetchObject)
 		if err != nil {
 			return errors.Wrap(err, "unable to find pod")
 		}
