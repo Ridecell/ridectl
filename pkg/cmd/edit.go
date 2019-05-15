@@ -32,6 +32,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/kms"
+	"github.com/manifoldco/promptui"
 	"github.com/pkg/errors"
 	"github.com/shurcooL/httpfs/vfsutil"
 	"github.com/spf13/cobra"
@@ -100,13 +101,25 @@ var editCmd = &cobra.Command{
 			if len(filenames) > 1 {
 				return errors.New("found multiple matches for filepath")
 			}
-			if filenames == nil {
-				return errors.New("Unable to find file")
-			}
 			if err != nil {
 				return err
 			}
-			filename = filenames[0]
+
+			if filenames != nil {
+				filename = filenames[0]
+			} else {
+				// Prompt user for region when creating new file
+				regionPrompt := promptui.Prompt{
+					Label: "Enter region (eu, us, in, etc.): ",
+				}
+				fileRegion, err := regionPrompt.Run()
+				if err != nil {
+					return err
+				}
+
+				filename = fmt.Sprintf("%s-%s/%s.yml", fileRegion, match[2], match[1])
+
+			}
 		}
 
 		// Read the file in.

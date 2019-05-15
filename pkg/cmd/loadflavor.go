@@ -56,14 +56,20 @@ var loadflavorCmd = &cobra.Command{
 		return nil
 	},
 	RunE: func(_ *cobra.Command, args []string) error {
+		namespace := kubernetes.ParseNamespace(args[0])
+		labelSelector := fmt.Sprintf("app.kubernetes.io/instance=%s-web", args[0])
 
-		clientset, err := kubernetes.GetClient(kubeconfigFlag)
-		if err != nil {
-			return errors.Wrap(err, "unable to load Kubernetes configuration")
-		}
-		pod, err := kubernetes.FindSummonPod(clientset, args[0], fmt.Sprintf("app.kubernetes.io/instance=%s-web", args[0]))
+		fetchObject := &kubernetes.KubeObject{}
+		err := kubernetes.GetPod(kubeconfigFlag, nil, &labelSelector, namespace, fetchObject)
 		if err != nil {
 			return errors.Wrap(err, "unable to find pod")
+		}
+
+		contextName := fetchObject.Context.Name
+
+		pod, ok := fetchObject.Top.(*corev1.Pod)
+		if !ok {
+			return errors.New("unable to convert runtime.object to corev1.pod")
 		}
 
 		// Need to check if our input is a file or not.
@@ -79,11 +85,11 @@ var loadflavorCmd = &cobra.Command{
 			if err != nil {
 				return err
 			}
-			cmd = genCommand(flavorString, pod)
+			cmd = genCommand(flavorString, contextName, pod)
 		} else {
 			// Our arg is a file, open it and stream it through stdin into the container
 			flavorString := "/dev/stdin"
-			cmd = genCommand(flavorString, pod)
+			cmd = genCommand(flavorString, contextName, pod)
 			cmd.Stdin = inFile
 			defer inFile.Close()
 		}
@@ -121,9 +127,9 @@ func getPresignedURL(flavorName string) (string, error) {
 	return urlStr, nil
 }
 
-func genCommand(input string, pod *corev1.Pod) *exec.Cmd {
+func genCommand(input string, contextName string, pod *corev1.Pod) *exec.Cmd {
 
-	cmdArgs := []string{"exec", "-i", "-n", pod.Namespace, pod.Name, "--", "python", "manage.py", "loadflavor", input}
+	cmdArgs := []string{"exec", "-i", "-n", pod.Namespace, pod.Name, "--context=%s", contextName, "--", "python", "manage.py", "loadflavor", input}
 	if eraseDatabaseFlag {
 		cmdArgs = append(cmdArgs, "--erase-database")
 	}
