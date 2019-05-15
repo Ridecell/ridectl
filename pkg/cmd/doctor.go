@@ -65,6 +65,8 @@ var doctorCmd = &cobra.Command{
 			doctorTestHomebrew,
 			doctorTestCaskroom,
 			doctorTestPostgresql,
+			doctorTestGcloud,
+			doctorTestGoogleCredentials,
 			doctorTestKubectl,
 			doctorTestKubectlCommand,
 			doctorTestKubectlConfig,
@@ -211,11 +213,35 @@ var doctorTestPostgresql = &doctorTest{
 	fixCmd:   `brew install postgresql`,
 }
 
+// Check for gcloud CLI.
+var doctorTestGcloud = &doctorTest{
+	subject:  "Google Cloud CLI",
+	checkCmd: "gcloud",
+	fixCmd:   `brew cask install google-cloud-sdk`,
+}
+
 // Check for kubectl.
 var doctorTestKubectl = &doctorTest{
 	subject:  "Kubectl CLI",
 	checkCmd: "kubectl",
 	fixCmd:   `brew install kubernetes-cli`,
+}
+
+// Check for gcloud credentials.
+var doctorTestGoogleCredentials = &doctorTest{
+	subject: "Google Cloud CLI credentials",
+	checkFn: func() bool {
+		cmd := exec.Command("gcloud", "config", "get-value", "account")
+		var buf strings.Builder
+		cmd.Stdout = &buf
+		cmd.Stderr = os.Stderr
+		err := cmd.Run()
+		if err != nil {
+			return false
+		}
+		return !strings.HasPrefix(buf.String(), "(unset)")
+	},
+	fixCmd: `gcloud auth login`,
 }
 
 var doctorTestKubectlConfig = &doctorTest{
