@@ -70,7 +70,6 @@ var doctorCmd = &cobra.Command{
 			doctorTestKubectl,
 			doctorTestKubectlCommand,
 			doctorTestKubectlConfig,
-			doctorTestKubectlContext,
 			doctorTestAWSCredentials,
 			doctorTestS3Access,
 		}
@@ -323,22 +322,6 @@ var doctorTestKubectlConfig = &doctorTest{
 		}
 		return nil
 	},
-}
-
-// Check for Kubernetes context for ridecell-aws-us-sandbox.
-var doctorTestKubectlContext = &doctorTest{
-	subject: `Kubenerets Config "ridecell-aws-us-sandbox"`,
-	checkFn: func() bool {
-		cmd := exec.Command("kubectl", "config", "current-context")
-		var buf strings.Builder
-		cmd.Stdout = &buf
-		err := cmd.Run()
-		if err != nil {
-			return false
-		}
-		return strings.Contains(buf.String(), "ridecell-aws-us-sandbox")
-	},
-	fixCmd: `kubectl config use-context ridecell-aws-us-sandbox`,
 }
 
 // Check example Kubernetes command.
