@@ -108,27 +108,14 @@ func GetPod(nameRegex *string, labelSelector *string, namespace string, fetchObj
 		go listPodsWithContext(kubeContextObj, listOptions, ch)
 	}
 
-	fails := 0
-	found := false
-	for !found {
-		select {
-		case s := <-ch:
-			if s == nil {
-				fails++
-				if fails >= len(kubeContexts) {
-					return errors.New("unable to locate object")
-				}
-			} else {
-				fetchObject.Top = s.Top
-				fetchObject.Client = s.Client
-				fetchObject.Context = s.Context
-				found = true
-				break
-			}
-		}
+	tempObject, err := getChannelOutput(len(kubeContexts), ch)
+	if err != nil {
+		return err
 	}
+	fetchObject.Client = tempObject.Client
+	fetchObject.Context = tempObject.Context
 
-	podList, ok := fetchObject.Top.(*corev1.PodList)
+	podList, ok := tempObject.Top.(*corev1.PodList)
 	if !ok {
 		return errors.New("unable to convert top object to podlist")
 	}
@@ -143,7 +130,6 @@ func GetPod(nameRegex *string, labelSelector *string, namespace string, fetchObj
 		}
 		return errors.New("unable to find pod matching regex")
 	}
-
 	fetchObject.Top = &podList.Items[0]
 	return nil
 }
@@ -163,22 +149,14 @@ func GetObject(name string, namespace string, fetchObject *KubeObject) error {
 		go getObjectWithContext(fetchObject.Top, name, namespace, kubeContextObj, ch)
 	}
 
-	fails := 0
-	for {
-		select {
-		case s := <-ch:
-			if s == nil {
-				fails++
-				if fails >= len(kubeContexts) {
-					return errors.New("unable to locate object")
-				}
-			} else {
-				fetchObject.Top = s.Top
-				fetchObject.Client = s.Client
-				return nil
-			}
-		}
+	tempObject, err := getChannelOutput(len(kubeContexts), ch)
+	if err != nil {
+		return err
 	}
+	fetchObject.Top = tempObject.Top
+	fetchObject.Client = tempObject.Client
+	fetchObject.Context = tempObject.Context
+	return nil
 }
 
 func GetObjectWithClient(contextClient client.Client, name string, namespace string, runtimeObj runtime.Object) error {
@@ -190,7 +168,6 @@ func GetObjectWithClient(contextClient client.Client, name string, namespace str
 }
 
 func getObjectWithContext(runtimeObj runtime.Object, name string, namespace string, contextObj *kubeContext, fetchObject chan *KubeObject) {
-
 	contextClient, err := getClientByContext(contextObj.Context)
 	if err != nil {
 		// User may have an invalid context that causes this to fail. Just return nil and continue.
@@ -249,4 +226,21 @@ func ParseNamespace(instanceName string) string {
 	env := strings.Split(instanceName, "-")[1]
 	namespace := fmt.Sprintf("%s%s", namespacePrefix, env)
 	return namespace
+}
+
+func getChannelOutput(maxFails int, ch chan *KubeObject) (*KubeObject, error) {
+	fails := 0
+	for {
+		select {
+		case s := <-ch:
+			if s == nil {
+				fails++
+				if fails >= maxFails {
+					return nil, errors.New("unable to locate object")
+				}
+			} else {
+				return s, nil
+			}
+		}
+	}
 }
