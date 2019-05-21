@@ -322,7 +322,7 @@ func createDefaultData(instance string) (io.Reader, error) {
 		Environment string
 	}{
 		Name:        match[1],
-		Namespace:   fmt.Sprintf("%s%s", kubernetes.NamespacePrefix, match[2]),
+		Namespace:   kubernetes.ParseNamespace(instance),
 		Environment: match[2],
 	})
 	if err != nil {
