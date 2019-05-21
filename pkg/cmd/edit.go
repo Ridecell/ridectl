@@ -317,13 +317,11 @@ func createDefaultData(instance string) (io.Reader, error) {
 	}
 	buffer := &bytes.Buffer{}
 	err = template.Execute(buffer, struct {
-		Name        string
-		Namespace   string
-		Environment string
+		Name      string
+		Namespace string
 	}{
-		Name:        match[1],
-		Namespace:   kubernetes.ParseNamespace(instance),
-		Environment: match[2],
+		Name:      instance,
+		Namespace: kubernetes.ParseNamespace(instance),
 	})
 	if err != nil {
 		return nil, errors.Wrap(err, "error rendering new instance template")
