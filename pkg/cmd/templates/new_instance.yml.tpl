@@ -1,7 +1,7 @@
 apiVersion: summon.ridecell.io/v1beta1
 kind: SummonPlatform
 metadata:
-  name: {{ .Name }}-{{ .Namespace }}
+  name: {{ .Name }}-{{ .Environment }}
   namespace: {{ .Namespace }}
 spec:
   version: fill_in_version
@@ -9,6 +9,6 @@ spec:
 apiVersion: secrets.ridecell.io/v1beta1
 kind: EncryptedSecret
 metadata:
-  name: {{ .Name }}-{{ .Namespace }}
+  name: {{ .Name }}-{{ .Environment }}
   namespace: {{ .Namespace }}
 data: {}

@@ -36,7 +36,7 @@ import (
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 )
 
-const namespacePrefix = "summon-"
+const NamespacePrefix = "summon-"
 
 type KubeObject struct {
 	Top     runtime.Object
@@ -231,7 +231,7 @@ func getClientByContext(kubeconfig string, kubeContext *api.Context) (client.Cli
 
 func ParseNamespace(instanceName string) string {
 	env := strings.Split(instanceName, "-")[1]
-	namespace := fmt.Sprintf("%s%s", namespacePrefix, env)
+	namespace := fmt.Sprintf("%s%s", NamespacePrefix, env)
 	return namespace
 }
 
