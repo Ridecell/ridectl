@@ -65,8 +65,6 @@ var loadflavorCmd = &cobra.Command{
 			return errors.Wrap(err, "unable to find pod")
 		}
 
-		contextName := fetchObject.Context.Name
-
 		pod, ok := fetchObject.Top.(*corev1.Pod)
 		if !ok {
 			return errors.New("unable to convert runtime.object to corev1.pod")
@@ -85,11 +83,11 @@ var loadflavorCmd = &cobra.Command{
 			if err != nil {
 				return err
 			}
-			cmd = genCommand(flavorString, contextName, pod)
+			cmd = genCommand(flavorString, pod)
 		} else {
 			// Our arg is a file, open it and stream it through stdin into the container
 			flavorString := "/dev/stdin"
-			cmd = genCommand(flavorString, contextName, pod)
+			cmd = genCommand(flavorString, pod)
 			cmd.Stdin = inFile
 			defer inFile.Close()
 		}
@@ -127,9 +125,9 @@ func getPresignedURL(flavorName string) (string, error) {
 	return urlStr, nil
 }
 
-func genCommand(input string, contextName string, pod *corev1.Pod) *exec.Cmd {
+func genCommand(input string, pod *corev1.Pod) *exec.Cmd {
 
-	cmdArgs := []string{"exec", "-i", "-n", pod.Namespace, pod.Name, "--context=%s", contextName, "--", "python", "manage.py", "loadflavor", input}
+	cmdArgs := []string{"exec", "-i", "-n", pod.Namespace, pod.Name, "--", "python", "manage.py", "loadflavor", input}
 	if eraseDatabaseFlag {
 		cmdArgs = append(cmdArgs, "--erase-database")
 	}
