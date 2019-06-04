@@ -29,6 +29,7 @@ import (
 	"strings"
 
 	"github.com/Ridecell/ridectl/pkg/cmd/edit"
+	"github.com/Ridecell/ridectl/pkg/kubernetes"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/kms"
@@ -318,7 +319,10 @@ func createDefaultData(instance string) (io.Reader, error) {
 	err = template.Execute(buffer, struct {
 		Name      string
 		Namespace string
-	}{Name: match[1], Namespace: match[2]})
+	}{
+		Name:      instance,
+		Namespace: kubernetes.ParseNamespace(instance),
+	})
 	if err != nil {
 		return nil, errors.Wrap(err, "error rendering new instance template")
 	}
