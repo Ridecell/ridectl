@@ -6,7 +6,8 @@ metadata:
 spec:
   version: fill_in_version
   {{- if .SlackChannel }}
-  slackChannel: "{{ .SlackChannel }}"
+  notifications:
+    slackChannel: "{{ .SlackChannel }}"
   {{- end }}
 ---
 apiVersion: secrets.ridecell.io/v1beta1
