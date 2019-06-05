@@ -5,6 +5,9 @@ metadata:
   namespace: {{ .Namespace }}
 spec:
   version: fill_in_version
+  {{- if .SlackChannel }}
+  slackChannel: "{{ .SlackChannel }}"
+  {{- end }}
 ---
 apiVersion: secrets.ridecell.io/v1beta1
 kind: EncryptedSecret

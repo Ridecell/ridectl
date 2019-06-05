@@ -111,7 +111,7 @@ var editCmd = &cobra.Command{
 			} else {
 				// Prompt user for region when creating new file
 				regionPrompt := promptui.Prompt{
-					Label: "Enter region (eu, us, in, etc.): ",
+					Label: "Enter region (eu, us, in, etc.)",
 				}
 				fileRegion, err := regionPrompt.Run()
 				if err != nil {
@@ -315,13 +315,31 @@ func createDefaultData(instance string) (io.Reader, error) {
 	if match == nil {
 		return nil, errors.Errorf("unable to parse instance name %s", instance)
 	}
+
+	// Prompt user for a slack channel to alert to
+	slackChannelPrompt := promptui.Prompt{
+		Label: "Enter a slack channel name (#channel-name, blank to skip)",
+		Validate: func(input string) error {
+			if !strings.HasPrefix(input, "#") && input != "" {
+				return errors.New(`Channel name must have prefix "#"`)
+			}
+			return nil
+		},
+	}
+	slackChannelName, err := slackChannelPrompt.Run()
+	if err != nil {
+		return nil, err
+	}
+
 	buffer := &bytes.Buffer{}
 	err = template.Execute(buffer, struct {
-		Name      string
-		Namespace string
+		Name         string
+		Namespace    string
+		SlackChannel string
 	}{
-		Name:      instance,
-		Namespace: kubernetes.ParseNamespace(instance),
+		Name:         instance,
+		Namespace:    kubernetes.ParseNamespace(instance),
+		SlackChannel: slackChannelName,
 	})
 	if err != nil {
 		return nil, errors.Wrap(err, "error rendering new instance template")
