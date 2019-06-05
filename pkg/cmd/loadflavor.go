@@ -129,7 +129,7 @@ func getPresignedURL(flavorName string) (string, error) {
 
 func genCommand(input string, contextName string, pod *corev1.Pod) *exec.Cmd {
 
-	cmdArgs := []string{"exec", "-i", "-n", pod.Namespace, pod.Name, "--context=%s", contextName, "--", "python", "manage.py", "loadflavor", input}
+	cmdArgs := []string{"exec", "-i", "-n", pod.Namespace, pod.Name, "--context", contextName, "--", "python", "manage.py", "loadflavor", input}
 	if eraseDatabaseFlag {
 		cmdArgs = append(cmdArgs, "--erase-database")
 	}
