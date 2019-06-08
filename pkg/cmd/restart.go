@@ -17,26 +17,22 @@ limitations under the License.
 package cmd
 
 import (
+	"bytes"
 	"fmt"
-	"io/ioutil"
-	"os"
-	"path/filepath"
-	"strings"
-	"text/template"
+	"html/template"
 	"time"
 
-	"github.com/pkg/errors"
-	"github.com/spf13/cobra"
-
-	//"github.com/Ridecell/ridectl/pkg/exec"
+	"github.com/Ridecell/ridectl/pkg/exec"
 	"github.com/Ridecell/ridectl/pkg/kubernetes"
+	"github.com/pkg/errors"
+	"github.com/shurcooL/httpfs/vfsutil"
+	"github.com/spf13/cobra"
 
 	appsv1 "k8s.io/api/apps/v1"
 )
 
 func init() {
 	rootCmd.AddCommand(rollingRestartCmd)
-	fmt.Printf("Init ran\n")
 }
 
 var rollingRestartCmd = &cobra.Command{
@@ -72,40 +68,29 @@ var rollingRestartCmd = &cobra.Command{
 			return errors.New("unable to convert runtime.object to corev1.pod")
 		}
 
-		tempfile, err := ioutil.TempFile("", "")
+		templateData, err := vfsutil.ReadFile(Templates, "rolling_restart.json.tpl")
 		if err != nil {
-			return errors.Wrap(err, "failed to create tempfile")
+			return errors.Wrap(err, "error reading rolling_restart.json.tpl")
 		}
-		defer os.Remove(tempfile.Name())
-
-		restartTemplate, err := template.ParseFiles("templates/rolling-restart.yml.tpl")
+		restartTemplate, err := template.New("rolling_restart.json").Parse(string(templateData))
 		if err != nil {
 			return errors.Wrap(err, "failed to parse restart template")
 		}
 
-		err = restartTemplate.Execute(tempfile, struct {
+		buffer := &bytes.Buffer{}
+		err = restartTemplate.Execute(buffer, struct {
 			Timestamp string
 		}{
-			Timestamp: time.Now().Format(time.RFC3339),
+			Timestamp: time.Now().UTC().Format(time.UnixDate),
 		})
 		if err != nil {
 			return errors.Wrap(err, "unable to execute template")
 		}
 
-		tempfilepath, err := filepath.Abs(tempfile.Name())
-		if err != nil {
-			return err
-		}
-
 		fmt.Printf("Initiating rolling restart of pods belonging to %s/%s\n", deployment.Namespace, deployment.Name)
 
 		// Spawn kubectl exec.
-		kubectlArgs := []string{"kubectl", "patch", "deployment", "-n", deployment.Namespace, deployment.Name, "--context", fetchObject.Context.Name, "-p", fmt.Sprintf(`"$(cat %s)"`, tempfilepath)}
-		fmt.Println(strings.Join(kubectlArgs, " "))
-		//err = exec.Exec(kubectlArgs)
-		//if err != nil {
-		//	return errors.Wrap(err, "Failed to patch deployment")
-		//}
-		return nil
+		kubectlArgs := []string{"kubectl", "patch", "deployment", "-n", deployment.Namespace, deployment.Name, "--context", fetchObject.Context.Name, "-p", buffer.String()}
+		return exec.Exec(kubectlArgs)
 	},
 }
