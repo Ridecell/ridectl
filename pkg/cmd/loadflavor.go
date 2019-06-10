@@ -17,10 +17,10 @@ limitations under the License.
 package cmd
 
 import (
+	"compress/bzip2"
 	"fmt"
 	"os"
 	"os/exec"
-	"time"
 
 	"github.com/Ridecell/ridectl/pkg/kubernetes"
 	"github.com/aws/aws-sdk-go/aws"
@@ -72,26 +72,37 @@ var loadflavorCmd = &cobra.Command{
 			return errors.New("unable to convert runtime.object to corev1.pod")
 		}
 
+		cmdArgs := []string{"exec", "-i", "-n", pod.Namespace, pod.Name, "--context", contextName, "--", "python", "manage.py", "loadflavor", "/dev/stdin"}
+		if eraseDatabaseFlag {
+			cmdArgs = append(cmdArgs, "--erase-database")
+		}
+		cmd := exec.Command("kubectl", cmdArgs...)
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+
 		// Need to check if our input is a file or not.
 		inFile, err := os.Open(args[1])
 		if err != nil && !os.IsNotExist(err) {
 			return err
 		}
+		cmd.Stdin = inFile
 
-		var cmd *exec.Cmd
 		if os.IsNotExist(err) {
-			// Our arg is not a file, assuming it's for s3
-			flavorString, err := getPresignedURL(args[1])
+			// Our arg is not a file, assume it's an s3 key
+			sess, err := session.NewSession()
 			if err != nil {
 				return err
 			}
-			cmd = genCommand(flavorString, contextName, pod)
-		} else {
-			// Our arg is a file, open it and stream it through stdin into the container
-			flavorString := "/dev/stdin"
-			cmd = genCommand(flavorString, contextName, pod)
-			cmd.Stdin = inFile
-			defer inFile.Close()
+			s3svc := s3.New(sess, aws.NewConfig().WithRegion("us-west-2"))
+			object, err := s3svc.GetObject(&s3.GetObjectInput{
+				Bucket: aws.String("ridecell-flavors"),
+				Key:    aws.String(args[1]),
+			})
+			if err != nil {
+				return err
+			}
+			// Decompress bzip2
+			cmd.Stdin = bzip2.NewReader(object.Body)
 		}
 
 		err = cmd.Run()
@@ -101,40 +112,4 @@ var loadflavorCmd = &cobra.Command{
 
 		return nil
 	},
-}
-
-func getPresignedURL(flavorName string) (string, error) {
-	sess, err := session.NewSessionWithOptions(session.Options{
-		Config: aws.Config{
-			Region: aws.String("us-west-2"),
-		},
-		SharedConfigState: session.SharedConfigEnable,
-	})
-	if err != nil {
-		return "", err
-	}
-	svc := s3.New(sess)
-	req, _ := svc.GetObjectRequest(&s3.GetObjectInput{
-		Bucket: aws.String("ridecell-flavors"),
-		Key:    aws.String(fmt.Sprintf("%s.json.bz2", flavorName)),
-	})
-
-	urlStr, err := req.Presign(15 * time.Minute)
-	if err != nil {
-		return "", errors.Wrapf(err, "failed to presign s3 url for object key %s.json.bz2", flavorName)
-	}
-
-	return urlStr, nil
-}
-
-func genCommand(input string, contextName string, pod *corev1.Pod) *exec.Cmd {
-
-	cmdArgs := []string{"exec", "-i", "-n", pod.Namespace, pod.Name, "--context", contextName, "--", "python", "manage.py", "loadflavor", input}
-	if eraseDatabaseFlag {
-		cmdArgs = append(cmdArgs, "--erase-database")
-	}
-	cmd := exec.Command("kubectl", cmdArgs...)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	return cmd
 }
