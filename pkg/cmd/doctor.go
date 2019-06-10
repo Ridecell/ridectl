@@ -205,24 +205,6 @@ var doctorTestLatestVersion = &doctorTest{
 		}
 		return true
 	},
-	fixFn: func() error {
-		fixCommands := []*exec.Cmd{
-			exec.Command("brew", "uninstall", "ridectl"),
-			exec.Command("brew", "install", "ridecell/ridecell/ridectl"),
-		}
-
-		for _, command := range fixCommands {
-			command.Stdin = os.Stdin
-			command.Stderr = os.Stderr
-			command.Stdout = os.Stdout
-			err := command.Run()
-			if err != nil {
-				return err
-			}
-		}
-
-		return nil
-	},
 }
 
 // Check if EDITOR environment variable is set for the edit command
