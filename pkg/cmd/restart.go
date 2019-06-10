@@ -81,7 +81,7 @@ var rollingRestartCmd = &cobra.Command{
 		err = restartTemplate.Execute(buffer, struct {
 			Timestamp string
 		}{
-			Timestamp: time.Now().UTC().Format(time.UnixDate),
+			Timestamp: time.Now().UTC().Format(time.RFC3339),
 		})
 		if err != nil {
 			return errors.Wrap(err, "unable to execute template")
