@@ -40,7 +40,6 @@ var rootCmd = &cobra.Command{
 		if versionFlag {
 			fmt.Printf("ridectl version %s\n", version)
 		}
-		os.Exit(0)
 		return nil
 	},
 }
