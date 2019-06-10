@@ -21,15 +21,15 @@ test: generate fmt vet
 
 # Build command binary
 build: generate fmt vet
-	go build -o bin/ridectl github.com/Ridecell/ridectl/cmd/ridectl
+	go build -o bin/ridectl -ldflags "-X github.com/Ridecell/ridectl/pkg/cmd.version=$(shell git describe --tags)" github.com/Ridecell/ridectl/cmd/ridectl
 
 # Build command binary, for macOS
 build_macos: generate fmt vet
-	GOOS=darwin GOARCH=amd64 go build -o bin/ridectl.macos -tags release github.com/Ridecell/ridectl/cmd/ridectl
+	GOOS=darwin GOARCH=amd64 go build -o bin/ridectl.macos -ldflags "-X github.com/Ridecell/ridectl/pkg/cmd.version=$(shell git describe --tags)" -tags release github.com/Ridecell/ridectl/cmd/ridectl
 
 # Build command binary, for Linux
 build_linux: generate fmt vet
-	GOOS=linux GOARCH=amd64 go build -o bin/ridectl.linux -tags release github.com/Ridecell/ridectl/cmd/ridectl
+	GOOS=linux GOARCH=amd64 go build -o bin/ridectl.linux -ldflags "-X github.com/Ridecell/ridectl/pkg/cmd.version=$(shell git describe --tags)" -tags release github.com/Ridecell/ridectl/cmd/ridectl
 
 # Run go fmt against code
 fmt:
