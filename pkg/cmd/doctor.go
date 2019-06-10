@@ -18,8 +18,10 @@ package cmd
 
 import (
 	"fmt"
+	"net/http"
 	"os"
 	"os/exec"
+	"regexp"
 	"runtime"
 	"strings"
 
@@ -61,6 +63,7 @@ var doctorCmd = &cobra.Command{
 		}
 
 		tests := []*doctorTest{
+			doctorTestLatestVersion,
 			doctorTestEditorEnvVar,
 			doctorTestHomebrew,
 			doctorTestCaskroom,
@@ -178,6 +181,48 @@ func (t *doctorTest) tryFix() error {
 	cmd.Stderr = os.Stderr
 	return cmd.Run()
 
+}
+
+var doctorTestLatestVersion = &doctorTest{
+	subject: "Latest version of ridectl",
+	checkFn: func() bool {
+		client := &http.Client{}
+
+		resp, err := client.Get("https://github.com/Ridecell/ridectl/releases/latest")
+		if err != nil {
+			panic(err)
+		}
+
+		slicedURL := strings.Split(resp.Request.URL.String(), "/")
+		latestVersion := slicedURL[len(slicedURL)-1]
+		match := regexp.MustCompile(`^v[0-9]*\.[0-9]*\.[0-9]*$`).MatchString(latestVersion)
+		if !match {
+			fmt.Println("Failed to fetch latest version number.")
+			return false
+		}
+		if latestVersion != version {
+			return false
+		}
+		return true
+	},
+	fixFn: func() error {
+		fixCommands := []*exec.Cmd{
+			exec.Command("brew", "uninstall", "ridectl"),
+			exec.Command("brew", "install", "ridecell/ridecell/ridectl"),
+		}
+
+		for _, command := range fixCommands {
+			command.Stdin = os.Stdin
+			command.Stderr = os.Stderr
+			command.Stdout = os.Stdout
+			err := command.Run()
+			if err != nil {
+				return err
+			}
+		}
+
+		return nil
+	},
 }
 
 // Check if EDITOR environment variable is set for the edit command

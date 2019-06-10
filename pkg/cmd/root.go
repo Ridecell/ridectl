@@ -30,10 +30,19 @@ import (
 )
 
 var kubeconfigFlag string
+var versionFlag bool
+var version string
 
 var rootCmd = &cobra.Command{
 	Use:   "ridectl",
 	Short: "Ridectl controls Summon instances in Kubernetes",
+	RunE: func(_ *cobra.Command, args []string) error {
+		if versionFlag {
+			fmt.Printf("ridectl version %s\n", version)
+		}
+		os.Exit(0)
+		return nil
+	},
 }
 
 func init() {
@@ -42,7 +51,7 @@ func init() {
 		panic(err)
 	}
 	rootCmd.PersistentFlags().StringVar(&kubeconfigFlag, "kubeconfig", filepath.Join(home, ".kube", "config"), "(optional) absolute path to the kubeconfig file")
-
+	rootCmd.Flags().BoolVar(&versionFlag, "version", true, "--version")
 	// Register all types from ridecell-operator.
 	apis.AddToScheme(scheme.Scheme)
 	hackapis.AddToScheme(scheme.Scheme)
