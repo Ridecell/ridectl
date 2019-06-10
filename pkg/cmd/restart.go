@@ -44,7 +44,7 @@ var rollingRestartCmd = &cobra.Command{
 			return fmt.Errorf("Cluster name argument is required.")
 		}
 		if len(args) == 1 {
-			return fmt.Errorf("Pod type argument is required.")
+			return fmt.Errorf("Deployment type argument is required.")
 		}
 		if len(args) > 2 {
 			return fmt.Errorf("Too many arguments")
