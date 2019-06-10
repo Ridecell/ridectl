@@ -32,14 +32,11 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-func init() {
-	rootCmd.AddCommand(loadflavorCmd)
-}
-
 var eraseDatabaseFlag bool
 
 func init() {
-	rootCmd.Flags().BoolVar(&eraseDatabaseFlag, "erase-database", false, "Erases database before loading flavor data.")
+	rootCmd.AddCommand(loadflavorCmd)
+	loadflavorCmd.Flags().BoolVar(&eraseDatabaseFlag, "erase-database", true, "Erases database before loading flavor data.")
 }
 
 var loadflavorCmd = &cobra.Command{
