@@ -36,7 +36,7 @@ var eraseDatabaseFlag bool
 
 func init() {
 	rootCmd.AddCommand(loadflavorCmd)
-	loadflavorCmd.Flags().BoolVar(&eraseDatabaseFlag, "erase-database", true, "Erases database before loading flavor data.")
+	loadflavorCmd.Flags().BoolVar(&eraseDatabaseFlag, "erase-database", false, "Erases database before loading flavor data.")
 }
 
 var loadflavorCmd = &cobra.Command{
