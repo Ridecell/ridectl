@@ -96,7 +96,7 @@ var loadflavorCmd = &cobra.Command{
 				Key:    aws.String(args[1]),
 			})
 			if err != nil {
-				return err
+				return errors.Wrap(err, "failed to download file from s3")
 			}
 			// Decompress bzip2
 			cmd.Stdin = bzip2.NewReader(object.Body)
