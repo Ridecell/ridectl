@@ -29,13 +29,13 @@ import (
 )
 
 func init() {
-	rootCmd.AddCommand(periscopeDataCmd)
+	rootCmd.AddCommand(periscopeCmd)
 }
 
-var periscopeDataCmd = &cobra.Command{
+var periscopeCmd = &cobra.Command{
 	Use:   "periscopedata <cluster_name>",
 	Short: "Dumps Periscope data to setup database.",
-	Long:  "Dumps relevant Periscope data required to setup databases on  the periscopdata web interface.",
+	Long:  "Dumps relevant Periscope data required to setup databases on the periscopdata web interface.",
 	Args: func(_ *cobra.Command, args []string) error {
 		if len(args) == 0 {
 			return fmt.Errorf("Cluster name argument is required")
