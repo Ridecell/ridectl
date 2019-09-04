@@ -205,6 +205,7 @@ var doctorTestLatestVersion = &doctorTest{
 		}
 		return true
 	},
+	fixCmd: `brew link --overwrite ridectl; brew reinstall ridectl`,
 }
 
 // Check if EDITOR environment variable is set for the edit command
