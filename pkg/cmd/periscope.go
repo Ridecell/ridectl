@@ -33,7 +33,7 @@ func init() {
 }
 
 var periscopeCmd = &cobra.Command{
-	Use:   "periscopedata <cluster_name>",
+	Use:   "periscope <cluster_name>",
 	Short: "Dumps Periscope data to setup database.",
 	Long:  "Dumps relevant Periscope data required to setup databases on the periscopdata web interface.",
 	Args: func(_ *cobra.Command, args []string) error {
