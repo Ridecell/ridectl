@@ -55,22 +55,6 @@
   revision = "ba4837b57e93af0fdfe3b009f3cb14dc8c32cc38"
 
 [[projects]]
-  digest = "1:6f18f1375352bc9eac3e6b03ad67ddfab971c9a90163bdf377fee5d1fb459faa"
-  name = "github.com/alecthomas/gometalinter"
-  packages = ["."]
-  pruneopts = "T"
-  revision = "df395bfa67c5d0630d936c0044cf07ff05086655"
-  version = "v3.0.0"
-
-[[projects]]
-  branch = "master"
-  digest = "1:c198fdc381e898e8fb62b8eb62758195091c313ad18e52a3067366e1dda2fb3c"
-  name = "github.com/alecthomas/units"
-  packages = ["."]
-  pruneopts = "T"
-  revision = "2efee857e7cfd4f3d0138cc3cbb1b4966962b93a"
-
-[[projects]]
   digest = "1:464aef731a5f82ded547c62e249a2e9ec59fbbc9ddab53cda7b9857852630a61"
   name = "github.com/appscode/jsonpatch"
   packages = ["."]
@@ -140,17 +124,6 @@
   packages = ["."]
   pruneopts = "T"
   revision = "2972be24d48e78746da79ba8e24e8b488c9880de"
-
-[[projects]]
-  digest = "1:a12c26510933c0af9fc828cce90aabb7e531d6014e97633b3cd452ad4763f64e"
-  name = "github.com/client9/misspell"
-  packages = [
-    ".",
-    "cmd/misspell",
-  ]
-  pruneopts = "T"
-  revision = "b90dc15cfd220ecf8bbc9043ecb928cef381f011"
-  version = "v0.3.4"
 
 [[projects]]
   digest = "1:9f42202ac457c462ad8bb9642806d275af9ab4850cf0b1960b9c6f083d4a309a"
@@ -243,17 +216,6 @@
   revision = "5b532d6fd5efaf7fa130d4e859a2fde0fc3a9e1b"
 
 [[projects]]
-  branch = "travis-1.9"
-  digest = "1:e84f095737b1b857021bafbfd3bcbac930fb1a969de7931946dc794dfc36ddb4"
-  name = "github.com/golang/lint"
-  packages = [
-    ".",
-    "golint",
-  ]
-  pruneopts = "T"
-  revision = "883fe33ffc4344bad1ecd881f61afd5ec5d80e0a"
-
-[[projects]]
   digest = "1:a2ecb56e5053d942aafc86738915fb94c9131bac848c543b8b6764365fd69080"
   name = "github.com/golang/protobuf"
   packages = [
@@ -284,14 +246,6 @@
   revision = "24818f796faf91cd76ec7bddd72458fbced7a6c1"
 
 [[projects]]
-  branch = "master"
-  digest = "1:473e7c5cbc58c538bce66e0ca2a033d31a3e7d9c6d5d96c6df1657b588bddac3"
-  name = "github.com/google/shlex"
-  packages = ["."]
-  pruneopts = "T"
-  revision = "c34317bd91bf98fab745d77b03933cf8769299fe"
-
-[[projects]]
   digest = "1:236d7e1bdb50d8f68559af37dbcf9d142d56b431c9b2176d41e2a009b664cda8"
   name = "github.com/google/uuid"
   packages = ["."]
@@ -310,14 +264,6 @@
   pruneopts = "T"
   revision = "7c663266750e7d82587642f65e60bc4083f1f84e"
   version = "v0.2.0"
-
-[[projects]]
-  branch = "master"
-  digest = "1:d408e7b2a9f7f4cd5467d09354921cb88069f7058553e018b59c05f67e57abeb"
-  name = "github.com/gordonklaus/ineffassign"
-  packages = ["."]
-  pruneopts = "T"
-  revision = "1003c8bd00dc2869cb5ca5282e6ce33834fed514"
 
 [[projects]]
   branch = "master"
@@ -430,7 +376,7 @@
   version = "v1.0.0"
 
 [[projects]]
-  digest = "1:a11b4e131becae967154e49c96990c6af50afb4c61d6ab13ad569b03c481ccde"
+  digest = "1:e50a957eff44648b2408a7ba1419f673006b0aff7d188d107c0b862820249851"
   name = "github.com/manifoldco/promptui"
   packages = [
     ".",
@@ -438,8 +384,8 @@
     "screenbuf",
   ]
   pruneopts = "T"
-  revision = "20f2a94120aa14a334121a6de66616a7fa89a5cd"
-  version = "v0.3.2"
+  revision = "157c96fb638a14d268b305cf2012582431fcc410"
+  version = "v0.3.1"
 
 [[projects]]
   digest = "1:b168836ecd85a2d138391dbc464d2442ea9400c29cc0636f2c6056b996692e29"
@@ -496,19 +442,6 @@
   pruneopts = "T"
   revision = "4b7aa43c6742a2c18fdef89dd197aaae7dac7ccd"
   version = "1.0.1"
-
-[[projects]]
-  digest = "1:d1290f617f8d1c52ced27699f233b7ee7cd528f83f95b95ee1435445593fbccb"
-  name = "github.com/nicksnyder/go-i18n"
-  packages = [
-    "i18n",
-    "i18n/bundle",
-    "i18n/language",
-    "i18n/translation",
-  ]
-  pruneopts = "T"
-  revision = "0dc1626d56435e9d605a29875701721c54bc9bbd"
-  version = "v1.10.0"
 
 [[projects]]
   digest = "1:1de2ef6996903caab4bcf41f7885aa276d8e20076ba52ca80b2c6c32efb9c5f5"
@@ -584,14 +517,6 @@
   pruneopts = "T"
   revision = "adf5a7427709b9deb95d29d3fa8a2bf9cfd388f1"
   version = "v1.2"
-
-[[projects]]
-  digest = "1:ccf9949c9c53e85dcb7e2905fc620571422567040925381e6baa62f0b7b850fe"
-  name = "github.com/pelletier/go-toml"
-  packages = ["."]
-  pruneopts = "T"
-  revision = "c01d1270ff3e442a8a57cddc1c92dc1138598194"
-  version = "v1.2.0"
 
 [[projects]]
   branch = "master"
@@ -712,14 +637,6 @@
   pruneopts = "T"
   revision = "298182f68c66c05229eb03ac171abe6e309ee79a"
   version = "v1.0.3"
-
-[[projects]]
-  branch = "master"
-  digest = "1:ba52e5a5fb800ce55108b7a5f181bb809aab71c16736051312b0aa969f82ad39"
-  name = "github.com/tsenart/deadcode"
-  packages = ["."]
-  pruneopts = "T"
-  revision = "210d2dc333e90c7e3eedf4f2242507a8e83ed4ab"
 
 [[projects]]
   branch = "master"
@@ -902,14 +819,6 @@
   pruneopts = "T"
   revision = "e9657d882bb81064595ca3b56cbe2546bbabf7b1"
   version = "v1.4.0"
-
-[[projects]]
-  branch = "v3-unstable"
-  digest = "1:ca6a4a40e699b257794dfe646ad1f25deb03745a41b2cf0d1e46897138fb0d66"
-  name = "gopkg.in/alecthomas/kingpin.v3-unstable"
-  packages = ["."]
-  pruneopts = "T"
-  revision = "df19058c872cddcd279411d709047160e543a700"
 
 [[projects]]
   digest = "1:7fc160b460a6fc506b37fcca68332464c3f2cd57b6e3f111f26c5bbfd2d5518e"
@@ -1223,6 +1132,7 @@
     "github.com/Ridecell/ridecell-operator/pkg/apis",
     "github.com/Ridecell/ridecell-operator/pkg/apis/aws",
     "github.com/Ridecell/ridecell-operator/pkg/apis/db",
+    "github.com/Ridecell/ridecell-operator/pkg/apis/db/v1beta1",
     "github.com/Ridecell/ridecell-operator/pkg/apis/secrets",
     "github.com/Ridecell/ridecell-operator/pkg/apis/secrets/v1beta1",
     "github.com/Ridecell/ridecell-operator/pkg/apis/summon",
@@ -1248,17 +1158,19 @@
     "github.com/shurcooL/vfsgen",
     "github.com/spf13/cobra",
     "gopkg.in/yaml.v2",
+    "k8s.io/api/apps/v1",
     "k8s.io/api/core/v1",
     "k8s.io/apimachinery/pkg/apis/meta/v1",
-    "k8s.io/apimachinery/pkg/apis/meta/v1/unstructured",
     "k8s.io/apimachinery/pkg/runtime",
     "k8s.io/apimachinery/pkg/runtime/schema",
-    "k8s.io/client-go/dynamic",
-    "k8s.io/client-go/kubernetes",
+    "k8s.io/apimachinery/pkg/types",
     "k8s.io/client-go/kubernetes/scheme",
     "k8s.io/client-go/plugin/pkg/client/auth/gcp",
     "k8s.io/client-go/tools/clientcmd",
+    "k8s.io/client-go/tools/clientcmd/api",
     "k8s.io/code-generator/cmd/deepcopy-gen",
+    "sigs.k8s.io/controller-runtime/pkg/client",
+    "sigs.k8s.io/controller-runtime/pkg/client/apiutil",
     "sigs.k8s.io/controller-runtime/pkg/runtime/scheme",
   ]
   solver-name = "gps-cdcl"
