@@ -63,10 +63,10 @@ var doctorCmd = &cobra.Command{
 		}
 
 		tests := []*doctorTest{
-			doctorTestLatestVersion,
 			doctorTestEditorEnvVar,
 			doctorTestHomebrew,
 			doctorTestCaskroom,
+			doctorTestLatestVersion,
 			doctorTestPostgresql,
 			doctorTestGcloud,
 			doctorTestGoogleCredentials,
@@ -205,7 +205,7 @@ var doctorTestLatestVersion = &doctorTest{
 		}
 		return true
 	},
-	fixCmd: `brew link --overwrite ridectl; brew reinstall ridectl`,
+	fixCmd: `brew reinstall ridectl`,
 }
 
 // Check if EDITOR environment variable is set for the edit command
