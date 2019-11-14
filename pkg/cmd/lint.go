@@ -26,7 +26,6 @@ import (
 
 	"github.com/Ridecell/ridectl/pkg/cmd/edit"
 	"github.com/heroku/docker-registry-client/registry"
-	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 
 	summonv1beta1 "github.com/Ridecell/ridecell-operator/pkg/apis/summon/v1beta1"
@@ -37,6 +36,7 @@ func init() {
 }
 
 var foundNames map[string]string
+var imageTagCheckEnabled bool
 
 var lintCmd = &cobra.Command{
 	Use:   "lint [flags] <path>...",
@@ -44,25 +44,31 @@ var lintCmd = &cobra.Command{
 	Long:  `Checks Summon instance manifest files for invalid values and names`,
 	Args:  func(_ *cobra.Command, args []string) error { return nil },
 	RunE: func(_ *cobra.Command, args []string) error {
+		imageTagCheckEnabled = true
 
 		// Fetch docker image names
 		googleKey := os.Getenv("GOOGLE_SERVICE_ACCOUNT_KEY")
 		if len(googleKey) == 0 {
-			return errors.New("environment variable GOOGLE_SERVICE_ACCOUNT_KEY not defined")
+			fmt.Printf("environment variable GOOGLE_SERVICE_ACCOUNT_KEY not defined, skipping image check\n")
+			imageTagCheckEnabled = false
 		}
 
-		transport := registry.WrapTransport(http.DefaultTransport, "https://us.gcr.io", "_json_key", googleKey)
-		hub := &registry.Registry{
-			URL: "https://us.gcr.io",
-			Client: &http.Client{
-				Transport: transport,
-			},
-			Logf: registry.Quiet,
-		}
+		var imageTags []string
+		var err error
+		if imageTagCheckEnabled {
+			transport := registry.WrapTransport(http.DefaultTransport, "https://us.gcr.io", "_json_key", googleKey)
+			hub := &registry.Registry{
+				URL: "https://us.gcr.io",
+				Client: &http.Client{
+					Transport: transport,
+				},
+				Logf: registry.Quiet,
+			}
 
-		imageTags, err := hub.Tags("ridecell-1/summon")
-		if err != nil {
-			return err
+			imageTags, err = hub.Tags("ridecell-1/summon")
+			if err != nil {
+				return err
+			}
 		}
 
 		foundNames = make(map[string]string)
@@ -164,16 +170,18 @@ func lintFile(filename string, imageTags []string) error {
 	foundNames[summonObj.Name] = filename
 
 	// Check that the docker image exists
-	var foundImage bool
-	for _, imageTag := range imageTags {
-		if summonObj.Spec.Version == imageTag {
-			foundImage = true
-			break
+	if imageTagCheckEnabled {
+		var foundImage bool
+		for _, imageTag := range imageTags {
+			if summonObj.Spec.Version == imageTag {
+				foundImage = true
+				break
+			}
 		}
-	}
 
-	if !foundImage {
-		return fmt.Errorf(`version "%s" does not exist`, summonObj.Spec.Version)
+		if !foundImage {
+			return fmt.Errorf(`version "%s" does not exist`, summonObj.Spec.Version)
+		}
 	}
 
 	if manifest[1].Kind != "EncryptedSecret" {
