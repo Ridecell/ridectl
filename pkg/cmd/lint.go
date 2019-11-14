@@ -18,12 +18,14 @@ package cmd
 
 import (
 	"fmt"
+	"net/http"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
 
 	"github.com/Ridecell/ridectl/pkg/cmd/edit"
+	"github.com/heroku/docker-registry-client/registry"
 	"github.com/spf13/cobra"
 
 	summonv1beta1 "github.com/Ridecell/ridecell-operator/pkg/apis/summon/v1beta1"
@@ -41,10 +43,32 @@ var lintCmd = &cobra.Command{
 	Long:  `Checks Summon instance manifest files for invalid values and names`,
 	Args:  func(_ *cobra.Command, args []string) error { return nil },
 	RunE: func(_ *cobra.Command, args []string) error {
+		// Fetch docker image names
+		googleKey := os.Getenv("GOOGLE_SERVICE_ACCOUNT_KEY")
+		if len(googleKey) == 0 {
+			fmt.Printf("environment variable GOOGLE_SERVICE_ACCOUNT_KEY not defined, skipping image check\n")
+		}
+
+		var imageTags []string
+		var err error
+		if len(googleKey) > 0 {
+			transport := registry.WrapTransport(http.DefaultTransport, "https://us.gcr.io", "_json_key", googleKey)
+			hub := &registry.Registry{
+				URL: "https://us.gcr.io",
+				Client: &http.Client{
+					Transport: transport,
+				},
+				Logf: registry.Quiet,
+			}
+
+			imageTags, err = hub.Tags("ridecell-1/summon")
+			if err != nil {
+				return err
+			}
+		}
 
 		foundNames = make(map[string]string)
 		var fileNames []string
-		var err error
 		if len(args) > 0 {
 			fileNames, err = parseArgs(args)
 			if err != nil {
@@ -63,7 +87,7 @@ var lintCmd = &cobra.Command{
 
 		var failedTests bool
 		for _, filename := range fileNames {
-			err = lintFile(filename)
+			err = lintFile(filename, imageTags)
 			if err != nil {
 				fmt.Printf("%s\n", err.Error())
 				failedTests = true
@@ -93,7 +117,7 @@ func getManifest(filename string) (edit.Manifest, error) {
 	return inManifest, nil
 }
 
-func lintFile(filename string) error {
+func lintFile(filename string, imageTags []string) error {
 	path, file := filepath.Split(filename)
 
 	clusterEnv := filepath.Base(path)
@@ -140,6 +164,21 @@ func lintFile(filename string) error {
 		return fmt.Errorf("Duplicate SummonPlatform names not supported: %s found in %s and %s", summonObj.Name, existingFilename, filename)
 	}
 	foundNames[summonObj.Name] = filename
+
+	// Check that the docker image exists
+	if imageTags != nil {
+		var foundImage bool
+		for _, imageTag := range imageTags {
+			if summonObj.Spec.Version == imageTag {
+				foundImage = true
+				break
+			}
+		}
+
+		if !foundImage {
+			return fmt.Errorf(`version "%s" does not exist`, summonObj.Spec.Version)
+		}
+	}
 
 	if manifest[1].Kind != "EncryptedSecret" {
 		return fmt.Errorf("%s: EncryptedSecret is required to be the second object in manifest", filename)
