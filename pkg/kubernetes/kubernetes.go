@@ -23,6 +23,7 @@ import (
 	"strings"
 
 	"github.com/Ridecell/ridecell-operator/pkg/apis"
+	summonv1beta1 "github.com/Ridecell/ridecell-operator/pkg/apis/summon/v1beta1"
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -250,4 +251,32 @@ func getChannelOutput(maxFails int, ch chan *KubeObject) (*KubeObject, error) {
 			}
 		}
 	}
+}
+
+func listSummonPlatformWithContext(kubeconfig string, contextObj *kubeContext, listOptions *client.ListOptions, summonList chan *KubeObject) {
+	contextClient, err := getClientByContext(kubeconfig, contextObj.Context)
+	if err != nil {
+		// User may have an invalid context that causes this to fail. Just return nil and continue.
+		summonList <- nil
+		return
+	}
+
+	fetchSummonList := &summonv1beta1.SummonPlatformList{}
+	err = contextClient.List(context.Background(), listOptions, fetchSummonList)
+	if err != nil {
+		summonList <- nil
+		return
+	}
+
+	if len(fetchSummonList.Items) == 0 {
+		summonList <- nil
+		return
+	}
+
+	newKubeObject := &KubeObject{
+		Top:     fetchSummonList,
+		Client:  contextClient,
+		Context: contextObj,
+	}
+	summonList <- newKubeObject
 }
