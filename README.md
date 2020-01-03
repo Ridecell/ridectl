@@ -8,6 +8,7 @@ Some key features are:
 2. shelling into an instance under the python environment (`pyshell`)
 3. shelling into the instance's database (`dbshell`)
 4. Obtaining dispatcher/support/reports account password (`password`)
+5. Redeploy summon instance(`redeploy`)
 
 For a full list of functionalities, run `ridectl --help`
 
