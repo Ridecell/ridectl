@@ -22,19 +22,19 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/Ridecell/ridecell-operator/pkg/apis"
-	summonv1beta1 "github.com/Ridecell/ridecell-operator/pkg/apis/summon/v1beta1"
 	"github.com/pkg/errors"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
+	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/clientcmd/api"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 
-	corev1 "k8s.io/api/core/v1"
-	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
+	"github.com/Ridecell/ridecell-operator/pkg/apis"
+	summonv1beta1 "github.com/Ridecell/ridecell-operator/pkg/apis/summon/v1beta1"
 )
 
 const namespacePrefix = "summon-"
@@ -279,4 +279,37 @@ func listSummonPlatformWithContext(kubeconfig string, contextObj *kubeContext, l
 		Context: contextObj,
 	}
 	summonList <- newKubeObject
+}
+
+func ListSummonPlatforms(kubeconfig string, namespace string) (summonv1beta1.SummonPlatformList, error) {
+	summonPlatformList := &summonv1beta1.SummonPlatformList{}
+	listOptions := &client.ListOptions{
+		Namespace: namespace,
+	}
+
+	kubeContexts, err := getKubeContexts()
+	if err != nil {
+		return *summonPlatformList, err
+	}
+
+	ch := make(chan *KubeObject, len(kubeContexts))
+	for contextName, contextObj := range kubeContexts {
+		kubeContextObj := &kubeContext{
+			Name:    contextName,
+			Context: contextObj,
+		}
+		go listSummonPlatformWithContext(kubeconfig, kubeContextObj, listOptions, ch)
+	}
+
+	tempObject, err := getChannelOutput(len(kubeContexts), ch)
+	if err != nil {
+		return *summonPlatformList, err
+	}
+
+	summonPlatformList, ok := tempObject.Top.(*summonv1beta1.SummonPlatformList)
+	if !ok {
+		return *summonPlatformList, errors.New("unable to convert top object to summonPlatformList")
+	}
+
+	return *summonPlatformList, nil
 }

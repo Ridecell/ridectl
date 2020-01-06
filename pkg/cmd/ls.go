@@ -17,16 +17,11 @@ package cmd
 
 import (
 	"fmt"
-	//"strings"
+	"strings"
 
-	//"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 
-	"github.com/Ridecell/ridecell-operator/pkg/webui/kubernetes"
-	//summonv1beta1 "github.com/Ridecell/ridecell-operator/pkg/apis/summon/v1beta1"
-	//"github.com/Ridecell/ridectl/pkg/kubernetes"
-	//dbv1beta1 "github.com/Ridecell/ridecell-operator/pkg/apis/db/v1beta1"
-	//corev1 "k8s.io/api/core/v1"
+	"github.com/Ridecell/ridectl/pkg/kubernetes"
 )
 
 func init() {
@@ -34,24 +29,41 @@ func init() {
 }
 
 var lsCmd = &cobra.Command{
-	Use:   "ls",
+	Use:   "ls [environment]",
 	Short: "Lists tenants that ridectl can connect to",
-	Long:  "Lists all SummonPlatform instances that ridectl can connect to/interact with (Note: you may be restricted depending on your permissions)",
+	Long:  "Lists all SummonPlatform instances (or just instances in [environment] that ridectl can connect to/interact with (Note: you may be restricted depending on your permissions)",
 	Args: func(_ *cobra.Command, args []string) error {
-		if len(args) > 0 {
-			return fmt.Errorf("ls does not take any arguments")
+		if len(args) > 1 {
+			return fmt.Errorf("ls takes at most one optional argument: [environment]")
 		}
 		return nil
 	},
 	RunE: func(_ *cobra.Command, args []string) error {
 		namespaces := []string{"summon-qa", "summon-dev", "summon-uat", "summon-prod"}
+		env := strings.ToLower(args[0])
+		// If user listed an environment, only get tenants in that environment
+		if strings.HasSuffix(env, "qa") {
+			namespaces = []string{"summon-qa"}
+		}
+		if strings.HasSuffix(env, "dev") {
+			namespaces = []string{"summon-dev"}
+		}
+		if strings.HasSuffix(env, "uat") {
+			namespaces = []string{"summon-uat"}
+		}
+		if strings.HasSuffix(env, "prod") {
+			namespaces = []string{"summon-prod"}
+		}
+
 		for _, namespace := range namespaces {
-			instances, err := kubernetes.ListSummonPlatform(namespace)
+			instances, err := kubernetes.ListSummonPlatforms(kubeconfigFlag, namespace)
 			if err != nil {
 				continue
 			}
+
+			fmt.Printf("\n%s\n=========================\n", strings.ToUpper(namespace))
 			for _, instance := range instances.Items {
-				fmt.Printf("%s", instance.Name)
+				fmt.Printf("%s\n", instance.Name)
 			}
 		}
 		return nil
