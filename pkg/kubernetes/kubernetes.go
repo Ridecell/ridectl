@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"regexp"
+	"sort"
 	"strings"
 
 	"github.com/pkg/errors"
@@ -282,14 +283,14 @@ func listSummonPlatformWithContext(kubeconfig string, contextObj *kubeContext, l
 }
 
 func ListSummonPlatforms(kubeconfig string, namespace string) (summonv1beta1.SummonPlatformList, error) {
-	summonPlatformList := &summonv1beta1.SummonPlatformList{}
+	summonPlatformLists := &summonv1beta1.SummonPlatformList{}
 	listOptions := &client.ListOptions{
 		Namespace: namespace,
 	}
 
 	kubeContexts, err := getKubeContexts()
 	if err != nil {
-		return *summonPlatformList, err
+		return *summonPlatformLists, err
 	}
 
 	ch := make(chan *KubeObject, len(kubeContexts))
@@ -301,15 +302,25 @@ func ListSummonPlatforms(kubeconfig string, namespace string) (summonv1beta1.Sum
 		go listSummonPlatformWithContext(kubeconfig, kubeContextObj, listOptions, ch)
 	}
 
-	tempObject, err := getChannelOutput(len(kubeContexts), ch)
-	if err != nil {
-		return *summonPlatformList, err
+	// go through each cluster and grab summon platforms
+	for i := 0; i < len(kubeContexts); i++ {
+		tempObject := <-ch
+		if tempObject == nil {
+			continue
+		}
+
+		summonPlatformList, ok := tempObject.Top.(*summonv1beta1.SummonPlatformList)
+		if !ok {
+			return *summonPlatformList, errors.New("unable to convert top object to summonPlatformList")
+		}
+
+		summonPlatformLists.Items = append(summonPlatformLists.Items, summonPlatformList.Items...)
 	}
 
-	summonPlatformList, ok := tempObject.Top.(*summonv1beta1.SummonPlatformList)
-	if !ok {
-		return *summonPlatformList, errors.New("unable to convert top object to summonPlatformList")
-	}
+	// Sort the list in alphabetical order
+	sort.Slice(summonPlatformLists.Items, func(i, j int) bool {
+		return summonPlatformLists.Items[i].Name < summonPlatformLists.Items[j].Name
+	})
 
-	return *summonPlatformList, nil
+	return *summonPlatformLists, nil
 }
