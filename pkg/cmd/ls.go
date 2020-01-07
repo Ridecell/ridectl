@@ -40,19 +40,18 @@ var lsCmd = &cobra.Command{
 	},
 	RunE: func(_ *cobra.Command, args []string) error {
 		namespaces := []string{"summon-qa", "summon-dev", "summon-uat", "summon-prod"}
-		env := strings.ToLower(args[0])
-		// If user listed an environment, only get tenants in that environment
-		if strings.HasSuffix(env, "qa") {
-			namespaces = []string{"summon-qa"}
-		}
-		if strings.HasSuffix(env, "dev") {
-			namespaces = []string{"summon-dev"}
-		}
-		if strings.HasSuffix(env, "uat") {
-			namespaces = []string{"summon-uat"}
-		}
-		if strings.HasSuffix(env, "prod") {
-			namespaces = []string{"summon-prod"}
+		if len(args) == 1 {
+			env := strings.ToLower(args[0])
+			// If user listed an environment, only get tenants in that environment
+			if strings.HasSuffix(env, "qa") {
+				namespaces = []string{"summon-qa"}
+			} else if strings.HasSuffix(env, "dev") {
+				namespaces = []string{"summon-dev"}
+			} else if strings.HasSuffix(env, "uat") {
+				namespaces = []string{"summon-uat"}
+			} else if strings.HasSuffix(env, "prod") {
+				namespaces = []string{"summon-prod"}
+			}
 		}
 
 		for _, namespace := range namespaces {
