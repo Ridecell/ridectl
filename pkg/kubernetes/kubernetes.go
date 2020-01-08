@@ -282,7 +282,7 @@ func listSummonPlatformWithContext(kubeconfig string, contextObj *kubeContext, l
 	summonList <- newKubeObject
 }
 
-func ListSummonPlatforms(kubeconfig string, namespace string) (summonv1beta1.SummonPlatformList, error) {
+func ListSummonPlatforms(kubeconfig string, nameregex string, namespace string) (summonv1beta1.SummonPlatformList, error) {
 	summonPlatformLists := &summonv1beta1.SummonPlatformList{}
 	listOptions := &client.ListOptions{
 		Namespace: namespace,
@@ -314,9 +314,24 @@ func ListSummonPlatforms(kubeconfig string, namespace string) (summonv1beta1.Sum
 			return *summonPlatformList, errors.New("unable to convert top object to summonPlatformList")
 		}
 
-		summonPlatformLists.Items = append(summonPlatformLists.Items, summonPlatformList.Items...)
+		// if searching for a single tenant, just return a summonPlatformList with that single tenant
+		if nameregex != "" {
+			for _, summonplatform := range summonPlatformList.Items {
+				match := regexp.MustCompile(nameregex).Match([]byte(summonplatform.Name))
+				if match {
+					summonPlatformLists.Items = append(summonPlatformLists.Items, summonplatform)
+					return *summonPlatformLists, nil
+				}
+			}
+		} else {
+			summonPlatformLists.Items = append(summonPlatformLists.Items, summonPlatformList.Items...)
+		}
 	}
 
+	// if we went through all the clusters and still haven't found a match, return error
+	if nameregex != "" {
+		return *summonPlatformLists, errors.New("unable to find %s" + nameregex + "\n")
+	}
 	// Sort the list in alphabetical order
 	sort.Slice(summonPlatformLists.Items, func(i, j int) bool {
 		return summonPlatformLists.Items[i].Name < summonPlatformLists.Items[j].Name
