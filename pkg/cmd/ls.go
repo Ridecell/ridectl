@@ -45,26 +45,23 @@ var lsCmd = &cobra.Command{
 		var nameregex string
 		if len(args) == 1 {
 			search := strings.ToLower(args[0])
+			nameregex = search
 			// If user listed an environment, only get tenants in that environment
 			if strings.HasSuffix(search, "qa") {
 				namespaces = []string{"summon-qa"}
-				nameregex = strings.TrimSuffix(search, "-qa")
 			} else if strings.HasSuffix(search, "dev") {
 				namespaces = []string{"summon-dev"}
-				nameregex = strings.TrimSuffix(search, "-dev")
 			} else if strings.HasSuffix(search, "uat") {
 				namespaces = []string{"summon-uat"}
-				nameregex = strings.TrimSuffix(search, "-uat")
 			} else if strings.HasSuffix(search, "prod") {
 				namespaces = []string{"summon-prod"}
-				nameregex = strings.TrimSuffix(search, "-prod")
 			} else {
 				return fmt.Errorf("%s not found or recognized.\n", search)
 			}
 
 			// If arg was just "qa", 'dev", "uat", "prod" or "summon-<env>",the then we actually
 			// want to set nameregex to empty so ListSummonPlatform will traverse the proper code path.
-			for _, env := range []string{"summon", "qa", "dev", "uat", "prod"} {
+			for _, env := range []string{"summon-qa", "summon-dev", "summon-uat", "summon-prod", "qa", "dev", "uat", "prod"} {
 				if nameregex == env {
 					nameregex = ""
 				}
