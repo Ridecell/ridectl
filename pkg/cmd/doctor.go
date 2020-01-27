@@ -70,6 +70,7 @@ var doctorCmd = &cobra.Command{
 			doctorTestPostgresql,
 			doctorTestGcloud,
 			doctorTestGoogleCredentials,
+			doctorTestGoogleDockerLogin,
 			doctorTestKubectl,
 			doctorTestKubectlCommand,
 			doctorTestKubectlConfig,
@@ -269,6 +270,20 @@ var doctorTestGoogleCredentials = &doctorTest{
 		return !strings.HasPrefix(buf.String(), "(unset)")
 	},
 	fixCmd: `gcloud auth login`,
+}
+
+var doctorTestGoogleDockerLogin = &doctorTest{
+	subject: "Google Cloud Docker Credentials",
+	checkFn: func() bool {
+		// Attempt to pull an image
+		cmd := exec.Command("docker", "pull", "us.gcr.io/ridecell-1/ridectl:latest")
+		err := cmd.Run()
+		if err != nil {
+			return false
+		}
+		return true
+	},
+	fixCmd: `gcloud auth configure-docker`,
 }
 
 var doctorTestKubectlConfig = &doctorTest{
