@@ -185,17 +185,25 @@ func lintFile(filename string, imageTags []string) error {
 		return fmt.Errorf("%s: EncryptedSecret is required to be the second object in manifest", filename)
 	}
 
+	var duplicateValuesFound, unencryptedValueFound bool
 	for secretKey, secretValue := range manifest[1].Data {
 		if !strings.HasPrefix(secretValue, "AQICAH") {
-			return fmt.Errorf("%s: EncryptedSecret %s missing preamble, may not be encrypted.", filename, secretKey)
+			unencryptedValueFound = true
+			fmt.Printf("%s: EncryptedSecret %s missing preamble, may not be encrypted.", filename, secretKey)
 		}
 
 		for _, foundSecretValue := range foundSecretValues {
 			if secretValue == foundSecretValue {
-				return fmt.Errorf("%s: EncryptedSecret %s found in multiple places. Value may have been copy/pasted?", filename, secretKey)
+				duplicateValuesFound = true
+				fmt.Printf("%s: EncryptedSecret %s found in multiple places. Value may have been copy/pasted?\n", filename, secretKey)
 			}
 		}
 		foundSecretValues = append(foundSecretValues, secretValue)
+	}
+
+	if duplicateValuesFound || unencryptedValueFound {
+		// Return blank error to not spam terminal, added benefit of spacing out filenames.
+		return fmt.Errorf("")
 	}
 
 	for _, object := range manifest {
