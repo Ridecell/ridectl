@@ -36,6 +36,7 @@ func init() {
 }
 
 var foundNames map[string]string
+var foundSecretValues []string
 
 var lintCmd = &cobra.Command{
 	Use:   "lint [flags] <path>...",
@@ -182,6 +183,19 @@ func lintFile(filename string, imageTags []string) error {
 
 	if manifest[1].Kind != "EncryptedSecret" {
 		return fmt.Errorf("%s: EncryptedSecret is required to be the second object in manifest", filename)
+	}
+
+	for secretKey, secretValue := range manifest[1].Data {
+		if !strings.HasPrefix(secretValue, "AQICAH") {
+			return fmt.Errorf("%s: EncryptedSecret %s missing preamble, may not be encrypted.", filename, secretKey)
+		}
+
+		for _, foundSecretValue := range foundSecretValues {
+			if secretValue == foundSecretValue {
+				return fmt.Errorf("%s: EncryptedSecret %s found in multiple places. Value may have been copy/pasted?", filename, secretKey)
+			}
+		}
+		foundSecretValues = append(foundSecretValues, secretValue)
 	}
 
 	for _, object := range manifest {
