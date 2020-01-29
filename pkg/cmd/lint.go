@@ -36,7 +36,7 @@ func init() {
 }
 
 var foundNames map[string]string
-var foundSecretValues []string
+var foundSecretValues map[string][]string
 
 var lintCmd = &cobra.Command{
 	Use:   "lint [flags] <path>...",
@@ -69,6 +69,7 @@ var lintCmd = &cobra.Command{
 		}
 
 		foundNames = make(map[string]string)
+		foundSecretValues = make(map[string][]string)
 		var fileNames []string
 		if len(args) > 0 {
 			fileNames, err = parseArgs(args)
@@ -92,6 +93,12 @@ var lintCmd = &cobra.Command{
 			if err != nil {
 				fmt.Printf("%s\n", err.Error())
 				failedTests = true
+			}
+		}
+		for _, secretLocations := range foundSecretValues {
+			if len(secretLocations) > 1 {
+				failedTests = true
+				fmt.Printf("Duplicate secret value found in %s\n", strings.Join(secretLocations, ", "))
 			}
 		}
 		if failedTests {
@@ -185,23 +192,17 @@ func lintFile(filename string, imageTags []string) error {
 		return fmt.Errorf("%s: EncryptedSecret is required to be the second object in manifest", filename)
 	}
 
-	var duplicateValuesFound, unencryptedValueFound bool
+	var unencryptedValueFound bool
 	for secretKey, secretValue := range manifest[1].Data {
 		if !strings.HasPrefix(secretValue, "AQICAH") {
 			unencryptedValueFound = true
 			fmt.Printf("%s: EncryptedSecret %s missing preamble, may not be encrypted.", filename, secretKey)
 		}
 
-		for _, foundSecretValue := range foundSecretValues {
-			if secretValue == foundSecretValue {
-				duplicateValuesFound = true
-				fmt.Printf("%s: EncryptedSecret %s found in multiple places. Value may have been copy/pasted?\n", filename, secretKey)
-			}
-		}
-		foundSecretValues = append(foundSecretValues, secretValue)
+		foundSecretValues[secretValue] = append(foundSecretValues[secretValue], fmt.Sprintf("%s: %s", summonObj.Name, secretKey))
 	}
 
-	if duplicateValuesFound || unencryptedValueFound {
+	if unencryptedValueFound {
 		// Return blank error to not spam terminal, added benefit of spacing out filenames.
 		return fmt.Errorf("")
 	}
