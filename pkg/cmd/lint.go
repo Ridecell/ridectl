@@ -210,18 +210,30 @@ func lintFile(filename string, imageTags []string) error {
 	}
 	foundNames[summonObj.Name] = filename
 
-	// Check that the docker image exists
-	if imageTags != nil {
-		var foundImage bool
-		for _, imageTag := range imageTags {
-			if summonObj.Spec.Version == imageTag {
-				foundImage = true
-				break
-			}
-		}
+	// Make sure that either autodeploy or version is set
+	if summonObj.Spec.AutoDeploy == "" && summonObj.Spec.Version == "" {
+		return fmt.Errorf("%s: Neither Autodeploy or Version are set.", filename)
+	}
 
-		if !foundImage {
-			return fmt.Errorf(`version "%s" does not exist`, summonObj.Spec.Version)
+	// Make sure that autodeploy and version are not both set
+	if summonObj.Spec.AutoDeploy != "" && summonObj.Spec.Version != "" {
+		return fmt.Errorf("%s: Autodeploy and Version both set, only one should be set at a time.", filename)
+	}
+
+	// Check that the docker image exists
+	if summonObj.Spec.AutoDeploy == "" {
+		if imageTags != nil {
+			var foundImage bool
+			for _, imageTag := range imageTags {
+				if summonObj.Spec.Version == imageTag {
+					foundImage = true
+					break
+				}
+			}
+
+			if !foundImage {
+				return fmt.Errorf(`%s: version "%s" does not exist`, filename, summonObj.Spec.Version)
+			}
 		}
 	}
 
