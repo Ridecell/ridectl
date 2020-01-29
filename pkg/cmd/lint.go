@@ -35,8 +35,39 @@ func init() {
 	rootCmd.AddCommand(lintCmd)
 }
 
+type secretLocation struct {
+	ObjName string
+	KeyName string
+}
+
+type secretLocations []secretLocation
+
+func (sl secretLocations) objNames() []string {
+	var allObjNames []string
+	for _, location := range sl {
+		allObjNames = append(allObjNames, location.ObjName)
+	}
+	return allObjNames
+}
+
+func (sl secretLocations) keyNames() []string {
+	var allKeyNames []string
+	for _, location := range sl {
+		allKeyNames = append(allKeyNames, location.KeyName)
+	}
+	return allKeyNames
+}
+
+func (sl secretLocations) formatStrings() []string {
+	var allFormattedStrings []string
+	for _, location := range sl {
+		allFormattedStrings = append(allFormattedStrings, fmt.Sprintf("%s: %s", location.ObjName, location.KeyName))
+	}
+	return allFormattedStrings
+}
+
 var foundNames map[string]string
-var foundSecretValues map[string][]string
+var allSecretLocations map[string]secretLocations
 
 var lintCmd = &cobra.Command{
 	Use:   "lint [flags] <path>...",
@@ -69,7 +100,7 @@ var lintCmd = &cobra.Command{
 		}
 
 		foundNames = make(map[string]string)
-		foundSecretValues = make(map[string][]string)
+		allSecretLocations = make(map[string]secretLocations)
 		var fileNames []string
 		if len(args) > 0 {
 			fileNames, err = parseArgs(args)
@@ -95,10 +126,24 @@ var lintCmd = &cobra.Command{
 				failedTests = true
 			}
 		}
-		for _, secretLocations := range foundSecretValues {
-			if len(secretLocations) > 1 {
+		for _, locationList := range allSecretLocations {
+			if len(locationList) > 1 {
 				failedTests = true
-				fmt.Printf("Duplicate secret value found in %s\n", strings.Join(secretLocations, ", "))
+
+				keysMatch := true
+				var allObjNames []string
+				for _, location := range locationList {
+					allObjNames = append(allObjNames, location.ObjName)
+					if location.KeyName != locationList[0].KeyName {
+						keysMatch = false
+					}
+				}
+
+				if keysMatch {
+					fmt.Printf("Duplicate secret value %s found in %s\n", locationList[0].KeyName, strings.Join(locationList.objNames(), ", "))
+				} else {
+					fmt.Printf("Duplicate secret value found in %s\n", strings.Join(locationList.formatStrings(), ", "))
+				}
 			}
 		}
 		if failedTests {
@@ -199,7 +244,7 @@ func lintFile(filename string, imageTags []string) error {
 			fmt.Printf("%s: EncryptedSecret %s missing preamble, may not be encrypted.", filename, secretKey)
 		}
 
-		foundSecretValues[secretValue] = append(foundSecretValues[secretValue], fmt.Sprintf("%s: %s", summonObj.Name, secretKey))
+		allSecretLocations[secretValue] = append(allSecretLocations[secretValue], secretLocation{ObjName: summonObj.Name, KeyName: secretKey})
 	}
 
 	if unencryptedValueFound {
