@@ -50,14 +50,6 @@ func (sl secretLocations) objNames() []string {
 	return allObjNames
 }
 
-func (sl secretLocations) keyNames() []string {
-	var allKeyNames []string
-	for _, location := range sl {
-		allKeyNames = append(allKeyNames, location.KeyName)
-	}
-	return allKeyNames
-}
-
 func (sl secretLocations) formatStrings() []string {
 	var allFormattedStrings []string
 	for _, location := range sl {
