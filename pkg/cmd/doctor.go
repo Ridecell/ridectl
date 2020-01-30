@@ -283,7 +283,30 @@ var doctorTestGoogleDockerLogin = &doctorTest{
 		}
 		return true
 	},
-	fixCmd: `gcloud auth configure-docker`,
+	fixFn: func() error {
+		cmd := exec.Command("gcloud", "auth", "configure-docker")
+		err := cmd.Run()
+		if err != nil {
+			return err
+		}
+
+		dockerPullCmd := exec.Command("docker", "pull", "us.gcr.io/ridecell-1/ridectl:latest")
+		err = dockerPullCmd.Run()
+		if err == nil {
+			return nil
+		}
+
+		// Sometimes not being able to pull the image is due the to oauth token being expired.
+		cmd = exec.Command("gcloud", "auth", "login")
+		err = cmd.Run()
+		if err != nil {
+			return err
+		}
+
+		dockerPullCmd = exec.Command("docker", "pull", "us.gcr.io/ridecell-1/ridectl:latest")
+		err = dockerPullCmd.Run()
+		return err
+	},
 }
 
 var doctorTestKubectlConfig = &doctorTest{
