@@ -183,7 +183,6 @@ var editCmd = &cobra.Command{
 				return errors.Wrap(err, "error finding key ID")
 			}
 		}
-		fmt.Println(keyId)
 
 		err = afterManifest.Encrypt(kmsService, keyId, keyIdFlag != "" || recrypt, recrypt)
 		if err != nil {
