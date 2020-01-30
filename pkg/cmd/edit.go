@@ -280,10 +280,8 @@ func editObjects(manifest edit.Manifest, comment string) (edit.Manifest, error) 
 
 		// If we're reencrypting ignore this equality check.
 		// Check if the file was edited at all.
-		if !recrypt {
-			if bytes.Equal(editorBuf.Bytes(), afterBuf.Bytes()) {
-				return nil, errors.New("tempfile not edited, aborting")
-			}
+		if bytes.Equal(editorBuf.Bytes(), afterBuf.Bytes()) && !recrypt {
+			return nil, errors.New("tempfile not edited, aborting")
 		}
 
 		// Try strip off the comment.
