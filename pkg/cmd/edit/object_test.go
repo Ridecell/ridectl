@@ -207,7 +207,7 @@ data:
 		It("encrypts the data", func() {
 			obj, err := edit.NewObject([]byte(complexMixedContext))
 			Expect(err).ToNot(HaveOccurred())
-			err = obj.Encrypt(kmsMock(), "12345", false)
+			err = obj.Encrypt(kmsMock(), "12345", false, false)
 			Expect(obj.Kind).To(Equal("EncryptedSecret"))
 			Expect(obj.Data).To(HaveKeyWithValue("MYKEY", "a21zbXl2YWx1ZQ=="))
 			Expect(obj.Data).To(HaveKeyWithValue("RANDOM_VALUE", "a21zNA=="))
@@ -217,7 +217,7 @@ data:
 		It("serializes the data after encryption", func() {
 			obj, err := edit.NewObject([]byte(complexMixedContext))
 			Expect(err).ToNot(HaveOccurred())
-			err = obj.Encrypt(kmsMock(), "12345", false)
+			err = obj.Encrypt(kmsMock(), "12345", false, false)
 			var buf strings.Builder
 			err = obj.Serialize(&buf)
 			Expect(err).ToNot(HaveOccurred())

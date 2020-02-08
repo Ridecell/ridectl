@@ -193,7 +193,7 @@ func (o *Object) Decrypt(kmsService kmsiface.KMSAPI) error {
 	return nil
 }
 
-func (o *Object) Encrypt(kmsService kmsiface.KMSAPI, defaultKeyId string, forceKeyId bool) error {
+func (o *Object) Encrypt(kmsService kmsiface.KMSAPI, defaultKeyId string, forceKeyId bool, reEncrypt bool) error {
 	if o.Kind == "" {
 		return nil
 	}
@@ -210,7 +210,7 @@ func (o *Object) Encrypt(kmsService kmsiface.KMSAPI, defaultKeyId string, forceK
 	enc := &secretsv1beta1.EncryptedSecret{ObjectMeta: o.AfterDec.ObjectMeta, Data: map[string]string{}}
 	for key, value := range o.AfterDec.Data {
 		// Check if this key has changed.
-		if o.OrigDec != nil && o.OrigEnc != nil {
+		if o.OrigDec != nil && o.OrigEnc != nil && !reEncrypt {
 			origDecValue, ok := o.OrigDec.Data[key]
 			if ok && value == origDecValue {
 				// Key was not changed, reuse the old encrypted value.
