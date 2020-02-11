@@ -28,10 +28,10 @@ import (
 )
 
 func init() {
-	rootCmd.AddCommand(redeployCmd)
+	rootCmd.AddCommand(restartMigrationsCmd)
 }
 
-var redeployCmd = &cobra.Command{
+var restartMigrationsCmd = &cobra.Command{
 	Use:   "restart-migrations [flags] <cluster_name> ",
 	Short: "Restart migrations for target summon instance.",
 	Long:  "Restart migrations for target summon instance.",
