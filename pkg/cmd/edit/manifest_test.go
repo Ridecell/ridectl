@@ -97,7 +97,7 @@ data:
 		It("encrypts and serializes correctly", func() {
 			m, err := edit.NewManifest(strings.NewReader(decrypted))
 			Expect(err).ToNot(HaveOccurred())
-			err = m.Encrypt(kmsMock(), "12345", false)
+			err = m.Encrypt(kmsMock(), "12345", false, false)
 			Expect(err).ToNot(HaveOccurred())
 			var buf strings.Builder
 			err = m.Serialize(&buf)

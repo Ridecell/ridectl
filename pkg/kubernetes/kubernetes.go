@@ -20,20 +20,22 @@ import (
 	"context"
 	"fmt"
 	"regexp"
+	"sort"
 	"strings"
 
-	"github.com/Ridecell/ridecell-operator/pkg/apis"
 	"github.com/pkg/errors"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
+	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/clientcmd/api"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 
-	corev1 "k8s.io/api/core/v1"
-	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
+	"github.com/Ridecell/ridecell-operator/pkg/apis"
+	summonv1beta1 "github.com/Ridecell/ridecell-operator/pkg/apis/summon/v1beta1"
 )
 
 const namespacePrefix = "summon-"
@@ -250,4 +252,90 @@ func getChannelOutput(maxFails int, ch chan *KubeObject) (*KubeObject, error) {
 			}
 		}
 	}
+}
+
+func listSummonPlatformWithContext(kubeconfig string, contextObj *kubeContext, listOptions *client.ListOptions, summonList chan *KubeObject) {
+	contextClient, err := getClientByContext(kubeconfig, contextObj.Context)
+	if err != nil {
+		// User may have an invalid context that causes this to fail. Just return nil and continue.
+		summonList <- nil
+		return
+	}
+
+	fetchSummonList := &summonv1beta1.SummonPlatformList{}
+	err = contextClient.List(context.Background(), listOptions, fetchSummonList)
+	if err != nil {
+		summonList <- nil
+		return
+	}
+
+	if len(fetchSummonList.Items) == 0 {
+		summonList <- nil
+		return
+	}
+
+	newKubeObject := &KubeObject{
+		Top:     fetchSummonList,
+		Client:  contextClient,
+		Context: contextObj,
+	}
+	summonList <- newKubeObject
+}
+
+func ListSummonPlatforms(kubeconfig string, nameregex string, namespace string) (summonv1beta1.SummonPlatformList, error) {
+	summonPlatformLists := &summonv1beta1.SummonPlatformList{}
+	listOptions := &client.ListOptions{
+		Namespace: namespace,
+	}
+
+	kubeContexts, err := getKubeContexts()
+	if err != nil {
+		return *summonPlatformLists, err
+	}
+
+	ch := make(chan *KubeObject, len(kubeContexts))
+	for contextName, contextObj := range kubeContexts {
+		kubeContextObj := &kubeContext{
+			Name:    contextName,
+			Context: contextObj,
+		}
+		go listSummonPlatformWithContext(kubeconfig, kubeContextObj, listOptions, ch)
+	}
+
+	// go through each cluster and grab summon platforms
+	for i := 0; i < len(kubeContexts); i++ {
+		tempObject := <-ch
+		if tempObject == nil {
+			continue
+		}
+
+		summonPlatformList, ok := tempObject.Top.(*summonv1beta1.SummonPlatformList)
+		if !ok {
+			return *summonPlatformList, errors.New("unable to convert top object to summonPlatformList")
+		}
+
+		// if searching for a single tenant, just return a summonPlatformList with that single tenant
+		if nameregex != "" {
+			for _, summonplatform := range summonPlatformList.Items {
+				match := regexp.MustCompile(nameregex).Match([]byte(summonplatform.Name))
+				if match {
+					summonPlatformLists.Items = append(summonPlatformLists.Items, summonplatform)
+					return *summonPlatformLists, nil
+				}
+			}
+		} else {
+			summonPlatformLists.Items = append(summonPlatformLists.Items, summonPlatformList.Items...)
+		}
+	}
+
+	// if we went through all the clusters and still haven't found a match, return error
+	if nameregex != "" {
+		return *summonPlatformLists, errors.New("unable to find %s" + nameregex + "\n")
+	}
+	// Sort the list in alphabetical order
+	sort.Slice(summonPlatformLists.Items, func(i, j int) bool {
+		return summonPlatformLists.Items[i].Name < summonPlatformLists.Items[j].Name
+	})
+
+	return *summonPlatformLists, nil
 }

@@ -45,10 +45,12 @@ func init() {
 
 var filenameFlag string
 var keyIdFlag string
+var recrypt bool
 
 var whitespaceRegexp *regexp.Regexp
 
 func init() {
+	editCmd.Flags().BoolVarP(&recrypt, "recrypt", "r", false, "(optional) re-encrypts all secrets in file")
 	editCmd.Flags().StringVarP(&filenameFlag, "file", "f", "", "(optional) Path to the file to edit")
 	editCmd.Flags().StringVarP(&keyIdFlag, "key", "k", "", "(optional) KMS key ID to use for encrypting")
 
@@ -181,7 +183,8 @@ var editCmd = &cobra.Command{
 				return errors.Wrap(err, "error finding key ID")
 			}
 		}
-		err = afterManifest.Encrypt(kmsService, keyId, keyIdFlag != "")
+
+		err = afterManifest.Encrypt(kmsService, keyId, keyIdFlag != "" || recrypt, recrypt)
 		if err != nil {
 			return errors.Wrap(err, "error encrypting after manifest")
 		}
@@ -275,8 +278,9 @@ func editObjects(manifest edit.Manifest, comment string) (edit.Manifest, error) 
 			return nil, errors.Wrapf(err, "error reading tempfile %s", tmpfile.Name())
 		}
 
+		// If we're reencrypting ignore this equality check.
 		// Check if the file was edited at all.
-		if bytes.Equal(editorBuf.Bytes(), afterBuf.Bytes()) {
+		if bytes.Equal(editorBuf.Bytes(), afterBuf.Bytes()) && !recrypt {
 			return nil, errors.New("tempfile not edited, aborting")
 		}
 

@@ -63,13 +63,14 @@ var doctorCmd = &cobra.Command{
 		}
 
 		tests := []*doctorTest{
-			doctorTestLatestVersion,
 			doctorTestEditorEnvVar,
 			doctorTestHomebrew,
 			doctorTestCaskroom,
+			doctorTestLatestVersion,
 			doctorTestPostgresql,
 			doctorTestGcloud,
 			doctorTestGoogleCredentials,
+			doctorTestGoogleDockerLogin,
 			doctorTestKubectl,
 			doctorTestKubectlCommand,
 			doctorTestKubectlConfig,
@@ -205,6 +206,7 @@ var doctorTestLatestVersion = &doctorTest{
 		}
 		return true
 	},
+	fixCmd: `brew reinstall ridectl`,
 }
 
 // Check if EDITOR environment variable is set for the edit command
@@ -268,6 +270,43 @@ var doctorTestGoogleCredentials = &doctorTest{
 		return !strings.HasPrefix(buf.String(), "(unset)")
 	},
 	fixCmd: `gcloud auth login`,
+}
+
+var doctorTestGoogleDockerLogin = &doctorTest{
+	subject: "Google Cloud Docker Credentials",
+	checkFn: func() bool {
+		// Attempt to pull an image
+		cmd := exec.Command("docker", "pull", "us.gcr.io/ridecell-1/ridectl:latest")
+		err := cmd.Run()
+		if err != nil {
+			return false
+		}
+		return true
+	},
+	fixFn: func() error {
+		cmd := exec.Command("gcloud", "auth", "configure-docker")
+		err := cmd.Run()
+		if err != nil {
+			return err
+		}
+
+		dockerPullCmd := exec.Command("docker", "pull", "us.gcr.io/ridecell-1/ridectl:latest")
+		err = dockerPullCmd.Run()
+		if err == nil {
+			return nil
+		}
+
+		// Sometimes not being able to pull the image is due the to oauth token being expired.
+		cmd = exec.Command("gcloud", "auth", "login")
+		err = cmd.Run()
+		if err != nil {
+			return err
+		}
+
+		dockerPullCmd = exec.Command("docker", "pull", "us.gcr.io/ridecell-1/ridectl:latest")
+		err = dockerPullCmd.Run()
+		return err
+	},
 }
 
 var doctorTestKubectlConfig = &doctorTest{

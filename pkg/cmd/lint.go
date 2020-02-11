@@ -35,7 +35,31 @@ func init() {
 	rootCmd.AddCommand(lintCmd)
 }
 
+type secretLocation struct {
+	ObjName string
+	KeyName string
+}
+
+type secretLocations []secretLocation
+
+func (sl secretLocations) objNames() []string {
+	var allObjNames []string
+	for _, location := range sl {
+		allObjNames = append(allObjNames, location.ObjName)
+	}
+	return allObjNames
+}
+
+func (sl secretLocations) formatStrings() []string {
+	var allFormattedStrings []string
+	for _, location := range sl {
+		allFormattedStrings = append(allFormattedStrings, fmt.Sprintf("%s: %s", location.ObjName, location.KeyName))
+	}
+	return allFormattedStrings
+}
+
 var foundNames map[string]string
+var allSecretLocations map[string]secretLocations
 
 var lintCmd = &cobra.Command{
 	Use:   "lint [flags] <path>...",
@@ -68,6 +92,7 @@ var lintCmd = &cobra.Command{
 		}
 
 		foundNames = make(map[string]string)
+		allSecretLocations = make(map[string]secretLocations)
 		var fileNames []string
 		if len(args) > 0 {
 			fileNames, err = parseArgs(args)
@@ -91,6 +116,26 @@ var lintCmd = &cobra.Command{
 			if err != nil {
 				fmt.Printf("%s\n", err.Error())
 				failedTests = true
+			}
+		}
+		for _, locationList := range allSecretLocations {
+			if len(locationList) > 1 {
+				failedTests = true
+
+				keysMatch := true
+				var allObjNames []string
+				for _, location := range locationList {
+					allObjNames = append(allObjNames, location.ObjName)
+					if location.KeyName != locationList[0].KeyName {
+						keysMatch = false
+					}
+				}
+
+				if keysMatch {
+					fmt.Printf("Duplicate secret value %s found in %s\n", locationList[0].KeyName, strings.Join(locationList.objNames(), ", "))
+				} else {
+					fmt.Printf("Duplicate secret value found in %s\n", strings.Join(locationList.formatStrings(), ", "))
+				}
 			}
 		}
 		if failedTests {
@@ -165,23 +210,50 @@ func lintFile(filename string, imageTags []string) error {
 	}
 	foundNames[summonObj.Name] = filename
 
-	// Check that the docker image exists
-	if imageTags != nil {
-		var foundImage bool
-		for _, imageTag := range imageTags {
-			if summonObj.Spec.Version == imageTag {
-				foundImage = true
-				break
-			}
-		}
+	// Make sure that either autodeploy or version is set
+	if summonObj.Spec.AutoDeploy == "" && summonObj.Spec.Version == "" {
+		return fmt.Errorf("%s: Neither Autodeploy or Version are set.", filename)
+	}
 
-		if !foundImage {
-			return fmt.Errorf(`version "%s" does not exist`, summonObj.Spec.Version)
+	// Make sure that autodeploy and version are not both set
+	if summonObj.Spec.AutoDeploy != "" && summonObj.Spec.Version != "" {
+		return fmt.Errorf("%s: Autodeploy and Version both set, only one should be set at a time.", filename)
+	}
+
+	// Check that the docker image exists
+	if summonObj.Spec.AutoDeploy == "" {
+		if imageTags != nil {
+			var foundImage bool
+			for _, imageTag := range imageTags {
+				if summonObj.Spec.Version == imageTag {
+					foundImage = true
+					break
+				}
+			}
+
+			if !foundImage {
+				return fmt.Errorf(`%s: version "%s" does not exist`, filename, summonObj.Spec.Version)
+			}
 		}
 	}
 
 	if manifest[1].Kind != "EncryptedSecret" {
 		return fmt.Errorf("%s: EncryptedSecret is required to be the second object in manifest", filename)
+	}
+
+	var unencryptedValueFound bool
+	for secretKey, secretValue := range manifest[1].Data {
+		if !strings.HasPrefix(secretValue, "AQICAH") {
+			unencryptedValueFound = true
+			fmt.Printf("%s: EncryptedSecret %s missing preamble, may not be encrypted.", filename, secretKey)
+		}
+
+		allSecretLocations[secretValue] = append(allSecretLocations[secretValue], secretLocation{ObjName: summonObj.Name, KeyName: secretKey})
+	}
+
+	if unencryptedValueFound {
+		// Return blank error to not spam terminal, added benefit of spacing out filenames.
+		return fmt.Errorf("")
 	}
 
 	for _, object := range manifest {
