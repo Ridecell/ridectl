@@ -17,9 +17,9 @@ limitations under the License.
 package cmd
 
 import (
+	"context"
 	"fmt"
 
-	"github.com/Ridecell/ridectl/pkg/exec"
 	"github.com/Ridecell/ridectl/pkg/kubernetes"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -32,9 +32,9 @@ func init() {
 }
 
 var redeployCmd = &cobra.Command{
-	Use:   "redeploy [flags] <cluster_name> ",
-	Short: "Redeploy summon instance",
-	Long:  "Redeploy summon instance.",
+	Use:   "restart-migrations [flags] <cluster_name> ",
+	Short: "Restart migrations for target summon instance.",
+	Long:  "Restart migrations for target summon instance.",
 	Args: func(_ *cobra.Command, args []string) error {
 		if len(args) == 0 {
 			return fmt.Errorf("Cluster name argument is required")
@@ -49,7 +49,7 @@ var redeployCmd = &cobra.Command{
 		fetchObject := &kubernetes.KubeObject{
 			Top: &batchv1.Job{},
 		}
-		err := kubernetes.GetObject(kubeconfigFlag, args[0]+"-migrations", namespace, fetchObject)
+		err := kubernetes.GetObject(kubeconfigFlag, fmt.Sprintf("%s-migrations", args[0]), namespace, fetchObject)
 		if err != nil {
 			return errors.Wrap(err, "unable to find job")
 		}
@@ -58,10 +58,14 @@ var redeployCmd = &cobra.Command{
 		if !ok {
 			return errors.New("unable to convert runtime.object to batchv1.Job")
 		}
-		fmt.Printf("Redeploying to %s\n", args[0])
 
-		// Spawn kubectl.
-		kubectlArgs := []string{"kubectl", "delete", "job", "-n", job.Namespace, job.Name, "--context", fetchObject.Context.Name}
-		return exec.Exec(kubectlArgs)
+		fmt.Printf("Restarting migrations for %s\n", args[0])
+
+		err = fetchObject.Client.Delete(context.Background(), job)
+		if err != nil {
+			return err
+		}
+
+		return nil
 	},
 }
