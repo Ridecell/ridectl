@@ -1,13 +1,14 @@
 # Ridectl
 
 ## Overview
-`ridectl` is Ridecell's internal tool that enables employees access and ways to interact with SummonPlatform instances. Employee's permissions are restricted to certain environments or features, depending on their role. 
+`ridectl` is Ridecell's internal tool that enables employees access and ways to interact with SummonPlatform instances. Employee's permissions are restricted to certain environments or features, depending on their role.
 
 Some key features are:
 1. shelling into an instance (`shell`)
 2. shelling into an instance under the python environment (`pyshell`)
 3. shelling into the instance's database (`dbshell`)
 4. Obtaining dispatcher/support/reports account password (`password`)
+5. Restart migrations for a summon instance(`restart-migrations`)
 
 For a full list of functionalities, run `ridectl --help`
 
