@@ -232,8 +232,15 @@ func getClientByContext(kubeconfig string, kubeContext *api.Context) (client.Cli
 }
 
 func ParseNamespace(instanceName string) string {
-	env := strings.Split(instanceName, "-")[1]
-	namespace := fmt.Sprintf("%s%s", namespacePrefix, env)
+	var namespace string
+	if strings.HasPrefix(instanceName, "svc-") {
+		// namespace should be the microservice name, so grab everything after the svc-<region>-<env> prefix.
+		namespace = strings.SplitN(instanceName, "-", 4)[3]
+	} else {
+		// we're dealing with a summon instance.
+		env := strings.Split(instanceName, "-")[1]
+		namespace = fmt.Sprintf("%s%s", namespacePrefix, env)
+	}
 	return namespace
 }
 

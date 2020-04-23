@@ -55,13 +55,7 @@ var dbShellCmd = &cobra.Command{
 
 		// Determine if we are trying to connect to a microservice or summonplatform db
 		instance := strings.ToLower(args[0])
-		var namespace string
-		if strings.HasPrefix(instance, "svc-") {
-			// namespace should be the microservice name, so grab everything after the svc-<region>-<env> prefix.
-			namespace = strings.SplitN(instance, "-", 4)[3]
-		} else {
-			namespace = kubernetes.ParseNamespace(instance)
-		}
+		namespace := kubernetes.ParseNamespace(instance)
 		fetchObject := &kubernetes.KubeObject{Top: &dbv1beta1.PostgresDatabase{}}
 		err := kubernetes.GetObject(kubeconfigFlag, instance, namespace, fetchObject)
 		if err != nil {
