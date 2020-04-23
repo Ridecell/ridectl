@@ -52,13 +52,16 @@ var rollingRestartCmd = &cobra.Command{
 		return nil
 	},
 	RunE: func(_ *cobra.Command, args []string) error {
-		namespace := kubernetes.ParseNamespace(args[0])
+		target, err := kubernetes.ParseSubject(args[0])
+		if err != nil {
+			return errors.Wrap(err, "not a valid target")
+		}
 		objectName := fmt.Sprintf("%s-%s", args[0], args[1])
 
 		fetchObject := &kubernetes.KubeObject{
 			Top: &appsv1.Deployment{},
 		}
-		err := kubernetes.GetObject(kubeconfigFlag, objectName, namespace, fetchObject)
+		err = kubernetes.GetObject(kubeconfigFlag, objectName, target.Namespace, fetchObject)
 		if err != nil {
 			return errors.Wrap(err, "unable to find deployment")
 		}

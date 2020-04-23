@@ -53,11 +53,14 @@ var loadflavorCmd = &cobra.Command{
 		return nil
 	},
 	RunE: func(_ *cobra.Command, args []string) error {
-		namespace := kubernetes.ParseNamespace(args[0])
+		target, err := kubernetes.ParseSubject(args[0])
+		if err != nil {
+			return errors.Wrap(err, "not a valid target")
+		}
 		labelSelector := fmt.Sprintf("app.kubernetes.io/instance=%s-web", args[0])
 
 		fetchObject := &kubernetes.KubeObject{}
-		err := kubernetes.GetPod(kubeconfigFlag, nil, &labelSelector, namespace, fetchObject)
+		err = kubernetes.GetPod(kubeconfigFlag, nil, &labelSelector, target.Namespace, fetchObject)
 		if err != nil {
 			return errors.Wrap(err, "unable to find pod")
 		}

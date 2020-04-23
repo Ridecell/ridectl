@@ -45,11 +45,13 @@ var passwordCmd = &cobra.Command{
 		return nil
 	},
 	RunE: func(_ *cobra.Command, args []string) error {
+		target, err := kubernetes.ParseSubject(args[0])
+		if err != nil {
+			return errors.Wrap(err, "not a valid target")
+		}
 		secretName := fmt.Sprintf("%s-dispatcher.django-password", args[0])
-		namespace := kubernetes.ParseNamespace(args[0])
-
 		fetchObject := &kubernetes.KubeObject{Top: &corev1.Secret{}}
-		err := kubernetes.GetObject(kubeconfigFlag, secretName, namespace, fetchObject)
+		err = kubernetes.GetObject(kubeconfigFlag, secretName, target.Namespace, fetchObject)
 		if err != nil {
 			return errors.Wrap(err, "unable to find secret")
 		}

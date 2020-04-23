@@ -21,7 +21,6 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/Ridecell/ridectl/pkg/exec"
 	"github.com/Ridecell/ridectl/pkg/kubernetes"
@@ -52,12 +51,13 @@ var dbShellCmd = &cobra.Command{
 		return nil
 	},
 	RunE: func(_ *cobra.Command, args []string) error {
-
 		// Determine if we are trying to connect to a microservice or summonplatform db
-		instance := strings.ToLower(args[0])
-		namespace := kubernetes.ParseNamespace(instance)
+		target, err := kubernetes.ParseSubject(args[0])
+		if err != nil {
+			return err
+		}
 		fetchObject := &kubernetes.KubeObject{Top: &dbv1beta1.PostgresDatabase{}}
-		err := kubernetes.GetObject(kubeconfigFlag, instance, namespace, fetchObject)
+		err = kubernetes.GetObject(kubeconfigFlag, target.Name, target.Namespace, fetchObject)
 		if err != nil {
 			return err
 		}
@@ -69,7 +69,7 @@ var dbShellCmd = &cobra.Command{
 		postgresConnection := pgdbObject.Status.Connection
 		fetchSecret := &corev1.Secret{}
 
-		err = kubernetes.GetObjectWithClient(fetchObject.Client, postgresConnection.PasswordSecretRef.Name, namespace, fetchSecret)
+		err = kubernetes.GetObjectWithClient(fetchObject.Client, postgresConnection.PasswordSecretRef.Name, target.Namespace, fetchSecret)
 		if err != nil {
 			return err
 		}

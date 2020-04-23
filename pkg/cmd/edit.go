@@ -307,6 +307,10 @@ func editObjects(manifest edit.Manifest, comment string) (edit.Manifest, error) 
 }
 
 func createDefaultData(instance string) (io.Reader, error) {
+	target, err := kubernetes.ParseSubject(instance)
+	if err != nil {
+		return nil, fmt.Errorf("unable to parse instance name %s", instance)
+	}
 	templateData, err := vfsutil.ReadFile(Templates, "new_instance.yml.tpl")
 	if err != nil {
 		return nil, errors.Wrap(err, "error reading new instance template")
@@ -314,10 +318,6 @@ func createDefaultData(instance string) (io.Reader, error) {
 	template, err := template.New("new_instance.yml.tpl").Parse(string(templateData))
 	if err != nil {
 		return nil, errors.Wrap(err, "error parsing new instance template")
-	}
-	match := regexp.MustCompile(`^([a-z0-9]+)-([a-z]+)$`).FindStringSubmatch(instance)
-	if match == nil {
-		return nil, errors.Errorf("unable to parse instance name %s", instance)
 	}
 
 	// Prompt user for a slack channel to alert to
@@ -342,7 +342,7 @@ func createDefaultData(instance string) (io.Reader, error) {
 		SlackChannel string
 	}{
 		Name:         instance,
-		Namespace:    kubernetes.ParseNamespace(instance),
+		Namespace:    target.Namespace,
 		SlackChannel: slackChannelName,
 	})
 	if err != nil {
