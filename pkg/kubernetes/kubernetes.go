@@ -18,7 +18,6 @@ package kubernetes
 
 import (
 	"context"
-	"fmt"
 	"regexp"
 	"sort"
 	"strings"
@@ -231,17 +230,34 @@ func getClientByContext(kubeconfig string, kubeContext *api.Context) (client.Cli
 	return client, nil
 }
 
-func ParseNamespace(instanceName string) string {
-	var namespace string
-	if strings.HasPrefix(instanceName, "svc-") {
-		// namespace should be the microservice name, so grab everything after the svc-<region>-<env> prefix.
-		namespace = strings.SplitN(instanceName, "-", 4)[3]
-	} else {
-		// we're dealing with a summon instance.
-		env := strings.Split(instanceName, "-")[1]
-		namespace = fmt.Sprintf("%s%s", namespacePrefix, env)
+// Parses the instance and returns an array of strings denoting: [region, env, subject, namespace]
+func ParseSubject(instanceName string) []string {
+
+	microservice := regexp.MustCompile(`svc-(\w+)-(\w+)-(.+)`)
+	summon := regexp.MustCompile(`(\w+)-(\w+)`)
+
+	svcMatch := microservice.MatchString(instanceName)
+	if svcMatch {
+		fields := microservice.FindStringSubmatch(instanceName)
+
+		return []string{fields[1], fields[2], fields[3], fields[3]}
 	}
-	return namespace
+
+	sMatch := summon.MatchString(instanceName)
+	if sMatch {
+		fields := summon.FindStringSubmatch(instanceName)
+
+		// summon instances can only parse out subject and namespace
+		return []string{"", "", fields[1], namespacePrefix + fields[2]}
+	}
+
+	// Nothing matched, return empty
+	return []string{}
+}
+
+func ParseNamespace(instanceName string) string {
+	parsed := ParseSubject(instanceName)
+	return parsed[3]
 }
 
 func getChannelOutput(maxFails int, ch chan *KubeObject) (*KubeObject, error) {
