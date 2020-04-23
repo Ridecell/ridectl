@@ -21,13 +21,14 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/Ridecell/ridectl/pkg/exec"
 	"github.com/Ridecell/ridectl/pkg/kubernetes"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 
-	summonv1beta1 "github.com/Ridecell/ridecell-operator/pkg/apis/summon/v1beta1"
+	dbv1beta1 "github.com/Ridecell/ridecell-operator/pkg/apis/db/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -37,8 +38,10 @@ func init() {
 
 var dbShellCmd = &cobra.Command{
 	Use:   "dbshell [flags] <cluster_name>",
-	Short: "Open a database shell on a Summon instance",
-	Long:  `Open an interactive PostgreSQL shell for a Summon instance running on Kubernetes`,
+	Short: "Open a database shell on a Summon instance or microservice",
+	Long: "Open an interactive PostgreSQL shell for a Summon instance or microservice running on Kubernetes.\n" +
+		"For summon instances: dbshell <tenant>-<env>                   -- e.g. ridectl dbshell darwin-qa\n" +
+		"For microservices: dbshell svc-<region>-<env>-<microservice>   -- e.g. ridectl dbshell svc-us-master-dispatch",
 	Args: func(_ *cobra.Command, args []string) error {
 		if len(args) == 0 {
 			return fmt.Errorf("Cluster name argument is required")
@@ -50,20 +53,28 @@ var dbShellCmd = &cobra.Command{
 	},
 	RunE: func(_ *cobra.Command, args []string) error {
 
-		fetchObject := &kubernetes.KubeObject{Top: &summonv1beta1.SummonPlatform{}}
-		namespace := kubernetes.ParseNamespace(args[0])
-		err := kubernetes.GetObject(kubeconfigFlag, args[0], namespace, fetchObject)
+		// Determine if we are trying to connect to a microservice or summonplatform db
+		instance := strings.ToLower(args[0])
+		var namespace string
+		if strings.HasPrefix(instance, "svc-") {
+			// namespace should be the microservice name, so grab everything after the svc-<region>-<env> prefix.
+			namespace = strings.SplitN(instance, "-", 4)[3]
+		} else {
+			namespace = kubernetes.ParseNamespace(instance)
+		}
+		fetchObject := &kubernetes.KubeObject{Top: &dbv1beta1.PostgresDatabase{}}
+		err := kubernetes.GetObject(kubeconfigFlag, instance, namespace, fetchObject)
 		if err != nil {
 			return err
 		}
 
-		summonObject, ok := fetchObject.Top.(*summonv1beta1.SummonPlatform)
+		pgdbObject, ok := fetchObject.Top.(*dbv1beta1.PostgresDatabase)
 		if !ok {
-			return errors.New("unable to convert to summonplatform object")
+			return errors.New("unable to convert to PostgresDatabase object")
 		}
-		postgresConnection := summonObject.Status.PostgresConnection
-
+		postgresConnection := pgdbObject.Status.Connection
 		fetchSecret := &corev1.Secret{}
+
 		err = kubernetes.GetObjectWithClient(fetchObject.Client, postgresConnection.PasswordSecretRef.Name, namespace, fetchSecret)
 		if err != nil {
 			return err
