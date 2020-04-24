@@ -50,8 +50,15 @@ var pyShellCmd = &cobra.Command{
 		if err != nil {
 			return errors.Wrap(err, "not a valid target")
 		}
-		labelSelector := fmt.Sprintf("app.kubernetes.io/instance=%s-web", args[0])
 
+		var labelSelector string
+		if target.Type == "summon" {
+			labelSelector = fmt.Sprintf("app.kubernetes.io/instance=%s-web", args[0])
+		} else if target.Type == "microservice" {
+			labelSelector = fmt.Sprintf("environment=%s, region=%s, role=web", target.Env, target.Region)
+		} else {
+			return fmt.Errorf("Cannot find pod without knowing the target's type: %#v", target)
+		}
 		fetchObject := &kubernetes.KubeObject{}
 		err = kubernetes.GetPod(kubeconfigFlag, nil, &labelSelector, target.Namespace, fetchObject)
 		if err != nil {
