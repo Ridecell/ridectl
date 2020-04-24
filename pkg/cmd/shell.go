@@ -34,8 +34,8 @@ func init() {
 
 var shellCmd = &cobra.Command{
 	Use:   "shell [flags] <cluster_name>",
-	Short: "Open a shell on a Summon instance",
-	Long:  `Open an interactive bash terminal on a Summon instance running on Kubernetes`,
+	Short: "Open a shell on a Summon instance or microservice",
+	Long:  `Open an interactive bash terminal on a Summon instance or microservice running on Kubernetes`,
 	Args: func(_ *cobra.Command, args []string) error {
 		if len(args) == 0 {
 			return fmt.Errorf("Cluster name argument is required")
@@ -46,11 +46,22 @@ var shellCmd = &cobra.Command{
 		return nil
 	},
 	RunE: func(_ *cobra.Command, args []string) error {
-		namespace := kubernetes.ParseNamespace(args[0])
-		labelSelector := fmt.Sprintf("app.kubernetes.io/instance=%s-web", args[0])
+		target, err := kubernetes.ParseSubject(args[0])
+		if err != nil {
+			return errors.Wrap(err, "not a valid target")
+		}
+
+		var labelSelector string
+		if target.Type == "summon" {
+			labelSelector = fmt.Sprintf("app.kubernetes.io/instance=%s-web", args[0])
+		} else if target.Type == "microservice" {
+			labelSelector = fmt.Sprintf("environment=%s, region=%s, role=web", target.Env, target.Region)
+		} else {
+			return fmt.Errorf("Cannot find pod without knowing the target's type: %#v", target)
+		}
 
 		fetchObject := &kubernetes.KubeObject{}
-		err := kubernetes.GetPod(kubeconfigFlag, nil, &labelSelector, namespace, fetchObject)
+		err = kubernetes.GetPod(kubeconfigFlag, nil, &labelSelector, target.Namespace, fetchObject)
 		if err != nil {
 			return errors.Wrap(err, "unable to find pod")
 		}

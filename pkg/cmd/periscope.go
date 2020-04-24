@@ -48,7 +48,10 @@ var periscopeCmd = &cobra.Command{
 	RunE: func(_ *cobra.Command, args []string) error {
 		dbname := args[0]
 		env := strings.Split(args[0], "-")[1]
-		namespace := kubernetes.ParseNamespace(args[0])
+		target, err := kubernetes.ParseSubject(args[0])
+		if err != nil {
+			return errors.Wrap(err, "not a valid target")
+		}
 		var secretName string
 
 		if env == "prod" {
@@ -58,7 +61,7 @@ var periscopeCmd = &cobra.Command{
 		}
 
 		fetchObject := &kubernetes.KubeObject{Top: &corev1.Secret{}}
-		err := kubernetes.GetObject(kubeconfigFlag, secretName, namespace, fetchObject)
+		err = kubernetes.GetObject(kubeconfigFlag, secretName, target.Namespace, fetchObject)
 		if err != nil {
 			return errors.Wrap(err, "unable to find secret")
 		}
@@ -68,7 +71,7 @@ var periscopeCmd = &cobra.Command{
 		}
 
 		fetchObject = &kubernetes.KubeObject{Top: &dbv1beta1.PostgresDatabase{}}
-		err = kubernetes.GetObject(kubeconfigFlag, dbname, namespace, fetchObject)
+		err = kubernetes.GetObject(kubeconfigFlag, dbname, target.Namespace, fetchObject)
 		if err != nil {
 			return errors.Wrap(err, "unable to find PostgresDatabase info")
 		}

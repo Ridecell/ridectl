@@ -45,11 +45,14 @@ var restartMigrationsCmd = &cobra.Command{
 		return nil
 	},
 	RunE: func(_ *cobra.Command, args []string) error {
-		namespace := kubernetes.ParseNamespace(args[0])
+		target, err := kubernetes.ParseSubject(args[0])
+		if err != nil {
+			return errors.Wrap(err, "not a valid target")
+		}
 		fetchObject := &kubernetes.KubeObject{
 			Top: &batchv1.Job{},
 		}
-		err := kubernetes.GetObject(kubeconfigFlag, fmt.Sprintf("%s-migrations", args[0]), namespace, fetchObject)
+		err = kubernetes.GetObject(kubeconfigFlag, fmt.Sprintf("%s-migrations", target.Name), target.Namespace, fetchObject)
 		if err != nil {
 			return errors.Wrap(err, "unable to find job")
 		}

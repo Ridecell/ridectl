@@ -40,6 +40,14 @@ import (
 
 const namespacePrefix = "summon-"
 
+type Subject struct {
+	Region    string
+	Env       string
+	Namespace string
+	Name      string
+	Type      string
+}
+
 type KubeObject struct {
 	Top     runtime.Object
 	Client  client.Client
@@ -231,10 +239,36 @@ func getClientByContext(kubeconfig string, kubeContext *api.Context) (client.Cli
 	return client, nil
 }
 
-func ParseNamespace(instanceName string) string {
-	env := strings.Split(instanceName, "-")[1]
-	namespace := fmt.Sprintf("%s%s", namespacePrefix, env)
-	return namespace
+// Parses the instance and returns an array of strings denoting: [region, env, subject, namespace]
+func ParseSubject(instanceName string) (Subject, error) {
+	var subject Subject
+	microservice := regexp.MustCompile(`svc-(\w+)-(\w+)-(.+)`)
+	// Summon instance name can't start with a digit since it is used with a Service -- needs a valid DNS name.
+	summon := regexp.MustCompile(`([a-z][a-z0-9]+)-([a-z]+)`)
+
+	svcMatch := microservice.MatchString(instanceName)
+	if svcMatch {
+		fields := microservice.FindStringSubmatch(instanceName)
+		subject.Name = fields[0]
+		subject.Region = fields[1]
+		subject.Env = fields[2]
+		subject.Namespace = fields[3]
+		subject.Type = "microservice"
+		return subject, nil
+	}
+
+	sMatch := summon.MatchString(instanceName)
+	if sMatch {
+		fields := summon.FindStringSubmatch(instanceName)
+		// summon instances can only parse out name, env and namespace
+		subject.Name = fields[0] // want summon name to keep env as well
+		subject.Env = fields[2]
+		subject.Namespace = namespacePrefix + subject.Env
+		subject.Type = "summon"
+		return subject, nil
+	}
+	// Nothing matched, return empty with error
+	return subject, fmt.Errorf("Could not parse out information from %s", instanceName)
 }
 
 func getChannelOutput(maxFails int, ch chan *KubeObject) (*KubeObject, error) {
