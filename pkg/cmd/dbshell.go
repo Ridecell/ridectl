@@ -24,6 +24,7 @@ import (
 
 	"github.com/Ridecell/ridectl/pkg/exec"
 	"github.com/Ridecell/ridectl/pkg/kubernetes"
+	"github.com/miekg/dns"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 
@@ -31,7 +32,10 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
+var disabledns bool
+
 func init() {
+	dbShellCmd.Flags().BoolVarP(&disabledns, "disabledns", "", false, "(optional) will not use aws dns to resolve postgres host")
 	rootCmd.AddCommand(dbShellCmd)
 }
 
@@ -87,15 +91,48 @@ var dbShellCmd = &cobra.Command{
 
 		password := fetchSecret.Data[postgresConnection.PasswordSecretRef.Key]
 
+		host := postgresConnection.Host
+		// get rds local ip
+		if !disabledns {
+			fmt.Println("Using aws dns...")
+			host, err = resolveAwsRecord(postgresConnection.Host)
+			if err != nil {
+				fmt.Println(err)
+				os.Exit(1)
+			}
+		}
 		// hostname:port:database:username:password
-		passwordFileString := fmt.Sprintf("%s:%s:%s:%s:%s", postgresConnection.Host, "*", postgresConnection.Database, postgresConnection.Username, password)
+		passwordFileString := fmt.Sprintf("%s:%s:%s:%s:%s", host, "*", postgresConnection.Database, postgresConnection.Username, password)
 		_, err = tempfile.Write([]byte(passwordFileString))
 		if err != nil {
 			return errors.Wrap(err, "failed to write password to tempfile")
 		}
 
-		psqlCmd := []string{"psql", "-h", postgresConnection.Host, "-U", postgresConnection.Username, postgresConnection.Database}
+		psqlCmd := []string{"psql", "-h", host, "-U", postgresConnection.Username, postgresConnection.Database}
 		os.Setenv("PGPASSFILE", tempfilepath)
 		return exec.Exec(psqlCmd)
 	},
+}
+
+func resolveAwsRecord(hostname string) (string, error) {
+	server := "172.30.2.63"
+	m1 := new(dns.Msg)
+	m1.Id = dns.Id()
+	m1.RecursionDesired = true
+	m1.Question = make([]dns.Question, 1)
+	m1.Question[0] = dns.Question{dns.Fqdn(hostname), dns.TypeA, dns.ClassINET}
+	r, err := dns.Exchange(m1, server+":53000")
+	if err != nil {
+		errors.Wrap(err, "failed get aws local ip for "+hostname)
+	}
+
+	if len(r.Answer) == 0 {
+		return "", errors.New("No records return")
+	}
+	for _, record := range r.Answer {
+		if t, ok := record.(*dns.A); ok {
+			return t.A.String(), nil
+		}
+	}
+	return "", errors.New("No A record returned")
 }

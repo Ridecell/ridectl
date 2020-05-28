@@ -434,6 +434,14 @@
   version = "v1.0.1"
 
 [[projects]]
+  digest = "1:268150f9b3d20034d6d230bf181587e4f1bb22e926d60b5b581740b807af910e"
+  name = "github.com/miekg/dns"
+  packages = ["."]
+  pruneopts = "T"
+  revision = "f515aa579d28efa1af67d9a62cc57f2dfe59da76"
+  version = "v1.1.29"
+
+[[projects]]
   digest = "1:5d231480e1c64a726869bc4142d270184c419749d34f167646baa21008eb0a79"
   name = "github.com/mitchellh/go-homedir"
   packages = ["."]
@@ -701,6 +709,8 @@
   digest = "1:eb5b910ca0953d88451895190c80fb2bbfb12b91ac73684200be391997eaa132"
   name = "golang.org/x/crypto"
   packages = [
+    "ed25519",
+    "ed25519/internal/edwards25519",
     "pbkdf2",
     "scrypt",
     "ssh/terminal",
@@ -713,6 +723,7 @@
   digest = "1:0ef79f0d58752e0511f9db8687005343854847f52a17d932bbab9bf82dc78fee"
   name = "golang.org/x/net"
   packages = [
+    "bpf",
     "context",
     "context/ctxhttp",
     "html",
@@ -722,6 +733,10 @@
     "http2",
     "http2/hpack",
     "idna",
+    "internal/iana",
+    "internal/socket",
+    "ipv4",
+    "ipv6",
   ]
   pruneopts = "T"
   revision = "d26f9f9a57f3fab6a695bec0d84433c2c50f8bbf"
@@ -1164,6 +1179,7 @@
     "github.com/heroku/docker-registry-client/registry",
     "github.com/manifoldco/promptui",
     "github.com/mattn/go-shellwords",
+    "github.com/miekg/dns",
     "github.com/mitchellh/go-homedir",
     "github.com/onsi/ginkgo",
     "github.com/onsi/gomega",
@@ -1174,6 +1190,7 @@
     "github.com/spf13/cobra",
     "gopkg.in/yaml.v2",
     "k8s.io/api/apps/v1",
+    "k8s.io/api/batch/v1",
     "k8s.io/api/core/v1",
     "k8s.io/apimachinery/pkg/apis/meta/v1",
     "k8s.io/apimachinery/pkg/runtime",
