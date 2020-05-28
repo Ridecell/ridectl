@@ -10,7 +10,6 @@ jobs:
     - restore_cache:
         keys:
         - v1-vendor-{{ checksum "Gopkg.lock" }}
-        - v1-vendor
 
     - run: make dep test
     - run: goveralls -coverprofile=gover.coverprofile -service=circle-ci -repotoken=$COVERALLS_TOKEN
@@ -30,7 +29,6 @@ jobs:
     - restore_cache:
         keys:
         - v1-vendor-{{ checksum "Gopkg.lock" }}
-        - v1-vendor
 
     - run: make dep build_macos build_linux
     - run: mkdir workspace && cp -R bin/ workspace/
