@@ -120,6 +120,16 @@ var statusCmd = &cobra.Command{
 					indicator.Clear()
 					steps++
 				}
+				// Calling it at end of for loop since we made these calls right before.
+				sData, err = getData("summon", fetchObject.Context.Name, target.Namespace, args[0])
+				if err != nil {
+					return err
+				}
+
+				dData, err = getData("deployment", fetchObject.Context.Name, target.Namespace, args[0])
+				if err != nil {
+					return err
+				}
 			}
 		} else {
 			fmt.Printf(sData + "\n" + dData + "\n")
