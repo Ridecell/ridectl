@@ -30,8 +30,11 @@ import (
 	summonv1beta1 "github.com/Ridecell/ridecell-operator/pkg/apis/summon/v1beta1"
 )
 
+// var skipSecretKeysPrefixFlag string
+
 func init() {
 	rootCmd.AddCommand(lintCmd)
+//	lintCmd.Flags().StringVarP(&skipSecretKeysPrefixFlag, "skipSecretKeysPrefix", "s", "", "enter prefixes of keys which need to be skipped (as comma separated values)")
 }
 
 type secretLocation struct {
@@ -119,17 +122,18 @@ var lintCmd = &cobra.Command{
 		}
 		for _, locationList := range allSecretLocations {
 			if len(locationList) > 1 {
+				fmt.Printf("Current location keyname is: %s\n", locationList[0].KeyName)
+				if strings.HasPrefix(locationList[0].KeyName, "MENSA") {
+					fmt.Printf("Skipped key '%s' because it starts with MENSA", locationList[0].KeyName)
+					continue
+				}
+
 				failedTests = true
 
 				keysMatch := true
 				var allObjNames []string
 				for _, location := range locationList {
 					allObjNames = append(allObjNames, location.ObjName)
-					fmt.Printf("Current location keyname is: %s\n", locationList[0].KeyName)
-					if strings.HasPrefix(locationList[0].KeyName, "MENSA") {
-						fmt.Printf("Skipped key '%s' because it starts with MENSA", locationList[0].KeyName)
-						continue;
-					}
 					if location.KeyName != locationList[0].KeyName {
 						keysMatch = false
 					}
