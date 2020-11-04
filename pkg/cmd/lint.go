@@ -23,7 +23,6 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
-
 	"github.com/Ridecell/ridectl/pkg/cmd/edit"
 	"github.com/heroku/docker-registry-client/registry"
 	"github.com/spf13/cobra"
@@ -126,6 +125,11 @@ var lintCmd = &cobra.Command{
 				var allObjNames []string
 				for _, location := range locationList {
 					allObjNames = append(allObjNames, location.ObjName)
+					fmt.Printf("Current location keyname is: %s\n", locationList[0].KeyName)
+					if strings.HasPrefix(locationList[0].KeyName, "MENSA") {
+						fmt.Printf("Skipped key '%s' because it starts with MENSA", locationList[0].KeyName)
+						continue;
+					}
 					if location.KeyName != locationList[0].KeyName {
 						keysMatch = false
 					}
