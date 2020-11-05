@@ -18,14 +18,14 @@ package cmd
 
 import (
 	"fmt"
+	"github.com/Ridecell/ridectl/pkg/cmd/edit"
+	"github.com/heroku/docker-registry-client/registry"
+	"github.com/spf13/cobra"
 	"net/http"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
-	"github.com/Ridecell/ridectl/pkg/cmd/edit"
-	"github.com/heroku/docker-registry-client/registry"
-	"github.com/spf13/cobra"
 
 	summonv1beta1 "github.com/Ridecell/ridecell-operator/pkg/apis/summon/v1beta1"
 )
@@ -34,7 +34,7 @@ var skipSecretKeysPrefixFlag string
 
 func init() {
 	rootCmd.AddCommand(lintCmd)
-    lintCmd.Flags().StringVarP(&skipSecretKeysPrefixFlag, "skipSecretKeysPrefix", "s", "", "enter prefixes of keys which need to be skipped (as comma separated values)")
+	lintCmd.Flags().StringVarP(&skipSecretKeysPrefixFlag, "skipSecretKeysPrefix", "s", "", "enter prefixes of keys which need to be skipped (as comma separated values)")
 }
 
 type secretLocation struct {
@@ -121,18 +121,17 @@ var lintCmd = &cobra.Command{
 			}
 		}
 
-        keyPrefixRegex := regexp.MustCompile(strings.ReplaceAll(skipSecretKeysPrefixFlag, ",", "|"))
+		keyPrefixRegex := regexp.MustCompile(strings.ReplaceAll(skipSecretKeysPrefixFlag, ",", "|"))
 		for _, locationList := range allSecretLocations {
 			if len(locationList) > 1 {
 				fmt.Printf("Current location keyname is: %s\n", locationList[0].KeyName)
-				if(skipSecretKeysPrefixFlag != ""){
+				if skipSecretKeysPrefixFlag != "" {
 					//replace commas with pipes and create a regex
-					if(keyPrefixRegex.FindString(locationList[0].KeyName) != "") {
+					if keyPrefixRegex.FindString(locationList[0].KeyName) != "" {
 						fmt.Printf("Skipped key '%s' because it starts with a skipped secret key prefix \n", locationList[0].KeyName)
 						continue
 					}
 				}
-				
 
 				failedTests = true
 
