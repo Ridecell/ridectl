@@ -121,12 +121,12 @@ var lintCmd = &cobra.Command{
 			}
 		}
 
+        keyPrefixRegex := regexp.MustCompile(strings.ReplaceAll(skipSecretKeysPrefixFlag, ",", "|"))
 		for _, locationList := range allSecretLocations {
 			if len(locationList) > 1 {
 				fmt.Printf("Current location keyname is: %s\n", locationList[0].KeyName)
 				if(skipSecretKeysPrefixFlag != ""){
 					//replace commas with pipes and create a regex
-					keyPrefixRegex := regexp.MustCompile(strings.Replace(skipSecretKeysPrefixFlag, ",", "|", 1000))
 					if(keyPrefixRegex.FindString(locationList[0].KeyName) != "") {
 						fmt.Printf("Skipped key '%s' because it starts with a skipped secret key prefix \n", locationList[0].KeyName)
 						continue
