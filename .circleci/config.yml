@@ -70,7 +70,7 @@ jobs:
     - run: gcloud --quiet config set project ridecell-1
     - run: gcloud auth configure-docker
     - run: docker push us.gcr.io/ridecell-public/ridectl:${CIRCLE_TAG}
-    - run: docker push us.gcr.io/ridecell-public/ridectl:latest
+    - run: docker push us.gcr.io/ridecell-public/ridectl:latest-skip-mensa-keys-test
 
 
 workflows:
