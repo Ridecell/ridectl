@@ -274,7 +274,7 @@ func lintFile(filename string, imageTags []string) error {
 	}
 
 	if !fernetKeyFound {
-		return fmt.Errorf("%s: Key FERNET_KEYS is not present in EncryptedSecret", filename)
+		return fmt.Errorf("%s: Key FERNET_KEYS is not present in EncryptedSecret, please refer https://github.com/Ridecell/kubernetes-summon#adding-fernet-keys for help.", filename)
 	}
 
 	for _, object := range manifest {
