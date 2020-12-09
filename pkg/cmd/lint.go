@@ -252,11 +252,17 @@ func lintFile(filename string, imageTags []string) error {
 		return fmt.Errorf("%s: EncryptedSecret is required to be the second object in manifest", filename)
 	}
 
+	var fernetKeyFound bool
 	var unencryptedValueFound bool
 	for secretKey, secretValue := range manifest[1].Data {
 		if !strings.HasPrefix(secretValue, "AQICAH") {
 			unencryptedValueFound = true
 			fmt.Printf("%s: EncryptedSecret %s missing preamble, may not be encrypted.", filename, secretKey)
+		}
+
+		// Check if FERNET_KEYS key is present or not, as its required in all summon yaml.
+		if secretKey == "FERNET_KEYS" {
+			fernetKeyFound = true
 		}
 
 		allSecretLocations[secretValue] = append(allSecretLocations[secretValue], secretLocation{ObjName: summonObj.Name, KeyName: secretKey})
@@ -265,6 +271,10 @@ func lintFile(filename string, imageTags []string) error {
 	if unencryptedValueFound {
 		// Return blank error to not spam terminal, added benefit of spacing out filenames.
 		return fmt.Errorf("")
+	}
+
+	if !fernetKeyFound {
+		return fmt.Errorf("%s: Key FERNET_KEYS is not present in EncryptedSecret, please refer https://github.com/Ridecell/kubernetes-summon#adding-fernet-keys for help.", filename)
 	}
 
 	for _, object := range manifest {
