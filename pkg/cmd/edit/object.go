@@ -17,7 +17,10 @@ limitations under the License.
 package edit
 
 import (
+	"bytes"
+	"crypto/rand"
 	"encoding/base64"
+	"encoding/gob"
 	"fmt"
 	"io"
 	"regexp"
@@ -28,15 +31,26 @@ import (
 	"github.com/aws/aws-sdk-go/service/kms"
 	"github.com/aws/aws-sdk-go/service/kms/kmsiface"
 	"github.com/pkg/errors"
+	"golang.org/x/crypto/nacl/secretbox"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/scheme"
 
 	hacksecretsv1beta1 "github.com/Ridecell/ridectl/pkg/apis/secrets/v1beta1"
 )
 
+const (
+	nonceLength = 24
+)
+
 var dataRegexp *regexp.Regexp
 var keyRegexp *regexp.Regexp
 var nonStringRegexp *regexp.Regexp
+
+type payload struct {
+	Key     []byte
+	Nonce   *[nonceLength]byte
+	Message []byte
+}
 
 func init() {
 	dataRegexp = regexp.MustCompile(`(?ms)kind: (EncryptedSecret|DecryptedSecret).*?(^data:.*?)\z`)
@@ -160,13 +174,53 @@ func (o *Object) Decrypt(kmsService kmsiface.KMSAPI) error {
 		return nil
 	}
 
+	// Key map for holding plainDataKey to avoid repetative KMS decrypt calls for single cipherDataKey
+	keyMap := map[string]*[32]byte{}
+
 	dec := &hacksecretsv1beta1.DecryptedSecret{ObjectMeta: o.OrigEnc.ObjectMeta, Data: map[string]string{}}
+
 	for key, value := range o.OrigEnc.Data {
+		useDataKey := false
+
+		if strings.HasPrefix(value, "crypto") {
+			useDataKey = true
+			array := strings.Split(value, " ")
+			value = array[len(array)-1]
+		}
+
 		decodedValue := make([]byte, base64.StdEncoding.DecodedLen(len(value)))
 		l, err := base64.StdEncoding.Decode(decodedValue, []byte(value))
 		if err != nil {
 			return errors.Wrapf(err, "error base64 decoding value for %s", key)
 		}
+
+		// If True, decrypt using data key
+		if useDataKey {
+			var p payload
+			gob.NewDecoder(bytes.NewReader(decodedValue)).Decode(&p)
+
+			plainDataKey, ok := keyMap[string(p.Key)]
+			if !ok {
+				// Decrypt cipherdatakey
+				fmt.Println("Decrypt: Decrypt cipherDataKey from KMS")
+				plainDataKey, err = decryptCipherDataKey(kmsService, p.Key)
+				if err != nil {
+					return errors.Wrapf(err, "error decrypting value for cipherDatakey")
+				}
+				keyMap[string(p.Key)] = plainDataKey
+			}
+
+			// Decrypt message
+			var plaintext []byte
+			plaintext, ok = secretbox.Open(plaintext, p.Message, p.Nonce, plainDataKey)
+			if !ok {
+				return errors.Wrapf(err, "error decrypting value with data key for %s", key)
+			}
+			dec.Data[key] = string(plaintext)
+			continue
+		}
+
+		// Decrypt using KMS service
 		decryptedValue, err := kmsService.Decrypt(&kms.DecryptInput{
 			CiphertextBlob: decodedValue[:l],
 			EncryptionContext: map[string]*string{
@@ -208,7 +262,39 @@ func (o *Object) Encrypt(kmsService kmsiface.KMSAPI, defaultKeyId string, forceK
 	}
 
 	enc := &secretsv1beta1.EncryptedSecret{ObjectMeta: o.AfterDec.ObjectMeta, Data: map[string]string{}}
+
+	plainDataKeyPresent := false
+	plainDataKey := &[32]byte{}
+	var cipherDataKey []byte
+
+	// check if any value is already encrypted using data key before
+	// If true, then use same data key to encrypt new values
+	for key, value := range o.OrigEnc.Data {
+		if !strings.HasPrefix(value, "crypto") {
+			continue
+		}
+		array := strings.Split(value, " ")
+		value = array[len(array)-1]
+
+		decodedValue := make([]byte, base64.StdEncoding.DecodedLen(len(value)))
+		_, err := base64.StdEncoding.Decode(decodedValue, []byte(value))
+		if err != nil {
+			return errors.Wrapf(err, "error base64 decoding value for %s", key)
+		}
+		var p payload
+		gob.NewDecoder(bytes.NewReader(decodedValue)).Decode(&p)
+		fmt.Println("Encrypt: Decrypt cipherDataKey from KMS")
+		plainDataKey, err = decryptCipherDataKey(kmsService, p.Key)
+		if err != nil {
+			return errors.Wrapf(err, "error decrypting value for cipherDatakey")
+		}
+		cipherDataKey = p.Key
+		plainDataKeyPresent = true
+		break
+	}
+
 	for key, value := range o.AfterDec.Data {
+
 		// Check if this key has changed.
 		if o.OrigDec != nil && o.OrigEnc != nil && !reEncrypt {
 			origDecValue, ok := o.OrigDec.Data[key]
@@ -224,19 +310,35 @@ func (o *Object) Encrypt(kmsService kmsiface.KMSAPI, defaultKeyId string, forceK
 			value = secretsv1beta1.EncryptedSecretEmptyKey
 		}
 
-		// Encrypt the new value.
-		encryptedValue, err := kmsService.Encrypt(&kms.EncryptInput{
-			KeyId:     aws.String(keyId),
-			Plaintext: []byte(value),
-			// This encryption context is used for access control policies.
-			EncryptionContext: map[string]*string{
-				"RidecellOperator": aws.String("true"),
-			},
-		})
-		if err != nil {
-			return errors.Wrapf(err, "error encrypting value for %s", key)
+		// check if plainDataKey is populated, if not create data key
+		if !plainDataKeyPresent {
+			var err error
+			plainDataKey, cipherDataKey, err = generateDataKey(kmsService, keyId)
+			if err != nil {
+				return errors.Wrapf(err, "error generating data key")
+			}
+			plainDataKeyPresent = true
 		}
-		enc.Data[key] = base64.StdEncoding.EncodeToString(encryptedValue.CiphertextBlob)
+
+		// Initialize payload
+		p := &payload{
+			Key:   cipherDataKey,
+			Nonce: &[nonceLength]byte{},
+		}
+
+		// Set nonce
+		if _, err := rand.Read(p.Nonce[:]); err != nil {
+			return errors.Wrapf(err, "error generating nonce for %s", key)
+		}
+
+		// Encrypt message
+		p.Message = secretbox.Seal(p.Message, []byte(value), p.Nonce, plainDataKey)
+		buf := &bytes.Buffer{}
+		if err := gob.NewEncoder(buf).Encode(p); err != nil {
+			return errors.Wrapf(err, "error encrypting value using data key for %s", key)
+		}
+
+		enc.Data[key] = fmt.Sprintf("crypto %s", string(base64.StdEncoding.EncodeToString(buf.Bytes())))
 	}
 	o.AfterEnc = enc
 	o.Kind = "EncryptedSecret"
@@ -307,4 +409,38 @@ func (o *Object) Serialize(out io.Writer) error {
 	}
 
 	return nil
+}
+
+func generateDataKey(kmsService kmsiface.KMSAPI, keyId string) (*[32]byte, []byte, error) {
+	// Generate data key
+	rsp, err := kmsService.GenerateDataKey(&kms.GenerateDataKeyInput{
+		KeyId:         aws.String(keyId),
+		NumberOfBytes: aws.Int64(32),
+		EncryptionContext: map[string]*string{
+			"RidecellOperator": aws.String("true"),
+		},
+	})
+	if err != nil {
+		return nil, nil, err
+	}
+
+	key := &[32]byte{}
+	copy(key[:], rsp.Plaintext)
+
+	return key, rsp.CiphertextBlob, nil
+}
+
+func decryptCipherDataKey(kmsService kmsiface.KMSAPI, cipherDataKey []byte) (*[32]byte, error) {
+	decryptRsp, err := kmsService.Decrypt(&kms.DecryptInput{
+		CiphertextBlob: cipherDataKey,
+		EncryptionContext: map[string]*string{
+			"RidecellOperator": aws.String("true"),
+		},
+	})
+	if err != nil {
+		return nil, err
+	}
+	plainDataKey := &[32]byte{}
+	copy(plainDataKey[:], decryptRsp.Plaintext)
+	return plainDataKey, nil
 }
