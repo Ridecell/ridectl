@@ -202,7 +202,6 @@ func (o *Object) Decrypt(kmsService kmsiface.KMSAPI) error {
 			plainDataKey, ok := keyMap[string(p.Key)]
 			if !ok {
 				// Decrypt cipherdatakey
-				fmt.Println("Decrypt: Decrypt cipherDataKey from KMS")
 				plainDataKey, err = decryptCipherDataKey(kmsService, p.Key)
 				if err != nil {
 					return errors.Wrapf(err, "error decrypting value for cipherDatakey")
@@ -283,7 +282,6 @@ func (o *Object) Encrypt(kmsService kmsiface.KMSAPI, defaultKeyId string, forceK
 		}
 		var p payload
 		gob.NewDecoder(bytes.NewReader(decodedValue)).Decode(&p)
-		fmt.Println("Encrypt: Decrypt cipherDataKey from KMS")
 		plainDataKey, err = decryptCipherDataKey(kmsService, p.Key)
 		if err != nil {
 			return errors.Wrapf(err, "error decrypting value for cipherDatakey")
