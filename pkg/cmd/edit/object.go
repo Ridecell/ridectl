@@ -215,7 +215,11 @@ func (o *Object) Decrypt(kmsService kmsiface.KMSAPI) error {
 			if !ok {
 				return errors.Wrapf(err, "error decrypting value with data key for %s", key)
 			}
-			dec.Data[key] = string(plaintext)
+			plainString := string(plaintext)
+			if plainString == secretsv1beta1.EncryptedSecretEmptyKey {
+				plainString = ""
+			}
+			dec.Data[key] = plainString
 			continue
 		}
 
