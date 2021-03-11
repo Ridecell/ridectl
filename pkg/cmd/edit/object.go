@@ -215,11 +215,11 @@ func (o *Object) Decrypt(kmsService kmsiface.KMSAPI) error {
 			if !ok {
 				return errors.Wrapf(err, "error decrypting value with data key for %s", key)
 			}
-			plainString := string(plaintext)
-			if plainString == secretsv1beta1.EncryptedSecretEmptyKey {
-				plainString = ""
-			}
-			dec.Data[key] = plainString
+			// plainString := string(plaintext)
+			// if plainString == secretsv1beta1.EncryptedSecretEmptyKey {
+			// 	plainString = ""
+			// }
+			dec.Data[key] = string(plaintext)
 			continue
 		}
 
@@ -272,27 +272,29 @@ func (o *Object) Encrypt(kmsService kmsiface.KMSAPI, defaultKeyId string, forceK
 
 	// check if any value is already encrypted using data key before
 	// If true, then use same data key to encrypt new values
-	for key, value := range o.OrigEnc.Data {
-		if !strings.HasPrefix(value, "crypto") {
-			continue
-		}
-		array := strings.Split(value, " ")
-		value = array[len(array)-1]
+	if o.OrigEnc != nil {
+		for key, value := range o.OrigEnc.Data {
+			if !strings.HasPrefix(value, "crypto") {
+				continue
+			}
+			array := strings.Split(value, " ")
+			value = array[len(array)-1]
 
-		decodedValue := make([]byte, base64.StdEncoding.DecodedLen(len(value)))
-		_, err := base64.StdEncoding.Decode(decodedValue, []byte(value))
-		if err != nil {
-			return errors.Wrapf(err, "error base64 decoding value for %s", key)
+			decodedValue := make([]byte, base64.StdEncoding.DecodedLen(len(value)))
+			_, err := base64.StdEncoding.Decode(decodedValue, []byte(value))
+			if err != nil {
+				return errors.Wrapf(err, "error base64 decoding value for %s", key)
+			}
+			var p payload
+			gob.NewDecoder(bytes.NewReader(decodedValue)).Decode(&p)
+			plainDataKey, err = decryptCipherDataKey(kmsService, p.Key)
+			if err != nil {
+				return errors.Wrapf(err, "error decrypting value for cipherDatakey")
+			}
+			cipherDataKey = p.Key
+			plainDataKeyPresent = true
+			break
 		}
-		var p payload
-		gob.NewDecoder(bytes.NewReader(decodedValue)).Decode(&p)
-		plainDataKey, err = decryptCipherDataKey(kmsService, p.Key)
-		if err != nil {
-			return errors.Wrapf(err, "error decrypting value for cipherDatakey")
-		}
-		cipherDataKey = p.Key
-		plainDataKeyPresent = true
-		break
 	}
 
 	for key, value := range o.AfterDec.Data {
@@ -308,9 +310,9 @@ func (o *Object) Encrypt(kmsService kmsiface.KMSAPI, defaultKeyId string, forceK
 		}
 
 		// Handle the magic empty value.
-		if value == "" {
-			value = secretsv1beta1.EncryptedSecretEmptyKey
-		}
+		// if value == "" {
+		// 	value = secretsv1beta1.EncryptedSecretEmptyKey
+		// }
 
 		// check if plainDataKey is populated, if not create data key
 		if !plainDataKeyPresent {
