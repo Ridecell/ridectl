@@ -49,6 +49,12 @@ func kmsMock() *KMSAPIMock {
 				CiphertextBlob: append([]byte("kms"), in.Plaintext...),
 			}, nil
 		},
+		GenerateDataKeyFunc: func(in *kms.GenerateDataKeyInput) (*kms.GenerateDataKeyOutput, error) {
+			return &kms.GenerateDataKeyOutput{
+				CiphertextBlob: []byte("kms"),
+				Plaintext:      []byte("12345678901234567890123456789012"),
+			}, nil
+		},
 	}
 }
 
