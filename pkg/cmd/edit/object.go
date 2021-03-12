@@ -215,10 +215,6 @@ func (o *Object) Decrypt(kmsService kmsiface.KMSAPI) error {
 			if !ok {
 				return errors.Wrapf(err, "error decrypting value with data key for %s", key)
 			}
-			// plainString := string(plaintext)
-			// if plainString == secretsv1beta1.EncryptedSecretEmptyKey {
-			// 	plainString = ""
-			// }
 			dec.Data[key] = string(plaintext)
 			continue
 		}
@@ -308,11 +304,6 @@ func (o *Object) Encrypt(kmsService kmsiface.KMSAPI, defaultKeyId string, forceK
 				continue
 			}
 		}
-
-		// Handle the magic empty value.
-		// if value == "" {
-		// 	value = secretsv1beta1.EncryptedSecretEmptyKey
-		// }
 
 		// check if plainDataKey is populated, if not create data key
 		if !plainDataKeyPresent {
