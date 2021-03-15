@@ -1,5 +1,5 @@
 # Build the ridectl binary
-FROM golang:1 as builder
+FROM golang:1.15.6 as builder
 
 # Copy in the go src
 COPY . /go/src/github.com/Ridecell/ridectl
