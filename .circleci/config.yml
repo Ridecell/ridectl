@@ -2,7 +2,7 @@ version: 2
 jobs:
   test:
     docker:
-    - image: circleci/golang:1
+    - image: circleci/golang:1.15.6
     working_directory: /go/src/github.com/Ridecell/ridectl
 
     steps:
@@ -22,7 +22,7 @@ jobs:
 
   build:
     docker:
-    - image: circleci/golang:1
+    - image: circleci/golang:1.15.6
     working_directory: /go/src/github.com/Ridecell/ridectl
 
     steps:
@@ -46,7 +46,7 @@ jobs:
 
   upload:
     docker:
-    - image: circleci/golang:1
+    - image: circleci/golang:1.15.6
     working_directory: /go/src/github.com/Ridecell/ridectl
 
     steps:

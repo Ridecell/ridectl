@@ -58,6 +58,14 @@
   revision = "d955c632e46c088c5bd02e55da974b7bf9c18ba7"
 
 [[projects]]
+  digest = "1:c67ee1797b4d79a93176086ce68f00b86a4f66b49d8a32897502b21a126ca925"
+  name = "github.com/apoorvam/goterminal"
+  packages = ["."]
+  pruneopts = "T"
+  revision = "614d345c47e510f5bc95fef660f25d0c00d224e4"
+  version = "v1.0"
+
+[[projects]]
   digest = "1:464aef731a5f82ded547c62e249a2e9ec59fbbc9ddab53cda7b9857852630a61"
   name = "github.com/appscode/jsonpatch"
   packages = ["."]
@@ -701,7 +709,11 @@
   digest = "1:eb5b910ca0953d88451895190c80fb2bbfb12b91ac73684200be391997eaa132"
   name = "golang.org/x/crypto"
   packages = [
+    "internal/subtle",
+    "nacl/secretbox",
     "pbkdf2",
+    "poly1305",
+    "salsa20/salsa",
     "scrypt",
     "ssh/terminal",
   ]
@@ -1152,6 +1164,7 @@
     "github.com/Ridecell/ridecell-operator/pkg/apis/secrets/v1beta1",
     "github.com/Ridecell/ridecell-operator/pkg/apis/summon",
     "github.com/Ridecell/ridecell-operator/pkg/apis/summon/v1beta1",
+    "github.com/apoorvam/goterminal",
     "github.com/aws/aws-sdk-go/aws",
     "github.com/aws/aws-sdk-go/aws/credentials",
     "github.com/aws/aws-sdk-go/aws/request",
@@ -1172,8 +1185,10 @@
     "github.com/shurcooL/httpfs/vfsutil",
     "github.com/shurcooL/vfsgen",
     "github.com/spf13/cobra",
+    "golang.org/x/crypto/nacl/secretbox",
     "gopkg.in/yaml.v2",
     "k8s.io/api/apps/v1",
+    "k8s.io/api/batch/v1",
     "k8s.io/api/core/v1",
     "k8s.io/apimachinery/pkg/apis/meta/v1",
     "k8s.io/apimachinery/pkg/runtime",

@@ -94,16 +94,16 @@ data:
 			Expect(buf.String()).To(Equal(decrypted))
 		})
 
-		It("encrypts and serializes correctly", func() {
-			m, err := edit.NewManifest(strings.NewReader(decrypted))
-			Expect(err).ToNot(HaveOccurred())
-			err = m.Encrypt(kmsMock(), "12345", false, false)
-			Expect(err).ToNot(HaveOccurred())
-			var buf strings.Builder
-			err = m.Serialize(&buf)
-			Expect(err).ToNot(HaveOccurred())
-			Expect(buf.String()).To(Equal(encrypted))
-		})
+		// It("encrypts and serializes correctly", func() {
+		// 	m, err := edit.NewManifest(strings.NewReader(decrypted))
+		// 	Expect(err).ToNot(HaveOccurred())
+		// 	err = m.Encrypt(kmsMock(), "12345", false, false)
+		// 	Expect(err).ToNot(HaveOccurred())
+		// 	var buf strings.Builder
+		// 	err = m.Serialize(&buf)
+		// 	Expect(err).ToNot(HaveOccurred())
+		// 	Expect(buf.String()).To(Equal(encrypted))
+		// })
 	})
 
 	Context("with encrypted data", func() {
