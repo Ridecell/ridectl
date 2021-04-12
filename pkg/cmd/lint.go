@@ -255,7 +255,7 @@ func lintFile(filename string, imageTags []string) error {
 	var fernetKeyFound bool
 	var unencryptedValueFound bool
 	for secretKey, secretValue := range manifest[1].Data {
-		if !strings.HasPrefix(secretValue, "AQICAH") || !strings.HasPrefix(secretValue, "crypto ") {
+		if !strings.HasPrefix(secretValue, "AQICAH") && !strings.HasPrefix(secretValue, "crypto ") {
 			unencryptedValueFound = true
 			fmt.Printf("%s: EncryptedSecret %s missing preamble, may not be encrypted.", filename, secretKey)
 		}
