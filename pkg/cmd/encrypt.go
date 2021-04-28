@@ -1,5 +1,5 @@
 /*
-Copyright 2019 Ridecell, Inc.
+Copyright 2021 Ridecell, Inc.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -39,7 +39,7 @@ func init() {
 
 func init() {
 	encryptCmd.Flags().BoolVarP(&recrypt, "recrypt", "r", false, "(optional) re-encrypts the file")
-	encryptCmd.Flags().StringVarP(&keyIdFlag, "key", "k", "", "(optional) KMS key ID to use for encrypting")
+	encryptCmd.Flags().StringVarP(&keyIdFlag, "key", "k", "", "(optional) KMS key ID / key alias to use for encrypting")
 }
 
 /*
@@ -54,7 +54,7 @@ An explanation of the encrypt process:
 */
 
 var encryptCmd = &cobra.Command{
-	Use:   "encrypt [flags] <file-names>",
+	Use:   "encrypt [-k <kms-key-alias>] [-r] <file-names>",
 	Short: "Encrypt files",
 	Long:  `encrypt files that has secret values`,
 	Args: func(_ *cobra.Command, args []string) error {
@@ -63,17 +63,14 @@ var encryptCmd = &cobra.Command{
 		}
 		return nil
 	},
-	RunE: func(_ *cobra.Command, args []string) error {
+	RunE: func(_ *cobra.Command, fileNames []string) error {
 		// Check if key id is provided
 		keyId := keyIdFlag
 		if len(keyId) == 0 {
 			keyId = "alias/microservices_dev"
-			fmt.Println("---------------\nWARNING: Using microservices_dev KMS key by default, Please specify other key for Prod/UAT environment using -k option.\n         For example: ridectl encrypt -k alias/<key-alias> [file-names]\n---------------")
+			fmt.Printf("---------------\nWARNING: Using %s KMS key by default, Please specify other key for Prod/UAT environment using -k option.\n         For example: ridectl encrypt -k alias/<key-alias> [file-names]\n---------------\n", keyId)
 		}
 		fmt.Println("Encrypting using key: " + keyId)
-
-		// Get the file names
-		fileNames := args
 
 		// generate data key
 		sess := session.Must(session.NewSessionWithOptions(session.Options{

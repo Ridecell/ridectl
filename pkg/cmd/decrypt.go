@@ -1,5 +1,5 @@
 /*
-Copyright 2019 Ridecell, Inc.
+Copyright 2021 Ridecell, Inc.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -63,14 +63,7 @@ var decryptCmd = &cobra.Command{
 		}
 		return nil
 	},
-	RunE: func(_ *cobra.Command, args []string) error {
-
-		// Key map for holding plainDataKey to avoid repetative KMS decrypt calls for single cipherDataKey
-		//keyMap = map[string]*[32]byte{}
-
-		// Get the file names
-		fileNames := args
-
+	RunE: func(_ *cobra.Command, fileNames []string) error {
 		// Create AWS KMS session
 		sess := session.Must(session.NewSessionWithOptions(session.Options{
 			SharedConfigState: session.SharedConfigEnable,
