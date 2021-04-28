@@ -75,31 +75,31 @@ jobs:
 
 workflows:
   version: 2
-  default:
-    jobs:
-    - test:
-        filters:
-          tags:
-            only: /^v.*/
-    - build:
-        requires:
-        - test
-        filters:
-          tags:
-            only: /^v.*/
-    - upload:
-        requires:
-        - build
-        filters:
-          branches:
-            ignore: /.*/
-          tags:
-            only: /^v.*/
-    - build_docker:
-        requires:
-        - build
-        filters:
-          branches:
-            ignore: /.*/
-          tags:
-            only: /^v.*/
+  #default:
+  #  jobs:
+  #  - test:
+  #      filters:
+  #        tags:
+  #          only: /^v.*/
+  #  - build:
+  #      requires:
+  #      - test
+  #      filters:
+  #        tags:
+  #          only: /^v.*/
+  #  - upload:
+  #      requires:
+  #      - build
+  #      filters:
+  #        branches:
+  #          ignore: /.*/
+  #        tags:
+  #          only: /^v.*/
+  #  - build_docker:
+  #      requires:
+  #      - build
+  #      filters:
+  #        branches:
+  #          ignore: /.*/
+  #        tags:
+  #          only: /^v.*/
