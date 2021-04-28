@@ -1,5 +1,5 @@
 /*
-Copyright 2019 Ridecell, Inc.
+Copyright 2021 Ridecell, Inc.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -46,7 +46,7 @@ var dataRegexp *regexp.Regexp
 var keyRegexp *regexp.Regexp
 var nonStringRegexp *regexp.Regexp
 
-type payload struct {
+type Payload struct {
 	Key     []byte
 	Nonce   *[nonceLength]byte
 	Message []byte
@@ -196,13 +196,13 @@ func (o *Object) Decrypt(kmsService kmsiface.KMSAPI) error {
 
 		// If True, decrypt using data key
 		if useDataKey {
-			var p payload
+			var p Payload
 			gob.NewDecoder(bytes.NewReader(decodedValue)).Decode(&p)
 
 			plainDataKey, ok := keyMap[string(p.Key)]
 			if !ok {
 				// Decrypt cipherdatakey
-				plainDataKey, err = decryptCipherDataKey(kmsService, p.Key)
+				plainDataKey, err = DecryptCipherDataKey(kmsService, p.Key)
 				if err != nil {
 					return errors.Wrapf(err, "error decrypting value for cipherDatakey")
 				}
@@ -281,9 +281,9 @@ func (o *Object) Encrypt(kmsService kmsiface.KMSAPI, defaultKeyId string, forceK
 			if err != nil {
 				return errors.Wrapf(err, "error base64 decoding value for %s", key)
 			}
-			var p payload
+			var p Payload
 			gob.NewDecoder(bytes.NewReader(decodedValue)).Decode(&p)
-			plainDataKey, err = decryptCipherDataKey(kmsService, p.Key)
+			plainDataKey, err = DecryptCipherDataKey(kmsService, p.Key)
 			if err != nil {
 				return errors.Wrapf(err, "error decrypting value for cipherDatakey")
 			}
@@ -308,15 +308,15 @@ func (o *Object) Encrypt(kmsService kmsiface.KMSAPI, defaultKeyId string, forceK
 		// check if plainDataKey is populated, if not create data key
 		if !plainDataKeyPresent {
 			var err error
-			plainDataKey, cipherDataKey, err = generateDataKey(kmsService, keyId)
+			plainDataKey, cipherDataKey, err = GenerateDataKey(kmsService, keyId)
 			if err != nil {
 				return errors.Wrapf(err, "error generating data key")
 			}
 			plainDataKeyPresent = true
 		}
 
-		// Initialize payload
-		p := &payload{
+		// Initialize Payload
+		p := &Payload{
 			Key:   cipherDataKey,
 			Nonce: &[nonceLength]byte{},
 		}
@@ -406,7 +406,7 @@ func (o *Object) Serialize(out io.Writer) error {
 	return nil
 }
 
-func generateDataKey(kmsService kmsiface.KMSAPI, keyId string) (*[32]byte, []byte, error) {
+func GenerateDataKey(kmsService kmsiface.KMSAPI, keyId string) (*[32]byte, []byte, error) {
 	// Generate data key
 	rsp, err := kmsService.GenerateDataKey(&kms.GenerateDataKeyInput{
 		KeyId:         aws.String(keyId),
@@ -425,7 +425,7 @@ func generateDataKey(kmsService kmsiface.KMSAPI, keyId string) (*[32]byte, []byt
 	return key, rsp.CiphertextBlob, nil
 }
 
-func decryptCipherDataKey(kmsService kmsiface.KMSAPI, cipherDataKey []byte) (*[32]byte, error) {
+func DecryptCipherDataKey(kmsService kmsiface.KMSAPI, cipherDataKey []byte) (*[32]byte, error) {
 	decryptRsp, err := kmsService.Decrypt(&kms.DecryptInput{
 		CiphertextBlob: cipherDataKey,
 		EncryptionContext: map[string]*string{
