@@ -7,9 +7,9 @@ jobs:
     name: Test
     runs-on: ubuntu-20.04
     container: golang:1.15.6
-    #defaults:
-    #  run:
-    #    working-directory: /home/runner/go/
+    defaults:
+      run:
+        working-directory: /go
 
     steps:
       - name: Checkout
