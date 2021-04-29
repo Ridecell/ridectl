@@ -20,10 +20,6 @@ jobs:
           mkdir -p /go/src/github.com/Ridecell/ridectl/
           mv /__w/ridectl/ridectl /go/src/github.com/Ridecell/ridectl/
 
-      - name: Env check
-        run: |
-          echo $GOPATH
-
       - name: Caching
         uses: actions/cache@v2
         with:
