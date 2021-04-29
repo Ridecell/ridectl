@@ -9,11 +9,13 @@ jobs:
     container: golang:1.15.6
     defaults:
       run:
-        working-directory: /go
+        working-directory: /go/src/github.com/Ridecell/ridectl
 
     steps:
       - name: Checkout
         uses: actions/checkout@v2
+        with:
+          path: /go/src/github.com/Ridecell/ridectl
 
       - name: Env check
         run: |
