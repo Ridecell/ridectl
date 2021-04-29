@@ -29,8 +29,9 @@ jobs:
           path: ~/go/pkg/mod
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
 
-      - name: Sleep
-        run: sleep 100m
+      - name: Debugging
+        run: |
+          ls -la
 
       - name: Test
         env:
