@@ -20,19 +20,13 @@ jobs:
           mkdir -p /go/src/github.com/Ridecell/ridectl/
           mv /__w/ridectl/ridectl /go/src/github.com/Ridecell/ridectl/
 
-      - name: Caching
-        uses: actions/cache@v2
-        with:
-          path: ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-
       - name: Debugging
         run: |
-          ls -la
+          cd /go/src/github.com/Ridecell/ridectl/ && ls -la
 
       - name: Test
         env:
           COVERALLS_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
         run: |
-          make dep test
-          goveralls -coverprofile=gover.coverprofile -service=github-actions -repotoken=$COVERALLS_TOKEN
+          cd /go/src/github.com/Ridecell/ridectl/ridectl/ && make dep test
+          cd /go/src/github.com/Ridecell/ridectl/ridectl/ goveralls -coverprofile=gover.coverprofile -service=github-actions -repotoken=$COVERALLS_TOKEN
