@@ -6,19 +6,23 @@ jobs:
   Test:
     name: Test
     runs-on: ubuntu-20.04
-    container: golang:1.15.6
+    #container: golang:1.15.6
     #defaults:
     #  run:
     #    working-directory: /go/src/github.com/Ridecell/ridectl
 
+    
     steps:
       - name: Checkout
         uses: actions/checkout@v2
-      
+
+      - name: Install Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.15.6
+
       - run: |
-          pwd
-          mkdir -p /go/src/github.com/Ridecell/ridectl/
-          mv /__w/ridectl/ridectl /go/src/github.com/Ridecell/ridectl/
+          sleep 1h
 
       - name: Debugging
         run: |
