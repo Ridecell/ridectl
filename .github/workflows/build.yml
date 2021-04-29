@@ -6,6 +6,9 @@ jobs:
   Test:
     name: Test
     runs-on: ubuntu-20.04
+    defaults:
+      run:
+        working-directory: /home/runner/go/
 
     steps:
       - name: Checkout
