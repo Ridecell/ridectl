@@ -6,9 +6,10 @@ jobs:
   Test:
     name: Test
     runs-on: ubuntu-20.04
-    defaults:
-      run:
-        working-directory: /home/runner/go/
+    container: circleci/golang:1.15.6
+    #defaults:
+    #  run:
+    #    working-directory: /home/runner/go/
 
     steps:
       - name: Checkout
