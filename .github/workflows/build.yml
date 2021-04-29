@@ -16,6 +16,10 @@ jobs:
         with:
           go-version: '1.15.6'
 
+      - name: Env check
+        run: |
+          echo $GOPATH
+
       - name: Caching
         uses: actions/cache@v2
         with:
