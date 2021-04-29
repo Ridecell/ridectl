@@ -7,15 +7,17 @@ jobs:
     name: Test
     runs-on: ubuntu-20.04
     container: golang:1.15.6
-    defaults:
-      run:
-        working-directory: /go/src/github.com/Ridecell/ridectl
+    #defaults:
+    #  run:
+    #    working-directory: /go/src/github.com/Ridecell/ridectl
 
     steps:
       - name: Checkout
         uses: actions/checkout@v2
-        with:
-          path: /go/src/github.com/Ridecell/ridectl
+      
+      - run: |
+          pwd
+          mv ../ridectl  /go/src/github.com/Ridecell/ridectl/
 
       - name: Env check
         run: |
