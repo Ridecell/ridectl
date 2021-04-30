@@ -29,7 +29,7 @@ jobs:
       - name: Cache
         uses: actions/cache@v2
         with:
-          path: vendor
+          path: ${{ env.GOPATH }}/src/github.com/${{ github.repository }}/vendor
           key: ${{ runner.os }}-${{ hashFiles('**/Gopkg.lock') }}
       
       - name: Test
