@@ -6,33 +6,35 @@ jobs:
   Test:
     name: Test
     runs-on: ubuntu-20.04
-    container: golang:1.15.6
+    # container: golang:1.15.6
     # defaults:
     #  run:
     #    working-directory: /home/runner/go/src/github.com/Ridecell/
 
     
     steps:
+      - name: Install Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.15.6
+
       - name: Checkout
         uses: actions/checkout@v2
+        with:
+          path: go/src/github.com/Ridecell/ridectl
 
-      # - name: Install Go
-      #   uses: actions/setup-go@v2
-      #   with:
-      #     go-version: 1.15.6
-
-      - run: |
-          ls -la
-          pwd
-          go env
-
-      - name: Debugging
+      - name: Debug
+        env:
+            GOPATH: /home/runner/work/woodpecker/go
         run: |
-          cd /go/src/github.com/Ridecell/ridectl/ && ls -la
+          pwd
+          echo ${HOME}
+          echo ${GITHUB_WORKSPACE}
+          echo ${GOPATH}
+          echo ${GOROOT}
 
       - name: Test
         env:
           COVERALLS_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
         run: |
-          cd /go/src/github.com/Ridecell/ridectl/ridectl/ && make dep test
-          cd /go/src/github.com/Ridecell/ridectl/ridectl/ goveralls -coverprofile=gover.coverprofile -service=github-actions -repotoken=$COVERALLS_TOKEN
+          cd ${GOPATH}/src/github.com/Ridecell/ridectl/ && make dep test && goveralls -coverprofile=gover.coverprofile -service=github-actions -repotoken=$COVERALLS_TOKEN
