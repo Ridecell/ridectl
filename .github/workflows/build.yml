@@ -39,7 +39,7 @@ jobs:
           echo ${GITHUB_WORKSPACE}
           echo ${GOPATH}
           echo ${GOROOT}
-          ls vendor/
+          
       
       - name: Test
         env:
@@ -63,7 +63,7 @@ jobs:
           mv bin/ridectl.linux bin/ridectl && zip -jrm bin/ridectl_linux.zip bin/ridectl
           go get github.com/tcnksm/ghr
           ghr -c ${CI_SHA_SHORT} ${CI_ACTION_REF_NAME} bin/
-
+          ls vendor/
       # - name: Release
       #   uses: softprops/action-gh-release@v1
       #   if: startsWith(github.ref, 'refs/tags/')
