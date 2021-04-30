@@ -18,6 +18,9 @@ jobs:
         with:
           path: ${{ env.GOPATH }}/src/github.com/${{ github.repository }}
       
+      - name: Set up github environment variables
+        uses: FranzDiebold/github-env-vars-action@v2
+
       - name: Install Go
         uses: actions/setup-go@v2
         with:
@@ -36,6 +39,7 @@ jobs:
           echo ${GITHUB_WORKSPACE}
           echo ${GOPATH}
           echo ${GOROOT}
+          ls vendor/
       
       - name: Test
         env:
@@ -52,19 +56,21 @@ jobs:
           ls bin/
 
       - name: pack artifact
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           mv bin/ridectl.macos bin/ridectl && zip -jrm bin/ridectl_macos.zip bin/ridectl
           mv bin/ridectl.linux bin/ridectl && zip -jrm bin/ridectl_linux.zip bin/ridectl
-          #go get github.com/tcnksm/ghr
-          #ghr -u ${CIRCLE_PROJECT_USERNAME} -r ${CIRCLE_PROJECT_REPONAME} -c ${CIRCLE_SHA1} ${CIRCLE_TAG} bin/
+          go get github.com/tcnksm/ghr
+          ghr -c ${CI_SHA_SHORT} ${CI_ACTION_REF_NAME} bin/
 
-      - name: Release
-        uses: softprops/action-gh-release@v1
-        if: startsWith(github.ref, 'refs/tags/')
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          files: |
-            bin/ridectl_macos.zip
-            bin/ridectl_linux.zip
+      # - name: Release
+      #   uses: softprops/action-gh-release@v1
+      #   if: startsWith(github.ref, 'refs/tags/')
+      #   env:
+      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      #   with:
+      #     files: |
+      #       bin/ridectl_macos.zip
+      #       bin/ridectl_linux.zip
         
