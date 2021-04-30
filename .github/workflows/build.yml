@@ -51,16 +51,20 @@ jobs:
           ls -al
           ls bin/
 
-      # - name: Release mac
-      #   uses: softprops/action-gh-release@v1
-      #   if: startsWith(github.ref, 'refs/tags/')
-      #   with:
-      #     files: 
-      #   env:
-      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      # - name: release
-      #   run: |
-      #     mv workspace/bin/ridectl.macos workspace/bin/ridectl && zip -jrm workspace/bin/ridectl_macos.zip workspace/bin/ridectl
-      #     mv workspace/bin/ridectl.linux workspace/bin/ridectl && zip -jrm workspace/bin/ridectl_linux.zip workspace/bin/ridectl
-      #     go get github.com/tcnksm/ghr
-      #     ghr -u ${CIRCLE_PROJECT_USERNAME} -r ${CIRCLE_PROJECT_REPONAME} -c ${CIRCLE_SHA1} ${CIRCLE_TAG} workspace/bin/
+      - name: pack artifact
+        run: |
+          mv workspace/bin/ridectl.macos workspace/bin/ridectl && zip -jrm workspace/bin/ridectl_macos.zip workspace/bin/ridectl
+          mv workspace/bin/ridectl.linux workspace/bin/ridectl && zip -jrm workspace/bin/ridectl_linux.zip workspace/bin/ridectl
+          #go get github.com/tcnksm/ghr
+          #ghr -u ${CIRCLE_PROJECT_USERNAME} -r ${CIRCLE_PROJECT_REPONAME} -c ${CIRCLE_SHA1} ${CIRCLE_TAG} workspace/bin/
+
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          files: |
+            bin/ridectl_macos.zip
+            bin/ridectl_linux.zip
+        
