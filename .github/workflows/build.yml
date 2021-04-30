@@ -26,36 +26,25 @@ jobs:
         with:
           go-version: 1.15.6
 
-      - name: Cache multiple paths
+      - name: Cache
         uses: actions/cache@v2
         with:
           path: vendor
           key: ${{ runner.os }}-${{ hashFiles('**/Gopkg.lock') }}
-
-      - name: Debug
-        run: |
-          pwd
-          echo ${HOME}
-          echo ${GITHUB_WORKSPACE}
-          echo ${GOPATH}
-          echo ${GOROOT}
-          
       
       - name: Test
         env:
           COVERALLS_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
         run: |
-          pwd
           make dep test 
           goveralls -coverprofile=gover.coverprofile -service=github-actions -repotoken=$COVERALLS_TOKEN
 
-      - name: Test
+      - name: build
         run: |
           make build_macos build_linux
-          ls -al
-          ls bin/
 
-      - name: pack artifact
+      - name: Release
+        if: startsWith(github.ref, 'refs/tags/')
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -63,14 +52,3 @@ jobs:
           mv bin/ridectl.linux bin/ridectl && zip -jrm bin/ridectl_linux.zip bin/ridectl
           go get github.com/tcnksm/ghr
           ghr -c ${CI_SHA_SHORT} ${CI_ACTION_REF_NAME} bin/
-          ls vendor/
-      # - name: Release
-      #   uses: softprops/action-gh-release@v1
-      #   if: startsWith(github.ref, 'refs/tags/')
-      #   env:
-      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      #   with:
-      #     files: |
-      #       bin/ridectl_macos.zip
-      #       bin/ridectl_linux.zip
-        
