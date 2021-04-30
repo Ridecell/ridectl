@@ -5,7 +5,7 @@ on:
 jobs:
   Test:
     name: Test
-    runs-on: ubuntu-20.0
+    runs-on: ubuntu-20.04
     env:
       GOPATH: ${{ github.workspace }}
       GO111MODULE: off
