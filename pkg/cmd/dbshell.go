@@ -27,7 +27,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 
-	dbv1beta1 "github.com/Ridecell/ridecell-operator/pkg/apis/db/v1beta1"
+	dbv1beta2 "github.com/Ridecell/ridecell-controllers/apis/db/v1beta2"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -56,20 +56,20 @@ var dbShellCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		fetchObject := &kubernetes.KubeObject{Top: &dbv1beta1.PostgresDatabase{}}
+		fetchObject := &kubernetes.KubeObject{Top: &dbv1beta2.PostgresDatabase{}}
 		err = kubernetes.GetObject(kubeconfigFlag, target.Name, target.Namespace, fetchObject)
 		if err != nil {
 			return err
 		}
 
-		pgdbObject, ok := fetchObject.Top.(*dbv1beta1.PostgresDatabase)
+		pgdbObject, ok := fetchObject.Top.(*dbv1beta2.PostgresDatabase)
 		if !ok {
 			return errors.New("unable to convert to PostgresDatabase object")
 		}
-		postgresConnection := pgdbObject.Status.Connection
+		postgresConnection := pgdbObject.Status.RdsAdminSecretRef
 		fetchSecret := &corev1.Secret{}
 
-		err = kubernetes.GetObjectWithClient(fetchObject.Client, postgresConnection.PasswordSecretRef.Name, target.Namespace, fetchSecret)
+		err = kubernetes.GetObjectWithClient(fetchObject.Client, postgresConnection.Name, target.Namespace, fetchSecret)
 		if err != nil {
 			return err
 		}
@@ -85,16 +85,16 @@ var dbShellCmd = &cobra.Command{
 			return err
 		}
 
-		password := fetchSecret.Data[postgresConnection.PasswordSecretRef.Key]
+		password := fetchSecret.Data["password"]
 
 		// hostname:port:database:username:password
-		passwordFileString := fmt.Sprintf("%s:%s:%s:%s:%s", postgresConnection.Host, "*", postgresConnection.Database, postgresConnection.Username, password)
+		passwordFileString := fmt.Sprintf("%s:%s:%s:%s:%s", fetchSecret.Data["endpoint"], "*", pgdbObject.Spec.DatabaseName, fetchSecret.Data["username"], password)
 		_, err = tempfile.Write([]byte(passwordFileString))
 		if err != nil {
 			return errors.Wrap(err, "failed to write password to tempfile")
 		}
 
-		psqlCmd := []string{"psql", "-h", postgresConnection.Host, "-U", postgresConnection.Username, postgresConnection.Database}
+		psqlCmd := []string{"psql", "-h", string(fetchSecret.Data["endpoint"]), "-U", string(fetchSecret.Data["username"]), pgdbObject.Spec.DatabaseName}
 		os.Setenv("PGPASSFILE", tempfilepath)
 		return exec.Exec(psqlCmd)
 	},
