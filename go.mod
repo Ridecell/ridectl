@@ -6,9 +6,9 @@ require (
 	github.com/Masterminds/goutils v1.1.0 // indirect
 	github.com/Masterminds/semver v1.4.2 // indirect
 	github.com/Masterminds/sprig v2.19.0+incompatible // indirect
-	github.com/Ridecell/ridecell-controllers v0.0.0-20210804103336-99e177863309 // indirect
-	github.com/Ridecell/ridecell-operator v0.0.0-20200129211046-d955c632e46c
-	github.com/Ridecell/ridectl v0.0.35
+	github.com/Ridecell/ridecell-controllers v0.0.0-20210804103336-99e177863309
+	//github.com/Ridecell/ridecell-operator v0.0.0-20200129211046-d955c632e46c
+	//github.com/Ridecell/ridectl v0.0.35
 	github.com/apoorvam/goterminal v0.0.0-20180523175556-614d345c47e5
 	github.com/appscode/jsonpatch v0.0.0-20190108182946-7c0e3b262f30 // indirect
 	github.com/aws/aws-sdk-go v1.38.57
