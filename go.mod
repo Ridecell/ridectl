@@ -3,10 +3,8 @@ module github.com/Ridecell/ridectl
 go 1.16
 
 require (
-	github.com/Masterminds/goutils v1.1.0 // indirect
-	github.com/Masterminds/semver v1.4.2 // indirect
-	github.com/Masterminds/sprig v2.19.0+incompatible // indirect
-	github.com/Ridecell/ridecell-controllers v0.0.0-20210804103336-99e177863309
+	github.com/Ridecell/ridecell-controllers v0.0.0-20210806070347-2df2a86faf79
+	github.com/Ridecell/summon-operator v0.0.0-20210824064123-59285fb3b472 // indirect
 	github.com/apoorvam/goterminal v0.0.0-20180523175556-614d345c47e5
 	github.com/appscode/jsonpatch v0.0.0-20190108182946-7c0e3b262f30 // indirect
 	github.com/aws/aws-sdk-go v1.38.57
@@ -27,7 +25,6 @@ require (
 	github.com/googleapis/gnostic v0.5.5 // indirect
 	github.com/gorilla/mux v1.8.0 // indirect
 	github.com/heroku/docker-registry-client v0.0.0-20181004091502-47ecf50fd8d4
-	github.com/huandu/xstrings v1.2.0 // indirect
 	github.com/improbable-eng/thanos v0.3.2 // indirect
 	github.com/json-iterator/go v1.1.11 // indirect
 	github.com/jsonnet-bundler/jsonnet-bundler v0.1.0 // indirect
@@ -67,7 +64,7 @@ require (
 	k8s.io/apimachinery v0.22.1
 	k8s.io/client-go v0.22.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20210421082810-95288971da7e // indirect
-	sigs.k8s.io/controller-runtime v0.9.6
+	sigs.k8s.io/controller-runtime v0.8.3
 	sigs.k8s.io/testing_frameworks v0.1.2 // indirect
 )
 
