@@ -32,6 +32,10 @@ jobs:
           path: ${{ env.GOPATH }}/src/github.com/${{ github.repository }}/vendor
           key: ${{ runner.os }}-${{ hashFiles('**/Gopkg.lock') }}
       
+      - name: Install dependencies
+        run: |
+          go install github.com/matryer/moq
+
       - name: Test
         env:
           COVERALLS_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
