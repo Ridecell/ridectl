@@ -9,6 +9,7 @@ jobs:
     env:
       GOPATH: ${{ github.workspace }}
       GO111MODULE: off
+      TOKEN: ${{ secrets.TEMP_GITHUB_TOKEN }}
     defaults:
       run:
         working-directory: ${{ env.GOPATH }}/src/github.com/${{ github.repository }}
@@ -28,6 +29,7 @@ jobs:
 
       - name: Install depencencies
         run: |
+          git config --global url."https://${TOKEN}:x-oauth-basic@github.com/Ridecell".insteadOf "https://github.com/Ridecell"
           go get -d ./...
 
       - name: Test
