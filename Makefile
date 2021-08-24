@@ -41,7 +41,9 @@ vet:
 
 # Generate code
 generate:
-	go run ./vendor/k8s.io/code-generator/cmd/deepcopy-gen/main.go -O zz_generated.deepcopy -i github.com/Ridecell/ridecell-operator/pkg/apis/...
+#go run ./vendor/k8s.io/code-generator/cmd/deepcopy-gen/main.go -O zz_generated.deepcopy -i github.com/Ridecell/ridecell-operator/pkg/apis/...
+#--go-header-file boilerplate.go.txt 
+#deepcopy-gen -O zz_generated.deepcopy -i github.com/Ridecell/summon-operator/apis/...
 	go generate ./pkg/... ./cmd/...
 
 # Install tools
@@ -50,8 +52,8 @@ tools:
 	go get -u github.com/onsi/ginkgo/ginkgo github.com/modocache/gover github.com/mattn/goveralls github.com/matryer/moq
 
 # Install dependencies
-dep: tools
-	dep ensure
+# dep: tools
+# 	dep ensure
 
 # Display a coverage report
 cover:
