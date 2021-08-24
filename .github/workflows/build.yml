@@ -28,7 +28,6 @@ jobs:
 
       - name: Install dependencies
         run: |
-          go get
           go install github.com/matryer/moq
 
 
