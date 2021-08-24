@@ -19,17 +19,16 @@ package cmd
 import (
 	"fmt"
 	"os"
+	osExec "os/exec"
 	"time"
 
-	"github.com/Ridecell/ridectl/pkg/kubernetes"
 	"github.com/apoorvam/goterminal"
 	"github.com/pkg/errors"
 	"github.com/shurcooL/httpfs/vfsutil"
 	"github.com/spf13/cobra"
 
-	osExec "os/exec"
-
-	summonv1beta2 "github.com/Ridecell/summon-operator/apis/app/v1beta2"
+	summonv1beta1 "github.com/Ridecell/ridecell-operator/pkg/apis/summon/v1beta1"
+	"github.com/Ridecell/ridectl/pkg/kubernetes"
 )
 
 func init() {
@@ -86,7 +85,7 @@ var statusCmd = &cobra.Command{
 			return errors.Wrap(err, "not a valid target")
 		}
 
-		fetchObject := &kubernetes.KubeObject{Top: &summonv1beta2.SummonPlatform{}}
+		fetchObject := &kubernetes.KubeObject{Top: &summonv1beta1.SummonPlatform{}}
 		err = kubernetes.GetObject(kubeconfigFlag, target.Name, target.Namespace, fetchObject)
 		if err != nil {
 			return err

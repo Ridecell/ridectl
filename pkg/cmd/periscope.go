@@ -24,7 +24,7 @@ import (
 
 	"github.com/Ridecell/ridectl/pkg/kubernetes"
 
-	dbv1beta2 "github.com/Ridecell/ridecell-controllers/apis/db/v1beta2"
+	dbv1beta1 "github.com/Ridecell/ridecell-operator/pkg/apis/db/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -70,33 +70,22 @@ var periscopeCmd = &cobra.Command{
 			return errors.New("unable to convert to secret object")
 		}
 
-		fetchObject = &kubernetes.KubeObject{Top: &dbv1beta2.PostgresDatabase{}}
+		fetchObject = &kubernetes.KubeObject{Top: &dbv1beta1.PostgresDatabase{}}
 		err = kubernetes.GetObject(kubeconfigFlag, dbname, target.Namespace, fetchObject)
 		if err != nil {
 			return errors.Wrap(err, "unable to find PostgresDatabase info")
 		}
-		database, ok := fetchObject.Top.(*dbv1beta2.PostgresDatabase)
+		database, ok := fetchObject.Top.(*dbv1beta1.PostgresDatabase)
 		if !ok {
 			return errors.New("unable to get PostgresDatabase object")
-		}
-		//fet postgresuser
-		fetchObject = &kubernetes.KubeObject{Top: &dbv1beta2.PostgresUser{}}
-		err = kubernetes.GetObject(kubeconfigFlag, dbname+".postgres-user-password", target.Namespace, fetchObject)
-		if err != nil {
-			return errors.Wrap(err, "unable to find PostgresUser info")
-		}
-
-		databaseUser, ok := fetchObject.Top.(*dbv1beta2.PostgresUser)
-		if !ok {
-			return errors.New("unable to get PostgresUser object")
 		}
 
 		fmt.Printf("Periscope Data\n================\n")
 		fmt.Printf("Database Type: Postgres\n") // Hard code-y
-		fmt.Printf("Database Host: %s\n", secret.Data["endpoint"])
-		fmt.Printf("Database Port: %d\n", secret.Data["port"])
-		fmt.Printf("Database Name: %s\n", database.Spec.DatabaseName)
-		fmt.Printf("Database Username: %s\n", databaseUser.Spec.Username)
+		fmt.Printf("Database Host: %s\n", database.Status.Connection.Host)
+		fmt.Printf("Database Port: %d\n", database.Status.Connection.Port)
+		fmt.Printf("Database Name: %s\n", database.Status.Connection.Database)
+		fmt.Printf("Database Username: periscope\n")
 		fmt.Printf("Database Password: %s\n\n", string(secret.Data["password"]))
 		return nil
 	},

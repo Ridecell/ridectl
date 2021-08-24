@@ -20,7 +20,7 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/Ridecell/summon-operator/apis"
+	"github.com/Ridecell/ridecell-operator/pkg/apis"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/kms"
 	"github.com/onsi/ginkgo"
@@ -59,7 +59,7 @@ func kmsMock() *KMSAPIMock {
 }
 
 func TestEdit(t *testing.T) {
-	// Register all types from summon-operator.
+	// Register all types from ridecell-operator.
 	apis.AddToScheme(scheme.Scheme)
 	hackapis.AddToScheme(scheme.Scheme)
 

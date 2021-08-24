@@ -17,7 +17,7 @@ limitations under the License.
 package edit
 
 import (
-	secretsv1beta2 "github.com/Ridecell/ridecell-controllers/apis/secrets/v1beta2"
+	secretsv1beta1 "github.com/Ridecell/ridecell-operator/pkg/apis/secrets/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 
@@ -34,10 +34,10 @@ type Object struct {
 	Meta   metav1.Object
 
 	// Tracking for the various stages of encryption and decryption.
-	OrigEnc  *secretsv1beta2.EncryptedSecret
+	OrigEnc  *secretsv1beta1.EncryptedSecret
 	OrigDec  *hacksecretsv1beta1.DecryptedSecret
 	AfterDec *hacksecretsv1beta1.DecryptedSecret
-	AfterEnc *secretsv1beta2.EncryptedSecret
+	AfterEnc *secretsv1beta1.EncryptedSecret
 	Kind     string
 	Data     map[string]string
 

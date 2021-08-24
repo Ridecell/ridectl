@@ -18,17 +18,16 @@ package cmd
 
 import (
 	"fmt"
+	"github.com/Ridecell/ridectl/pkg/cmd/edit"
+	"github.com/heroku/docker-registry-client/registry"
+	"github.com/spf13/cobra"
 	"net/http"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
 
-	"github.com/Ridecell/ridectl/pkg/cmd/edit"
-	"github.com/heroku/docker-registry-client/registry"
-	"github.com/spf13/cobra"
-
-	summonv1beta2 "github.com/Ridecell/summon-operator/apis/app/v1beta2"
+	summonv1beta1 "github.com/Ridecell/ridecell-operator/pkg/apis/summon/v1beta1"
 )
 
 var skipSecretKeysPrefixFlag string
@@ -212,7 +211,7 @@ func lintFile(filename string, imageTags []string) error {
 		return fmt.Errorf("%s: expected two objects in file got %v", filename, len(manifest))
 	}
 
-	summonObj, ok := manifest[0].Object.(*summonv1beta2.SummonPlatform)
+	summonObj, ok := manifest[0].Object.(*summonv1beta1.SummonPlatform)
 	if !ok {
 		return fmt.Errorf("%s: SummonPlatform is required to be the first object in manifest", filename)
 	}
