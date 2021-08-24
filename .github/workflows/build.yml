@@ -28,7 +28,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          go mod tidy
+          go get
           go install github.com/matryer/moq
 
 
