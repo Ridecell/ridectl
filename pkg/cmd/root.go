@@ -21,7 +21,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/Ridecell/summon-operator/apis"
+	summonv1beta2 "github.com/Ridecell/summon-operator/apis/app/v1beta2"
 	"github.com/mitchellh/go-homedir"
 	"github.com/spf13/cobra"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -52,7 +52,7 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&kubeconfigFlag, "kubeconfig", filepath.Join(home, ".kube", "config"), "(optional) absolute path to the kubeconfig file")
 	rootCmd.Flags().BoolVar(&versionFlag, "version", true, "--version")
 	// Register all types from summon-operator.
-	apis.AddToScheme(scheme.Scheme)
+	summonv1beta2.AddToScheme(scheme.Scheme)
 	hackapis.AddToScheme(scheme.Scheme)
 }
 

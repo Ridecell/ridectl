@@ -20,7 +20,7 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/Ridecell/ridecell-controllers/apis"
+	encryptedsecretsv1beta2 "github.com/Ridecell/ridecell-controllers/apis/secrets/v1beta2"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/kms"
 	"github.com/onsi/ginkgo"
@@ -59,7 +59,7 @@ func kmsMock() *KMSAPIMock {
 
 func TestEdit(t *testing.T) {
 	// Register all types from summon-operator.
-	apis.AddToScheme(scheme.Scheme)
+	encryptedsecretsv1beta2.AddToScheme(scheme.Scheme)
 	hackapis.AddToScheme(scheme.Scheme)
 
 	gomega.RegisterFailHandler(ginkgo.Fail)
