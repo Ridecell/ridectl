@@ -74,7 +74,10 @@ github.com/PuerkitoBio/urlesc v0.0.0-20160726150825-5bd2802263f2/go.mod h1:uGdko
 github.com/PuerkitoBio/urlesc v0.0.0-20170810143723-de5bf2ad4578/go.mod h1:uGdkoq3SwY9Y+13GIhn11/XLaGBb4BfwItxLd5jeuXE=
 github.com/Ridecell/ridecell-controllers v0.0.0-20210804103336-99e177863309 h1:nWNm0jgLo1gE1rP9YVyeyh2SAqIpbj6mswyLvlOK0wE=
 github.com/Ridecell/ridecell-controllers v0.0.0-20210804103336-99e177863309/go.mod h1:zxrt0MSuy7bGL3QxE4N9PzKK8OSFNq6yMvQjR+6yan8=
+github.com/Ridecell/ridecell-controllers v0.0.0-20210806070347-2df2a86faf79 h1:/+4eiF8agSpOtgPqI+ZZzS7ujyQ1BSnmDWbCZRbeJKg=
 github.com/Ridecell/ridecell-controllers v0.0.0-20210806070347-2df2a86faf79/go.mod h1:zxrt0MSuy7bGL3QxE4N9PzKK8OSFNq6yMvQjR+6yan8=
+github.com/Ridecell/ridecell-controllers v0.0.0-20210820121207-73cd3f5b12bc h1:NRFhAQvRlFfby+SYF03HwdxtRoVNssWk74BqtnFFO+k=
+github.com/Ridecell/ridecell-controllers v0.0.0-20210820121207-73cd3f5b12bc/go.mod h1:zxrt0MSuy7bGL3QxE4N9PzKK8OSFNq6yMvQjR+6yan8=
 github.com/Ridecell/ridectl v0.0.35 h1:T5SBKoWIv5tyzhy8scIrEvffYDahAxsXPWJ0nIYv9QY=
 github.com/Ridecell/ridectl v0.0.35/go.mod h1:UzXJxMEHjZUD8tHbhMa/IX+xT/5BMuMuUA399l9pG/s=
 github.com/Ridecell/summon-operator v0.0.0-20210824064123-59285fb3b472 h1:D2uvb4LshQqVtbfmlo6lAdO3nwDHS8fOvYUURY/dBWU=
@@ -1491,6 +1494,7 @@ k8s.io/utils v0.0.0-20200324210504-a9aa75ae1b89/go.mod h1:sZAwmy6armz5eXlNoLmJcl
 k8s.io/utils v0.0.0-20201110183641-67b214c5f920/go.mod h1:jPW/WVKK9YHAvNhRxK0md/EJ228hCsBRufyofKtW8HA=
 k8s.io/utils v0.0.0-20210111153108-fddb29f9d009 h1:0T5IaWHO3sJTEmCP6mUlBvMukxPKUQWqiI/YuiBNMiQ=
 k8s.io/utils v0.0.0-20210111153108-fddb29f9d009/go.mod h1:jPW/WVKK9YHAvNhRxK0md/EJ228hCsBRufyofKtW8HA=
+k8s.io/utils v0.0.0-20210707171843-4b05e18ac7d9 h1:imL9YgXQ9p7xmPzHFm/vVd/cF78jad+n4wK1ABwYtMM=
 k8s.io/utils v0.0.0-20210707171843-4b05e18ac7d9/go.mod h1:jPW/WVKK9YHAvNhRxK0md/EJ228hCsBRufyofKtW8HA=
 k8s.io/utils v0.0.0-20210722164352-7f3ee0f31471 h1:DnzUXII7sVg1FJ/4JX6YDRJfLNAC7idRatPwe07suiI=
 k8s.io/utils v0.0.0-20210722164352-7f3ee0f31471/go.mod h1:jPW/WVKK9YHAvNhRxK0md/EJ228hCsBRufyofKtW8HA=

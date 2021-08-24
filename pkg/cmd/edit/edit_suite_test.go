@@ -20,7 +20,7 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/Ridecell/summon-operator/apis"
+	"github.com/Ridecell/ridecell-controllers/apis"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/kms"
 	"github.com/onsi/ginkgo"
@@ -32,7 +32,6 @@ import (
 )
 
 // Sed is a workaround for https://github.com/matryer/moq/issues/86.
-//go:generate bash -c "moq -pkg edit_test ../../../vendor/github.com/aws/aws-sdk-go/service/kms/kmsiface KMSAPI | sed 's|github.com/Ridecell/ridectl/vendor/||' > zz_generated.mock_kmsiface_test.go"
 func kmsMock() *KMSAPIMock {
 	return &KMSAPIMock{
 		DecryptFunc: func(in *kms.DecryptInput) (*kms.DecryptOutput, error) {
