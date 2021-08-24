@@ -34,9 +34,6 @@ jobs:
           make test
           goveralls -coverprofile=gover.coverprofile -service=github-actions -repotoken=$COVERALLS_TOKEN
 
-      - name: Debug
-        run: sleep 100m
-
       - name: build
         run: |
           make build_macos build_linux
