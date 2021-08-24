@@ -26,7 +26,7 @@ import (
 	"regexp"
 	"strings"
 
-	secretsv1beta2 "github.com/Ridecell/ridecell-controllers/apis/secrets/v1beta2"
+	secretsv1beta1 "github.com/Ridecell/ridecell-operator/pkg/apis/secrets/v1beta1"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/kms"
 	"github.com/aws/aws-sdk-go/service/kms/kmsiface"
@@ -90,7 +90,7 @@ func NewObject(raw []byte) (*Object, error) {
 	o.Meta = obj.(metav1.Object)
 
 	// Check if this an EncryptedSecret.
-	enc, ok := obj.(*secretsv1beta2.EncryptedSecret)
+	enc, ok := obj.(*secretsv1beta1.EncryptedSecret)
 	if ok {
 		o.OrigEnc = enc
 		o.Kind = "EncryptedSecret"
@@ -235,7 +235,7 @@ func (o *Object) Decrypt(kmsService kmsiface.KMSAPI) error {
 		}
 		o.KeyId = *decryptedValue.KeyId
 		decryptedString := string(decryptedValue.Plaintext)
-		if decryptedString == secretsv1beta2.EncryptedSecretEmptyKey {
+		if decryptedString == secretsv1beta1.EncryptedSecretEmptyKey {
 			decryptedString = ""
 		}
 		dec.Data[key] = decryptedString
@@ -260,7 +260,7 @@ func (o *Object) Encrypt(kmsService kmsiface.KMSAPI, defaultKeyId string, forceK
 		return errors.New("Key ID cannot be blank")
 	}
 
-	enc := &secretsv1beta2.EncryptedSecret{ObjectMeta: o.AfterDec.ObjectMeta, Data: map[string]string{}}
+	enc := &secretsv1beta1.EncryptedSecret{ObjectMeta: o.AfterDec.ObjectMeta, Data: map[string]string{}}
 
 	plainDataKeyPresent := false
 	plainDataKey := &[32]byte{}
