@@ -20,13 +20,13 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/Ridecell/ridectl/pkg/exec"
 	"github.com/spf13/cobra"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/clientcmd/api"
 	"k8s.io/client-go/util/homedir"
 
 	k8s "github.com/Ridecell/ridectl/pkg/kubernetes"
+	summonv1beta2 "github.com/Ridecell/summon-operator/apis/app/v1beta2"
 	corev1 "k8s.io/api/core/v1"
 	crclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -38,7 +38,9 @@ func init() {
 const summon = "summon-"
 
 type Kubeobject struct {
-	Object crclient.Object
+	Object  crclient.Object
+	Context *api.Context
+	Client  crclient.Client
 }
 
 func fetchSecret(channel chan Kubeobject, kubeconfig string, k8scontext *api.Context) {
@@ -53,18 +55,52 @@ func fetchSecret(channel chan Kubeobject, kubeconfig string, k8scontext *api.Con
 	if err != nil {
 		fmt.Printf("\nUnable to find secret in %s\n", k8scontext.Cluster)
 	}
-	channel <- Kubeobject{Object: secret}
-	fmt.Println("writing to channel")
+	if err == nil {
+		channel <- Kubeobject{Object: secret, Client: k8sClient}
+		fmt.Println("writing to channel")
+	}
 }
-func getAppropriateSecret(kubeconfig string, contexts map[string]*api.Context) Kubeobject {
+
+func fetchContext(channel chan Kubeobject, kubeconfig string, k8scontext *api.Context) {
+	fmt.Printf("getting context in %s\n", k8scontext.Cluster)
+	k8sClient, err := k8s.GetClientByContext(kubeconfig, k8scontext)
+	if err != nil {
+		fmt.Println("\nthis is error in getting k8s client\n", err)
+	}
+	summonObj := &summonv1beta2.SummonPlatform{}
+	err = k8sClient.Get(context.Background(), types.NamespacedName{Name: "summontest-dev", Namespace: summon + "summontest-dev"}, summonObj)
+	if err != nil {
+		fmt.Printf("\nUnable to find summon in %s\n", k8scontext.Cluster)
+	}
+	if err == nil {
+		channel <- Kubeobject{Context: k8scontext}
+		fmt.Println("writing to channel")
+	}
+}
+
+func getAppropriateContext(kubeconfig string, contexts map[string]*api.Context) Kubeobject {
+	contextchannel := make(chan Kubeobject, len(contexts))
+	defer close(contextchannel)
+	for _, context := range contexts {
+		fmt.Printf("\nrunning fetchcontext in %s\n", context.Cluster)
+		go fetchContext(contextchannel, kubeconfig, context)
+	}
+
+	contextObj := <-contextchannel
+	return contextObj
+}
+
+func getAppropriateSecret(kubeconfig string, contexts map[string]*api.Context) crclient.Object {
 	secretchannel := make(chan Kubeobject, len(contexts))
 	defer close(secretchannel)
 	for _, context := range contexts {
 		fmt.Printf("\nrunning fetchsecret in %s\n", context.Cluster)
+		//go fetchSecret(secretchannel, kubeconfig, contexts["us-sandbox.kops.ridecell.io"])
 		go fetchSecret(secretchannel, kubeconfig, context)
 	}
-	fmt.Printf("\nthis is kubeobject %+v\n", Kubeobject{})
-	return Kubeobject{}
+
+	secretObj := <-secretchannel
+	return secretObj.Object
 }
 
 var dbShellCmd = &cobra.Command{
@@ -83,7 +119,7 @@ var dbShellCmd = &cobra.Command{
 		return nil
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
-		ctx := context.Background()
+		//ctx := context.Background()
 		var kubeconfig *string
 		if home := homedir.HomeDir(); home != "" {
 			kubeconfig = flag.String("kubeconfig", filepath.Join(home, ".kube", "config"), "(optional) absolute path to the kubeconfig file")
@@ -97,22 +133,28 @@ var dbShellCmd = &cobra.Command{
 			fmt.Println("\nthis is error in getting kubecontext\n", err)
 		}
 
-		kobj := getAppropriateSecret(*kubeconfig, kubeContexts)
-		fmt.Printf("%+v", kobj)
+		//someSecret := &corev1.Secret{}
+		//dbSecret := getAppropriateSecret(*kubeconfig, kubeContexts)
+		//someSecret := dbSecret.(*corev1.Secret)
+		appropriateObj := getAppropriateContext(*kubeconfig, kubeContexts)
+		fmt.Printf("this is appropirate cluster: %+v", appropriateObj.Context.Cluster)
 		os.Exit(0)
-		k8sClient, err := k8s.GetClientByContext(*kubeconfig, kubeContexts["us-sandbox.kops.ridecell.io"])
-		if err != nil {
-			fmt.Println("\nthis is error in getting k8s client\n", err)
-		}
-		secret := &corev1.Secret{}
-		err = k8sClient.Get(ctx, types.NamespacedName{Name: args[0] + ".postgres-user-password", Namespace: summon + "summontest-dev"}, secret)
-		if err != nil {
-			fmt.Println("secret not found")
-		}
+		// fmt.Printf("\nthis is fetched secret:%+v\n", someSecret)
+		// os.Exit(0)
+		// k8sClient, err := k8s.GetClientByContext(*kubeconfig, kubeContexts["us-sandbox.kops.ridecell.io"])
+		// if err != nil {
+		// 	fmt.Println("\nthis is error in getting k8s client\n", err)
+		// }
+		// secret := &corev1.Secret{}
+		// err = k8sClient.Get(ctx, types.NamespacedName{Name: args[0] + ".postgres-user-password", Namespace: summon + "summontest-dev"}, secret)
+		// if err != nil {
+		// 	fmt.Println("secret not found")
+		// }
 
-		psqlCmd := []string{"psql", "-h", string(secret.Data["host"]), "-U", string(secret.Data["username"]), string(secret.Data["dbname"])}
-		os.Setenv("PGPASSWORD", string(secret.Data["password"]))
-		return exec.Exec(psqlCmd)
+		// psqlCmd := []string{"psql", "-h", string(someSecret.Data["host"]), "-U", string(someSecret.Data["username"]), string(someSecret.Data["dbname"])}
+		// os.Setenv("PGPASSWORD", string(someSecret.Data["password"]))
+		//return exec.Exec(psqlCmd)
+		return nil
 
 	},
 }
