@@ -223,7 +223,7 @@ func (o *Object) Decrypt(kmsService kmsiface.KMSAPI) error {
 		decryptedValue, err := kmsService.Decrypt(&kms.DecryptInput{
 			CiphertextBlob: decodedValue[:l],
 			EncryptionContext: map[string]*string{
-				"SummonOperator": aws.String("true"),
+				"RidecellOperator": aws.String("true"),
 			},
 		})
 		if err != nil {
@@ -412,7 +412,7 @@ func GenerateDataKey(kmsService kmsiface.KMSAPI, keyId string) (*[32]byte, []byt
 		KeyId:         aws.String(keyId),
 		NumberOfBytes: aws.Int64(32),
 		EncryptionContext: map[string]*string{
-			"SummonOperator": aws.String("true"),
+			"RidecellOperator": aws.String("true"),
 		},
 	})
 	if err != nil {
@@ -429,7 +429,7 @@ func DecryptCipherDataKey(kmsService kmsiface.KMSAPI, cipherDataKey []byte) (*[3
 	decryptRsp, err := kmsService.Decrypt(&kms.DecryptInput{
 		CiphertextBlob: cipherDataKey,
 		EncryptionContext: map[string]*string{
-			"SummonOperator": aws.String("true"),
+			"RidecellOperator": aws.String("true"),
 		},
 	})
 	if err != nil {
