@@ -11,12 +11,5 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package main
-
-import (
-	"github.com/Ridecell/ridectl/pkg/cmd"
-)
-
-func main() {
-	cmd.Execute()
-}
+// Package secrets contains secrets API versions
+package secrets
