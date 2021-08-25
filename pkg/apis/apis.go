@@ -15,7 +15,7 @@ limitations under the License.
 */
 
 // Generate deepcopy for apis
-//go:generate go run deepcopy-gen -O zz_generated.deepcopy -i ./...
+////go:generate go run deepcopy-gen -O zz_generated.deepcopy -i ./...
 
 // Package apis contains Kubernetes API groups.
 package apis

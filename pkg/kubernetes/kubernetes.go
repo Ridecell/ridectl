@@ -24,7 +24,8 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
-	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
@@ -49,7 +50,7 @@ type Subject struct {
 }
 
 type KubeObject struct {
-	Top     runtime.Object
+	Top     client.Object
 	Client  client.Client
 	Context *kubeContext
 }
@@ -76,7 +77,7 @@ func listPodsWithContext(kubeconfig string, contextObj *kubeContext, listOptions
 	}
 
 	fetchPodList := &corev1.PodList{}
-	err = contextClient.List(context.Background(), listOptions, fetchPodList)
+	err = contextClient.List(context.Background(), fetchPodList, listOptions)
 	if err != nil {
 		podList <- nil
 		return
@@ -100,8 +101,13 @@ func GetPod(kubeconfig string, nameRegex *string, labelSelector *string, namespa
 		Namespace: namespace,
 	}
 
+	req, err := labels.NewRequirement(*labelSelector, selection.Exists, []string{})
+	if err != nil {
+		return err
+	}
+
 	if labelSelector != nil {
-		listOptions.SetLabelSelector(*labelSelector)
+		listOptions.LabelSelector = labels.NewSelector().Add(*req)
 	}
 
 	kubeContexts, err := getKubeContexts()
@@ -169,7 +175,7 @@ func GetObject(kubeconfig string, name string, namespace string, fetchObject *Ku
 	return nil
 }
 
-func GetObjectWithClient(contextClient client.Client, name string, namespace string, runtimeObj runtime.Object) error {
+func GetObjectWithClient(contextClient client.Client, name string, namespace string, runtimeObj client.Object) error {
 	err := contextClient.Get(context.Background(), types.NamespacedName{Name: name, Namespace: namespace}, runtimeObj)
 	if err != nil {
 		return err
@@ -177,7 +183,7 @@ func GetObjectWithClient(contextClient client.Client, name string, namespace str
 	return nil
 }
 
-func getObjectWithContext(kubeconfig string, runtimeObj runtime.Object, name string, namespace string, contextObj *kubeContext, fetchObject chan *KubeObject) {
+func getObjectWithContext(kubeconfig string, runtimeObj client.Object, name string, namespace string, contextObj *kubeContext, fetchObject chan *KubeObject) {
 	contextClient, err := getClientByContext(kubeconfig, contextObj.Context)
 	if err != nil {
 		// User may have an invalid context that causes this to fail. Just return nil and continue.
@@ -297,7 +303,7 @@ func listSummonPlatformWithContext(kubeconfig string, contextObj *kubeContext, l
 	}
 
 	fetchSummonList := &summonv1beta2.SummonPlatformList{}
-	err = contextClient.List(context.Background(), listOptions, fetchSummonList)
+	err = contextClient.List(context.Background(), fetchSummonList, listOptions)
 	if err != nil {
 		summonList <- nil
 		return
