@@ -40,10 +40,10 @@ var dbShellCmd = &cobra.Command{
 		"For microservices: dbshell svc-<region>-<env>-<microservice>   -- e.g. ridectl dbshell svc-us-master-dispatch",
 	Args: func(_ *cobra.Command, args []string) error {
 		if len(args) == 0 {
-			return fmt.Errorf("Cluster name argument is required")
+			return fmt.Errorf("cluster name argument is required")
 		}
 		if len(args) > 1 {
-			return fmt.Errorf("Too many arguments")
+			return fmt.Errorf("too many arguments")
 		}
 		return nil
 	},
@@ -59,7 +59,7 @@ var dbShellCmd = &cobra.Command{
 
 		kubeObj := kubernetes.GetAppropriateObjectWithContext(*kubeconfig, args[0], "dbshell", nil)
 		if reflect.DeepEqual(kubeObj, kubernetes.Kubeobject{}) {
-			return fmt.Errorf("No instance found")
+			return fmt.Errorf("no instance found")
 		}
 
 		dbSecret := kubeObj.Object.(*corev1.Secret)

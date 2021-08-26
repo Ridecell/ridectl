@@ -93,7 +93,7 @@ func fetchDBSecret(channel chan Kubeobject, cluster string, client client.Client
 		secretObj := &corev1.Secret{}
 		err := client.Get(context.Background(), types.NamespacedName{Name: subject.Name + ".postgres-user-password", Namespace: subject.Namespace}, secretObj)
 		if err != nil {
-			fmt.Println("Instance not found in\n", cluster)
+			fmt.Println("Instance not found in", cluster)
 			return
 		}
 		if err == nil {
@@ -118,11 +118,11 @@ func fetchPodList(channel chan Kubeobject, cluster *api.Context, crclient client
 	podList := &corev1.PodList{}
 	err := crclient.List(context.Background(), podList, listOptions)
 	if err != nil {
-		fmt.Println("Instance not found in\n", cluster.Cluster)
+		fmt.Println("Instance not found in", cluster.Cluster)
 		return
 	}
 	if len(podList.Items) == 0 {
-		fmt.Println("Instance not found in\n", cluster.Cluster)
+		fmt.Println("Instance not found in", cluster.Cluster)
 		return
 	}
 	if err == nil {
@@ -134,7 +134,7 @@ func GetAppropriateObjectWithContext(kubeconfig string, subject string, shellcmd
 
 	contexts, err := getKubeContexts()
 	if err != nil {
-		fmt.Println("Error getting kubecontexts\n", err)
+		fmt.Println("Error getting kubecontexts", err)
 		return Kubeobject{}
 	}
 	k8sClients := make(map[string]client.Client)
@@ -148,7 +148,7 @@ func GetAppropriateObjectWithContext(kubeconfig string, subject string, shellcmd
 	objChannel := make(chan Kubeobject)
 	sub, err := ParseSubject(subject)
 	if err != nil {
-		fmt.Println("Error parsing subject\n", err)
+		fmt.Println("Error parsing subject", err)
 		return Kubeobject{}
 	}
 	for cluster, client := range k8sClients {
@@ -190,5 +190,5 @@ func ParseSubject(instanceName string) (Subject, error) {
 		return subject, nil
 	}
 	// Nothing matched, return empty with error
-	return subject, fmt.Errorf("Could not parse out information from %s", instanceName)
+	return subject, fmt.Errorf("could not parse out information from %s", instanceName)
 }

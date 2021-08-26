@@ -41,10 +41,10 @@ var pyShellCmd = &cobra.Command{
 	Long:  `Open an interactive Python terminal on a Summon instance running on Kubernetes`,
 	Args: func(_ *cobra.Command, args []string) error {
 		if len(args) == 0 {
-			return fmt.Errorf("Cluster name argument is required")
+			return fmt.Errorf("cluster name argument is required")
 		}
 		if len(args) > 1 {
-			return fmt.Errorf("Too many arguments")
+			return fmt.Errorf("too many arguments")
 		}
 		return nil
 	},
@@ -71,12 +71,12 @@ var pyShellCmd = &cobra.Command{
 			podLabels["region"] = target.Region
 			podLabels["role"] = "web"
 		} else {
-			return fmt.Errorf("Cannot find pod without knowing the target's type: %#v", target)
+			return fmt.Errorf("cannot find pod without knowing the target's type: %#v", target)
 		}
 
 		kubeObj := kubernetes.GetAppropriateObjectWithContext(*kubeconfig, args[0], "pyshell", podLabels)
 		if reflect.DeepEqual(kubeObj, kubernetes.Kubeobject{}) {
-			return fmt.Errorf("No instance found")
+			return fmt.Errorf("no instance found")
 		}
 		pod := kubeObj.Object.(*corev1.Pod)
 		// Spawn kubectl exec.
