@@ -61,7 +61,7 @@ var dbShellCmd = &cobra.Command{
 		if err != nil {
 			return errors.Wrap(err, "not a valid target")
 		}
-		kubeObj := kubernetes.GetAppropriateObjectWithContext(*kubeconfig, args[0], "dbshell", target, nil)
+		kubeObj := kubernetes.GetAppropriateObjectWithContext(*kubeconfig, args[0], target, nil)
 		if reflect.DeepEqual(kubeObj, kubernetes.Kubeobject{}) {
 			return fmt.Errorf("no instance found")
 		}

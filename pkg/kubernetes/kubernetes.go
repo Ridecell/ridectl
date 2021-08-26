@@ -127,7 +127,7 @@ func fetchObject(channel chan Kubeobject, cluster *api.Context, crclient client.
 	}
 }
 
-func GetAppropriateObjectWithContext(kubeconfig string, instance string, shellcmd string, subject Subject, podLabels map[string]string) Kubeobject {
+func GetAppropriateObjectWithContext(kubeconfig string, instance string, subject Subject, podLabels map[string]string) Kubeobject {
 
 	contexts, err := getKubeContexts()
 	if err != nil {
