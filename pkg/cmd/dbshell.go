@@ -21,6 +21,7 @@ import (
 	"reflect"
 
 	"github.com/Ridecell/ridectl/pkg/exec"
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"k8s.io/client-go/util/homedir"
 
@@ -56,8 +57,11 @@ var dbShellCmd = &cobra.Command{
 			kubeconfig = flag.String("kubeconfig", "", "absolute path to the kubeconfig file")
 		}
 		flag.Parse()
-
-		kubeObj := kubernetes.GetAppropriateObjectWithContext(*kubeconfig, args[0], "dbshell", nil)
+		target, err := kubernetes.ParseSubject(args[0])
+		if err != nil {
+			return errors.Wrap(err, "not a valid target")
+		}
+		kubeObj := kubernetes.GetAppropriateObjectWithContext(*kubeconfig, args[0], "dbshell", target, nil)
 		if reflect.DeepEqual(kubeObj, kubernetes.Kubeobject{}) {
 			return fmt.Errorf("no instance found")
 		}

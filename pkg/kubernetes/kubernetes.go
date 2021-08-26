@@ -87,56 +87,54 @@ func getKubeContexts() (map[string]*api.Context, error) {
 	return rawConfig.Contexts, nil
 }
 
-func fetchDBSecret(channel chan Kubeobject, cluster string, client client.Client, subject Subject) {
+func fetchObject(channel chan Kubeobject, cluster *api.Context, crclient client.Client, subject Subject, podLabels map[string]string) {
 
-	if subject.Type == "summon" || subject.Type == "microservice" {
+	if podLabels == nil {
+		// podLables is nil that means we are getting a secret i.e it is a dbshell call
 		secretObj := &corev1.Secret{}
-		err := client.Get(context.Background(), types.NamespacedName{Name: subject.Name + ".postgres-user-password", Namespace: subject.Namespace}, secretObj)
+		err := crclient.Get(context.Background(), types.NamespacedName{Name: subject.Name + ".postgres-user-password", Namespace: subject.Namespace}, secretObj)
 		if err != nil {
-			fmt.Println("Instance not found in", cluster)
+			fmt.Println("Instance not found in", cluster.Cluster)
 			return
 		}
 		if err == nil {
-			channel <- Kubeobject{Client: client, Object: secretObj}
+			channel <- Kubeobject{Client: crclient, Context: cluster, Object: secretObj}
+		}
+	} else if podLabels != nil {
+		// podLables is not nil that means we are getting a pod i.e it is a pyshell call
+		labelSet := labels.Set{}
+		for k, v := range podLabels {
+			labelSet[k] = v
+		}
+		listOptions := &client.ListOptions{
+			Namespace:     subject.Namespace,
+			LabelSelector: labels.SelectorFromSet(labelSet),
+		}
+
+		podList := &corev1.PodList{}
+		err := crclient.List(context.Background(), podList, listOptions)
+		if err != nil {
+			fmt.Println("Instance not found in", cluster.Cluster)
+			return
+		}
+		if len(podList.Items) == 0 {
+			fmt.Println("Instance not found in", cluster.Cluster)
+			return
+		}
+		if err == nil {
+			channel <- Kubeobject{Client: crclient, Context: cluster, Object: &podList.Items[0]}
 		}
 	}
-
 }
 
-func fetchPodList(channel chan Kubeobject, cluster *api.Context, crclient client.Client, subject Subject, podLabels map[string]string) {
-
-	fmt.Println("getting podlist in ", cluster.Cluster)
-	labelSet := labels.Set{}
-	for k, v := range podLabels {
-		labelSet[k] = v
-	}
-	listOptions := &client.ListOptions{
-		Namespace:     subject.Namespace,
-		LabelSelector: labels.SelectorFromSet(labelSet),
-	}
-
-	podList := &corev1.PodList{}
-	err := crclient.List(context.Background(), podList, listOptions)
-	if err != nil {
-		fmt.Println("Instance not found in", cluster.Cluster)
-		return
-	}
-	if len(podList.Items) == 0 {
-		fmt.Println("Instance not found in", cluster.Cluster)
-		return
-	}
-	if err == nil {
-		channel <- Kubeobject{Client: crclient, Context: cluster, Object: &podList.Items[0]}
-	}
-}
-
-func GetAppropriateObjectWithContext(kubeconfig string, subject string, shellcmd string, podLabels map[string]string) Kubeobject {
+func GetAppropriateObjectWithContext(kubeconfig string, instance string, shellcmd string, subject Subject, podLabels map[string]string) Kubeobject {
 
 	contexts, err := getKubeContexts()
 	if err != nil {
 		fmt.Println("Error getting kubecontexts", err)
 		return Kubeobject{}
 	}
+
 	k8sClients := make(map[string]client.Client)
 	for _, context := range contexts {
 		k8sClient, err := getClientByContext(kubeconfig, context)
@@ -145,18 +143,10 @@ func GetAppropriateObjectWithContext(kubeconfig string, subject string, shellcmd
 		}
 		k8sClients[context.Cluster] = k8sClient
 	}
+
 	objChannel := make(chan Kubeobject)
-	sub, err := ParseSubject(subject)
-	if err != nil {
-		fmt.Println("Error parsing subject", err)
-		return Kubeobject{}
-	}
 	for cluster, client := range k8sClients {
-		if shellcmd == "dbshell" {
-			go fetchDBSecret(objChannel, cluster, client, sub)
-		} else if shellcmd == "pyshell" {
-			go fetchPodList(objChannel, contexts[cluster], client, sub, podLabels)
-		}
+		go fetchObject(objChannel, contexts[cluster], client, subject, podLabels)
 	}
 	return <-objChannel
 }

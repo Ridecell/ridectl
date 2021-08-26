@@ -65,7 +65,6 @@ var pyShellCmd = &cobra.Command{
 		if target.Type == "summon" {
 			podLabels["app.kubernetes.io/instance"] = fmt.Sprintf("%s-web", args[0])
 		} else if target.Type == "microservice" {
-			fmt.Printf("this is target: %+v", target)
 			podLabels["app"] = fmt.Sprintf("%s-svc-%s", target.Env, target.Namespace)
 			podLabels["environment"] = target.Env
 			podLabels["region"] = target.Region
@@ -74,10 +73,11 @@ var pyShellCmd = &cobra.Command{
 			return fmt.Errorf("cannot find pod without knowing the target's type: %#v", target)
 		}
 
-		kubeObj := kubernetes.GetAppropriateObjectWithContext(*kubeconfig, args[0], "pyshell", podLabels)
+		kubeObj := kubernetes.GetAppropriateObjectWithContext(*kubeconfig, args[0], "pyshell", target, podLabels)
 		if reflect.DeepEqual(kubeObj, kubernetes.Kubeobject{}) {
 			return fmt.Errorf("no instance found")
 		}
+
 		pod := kubeObj.Object.(*corev1.Pod)
 		// Spawn kubectl exec.
 		kubectlArgs := []string{"kubectl", "exec", "-it", "-n", pod.Namespace, pod.Name, "--context", kubeObj.Context.Cluster, "--", "bash", "-l", "-c", "python manage.py shell"}
