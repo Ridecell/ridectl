@@ -73,7 +73,7 @@ var pyShellCmd = &cobra.Command{
 			return fmt.Errorf("cannot find pod without knowing the target's type: %#v", target)
 		}
 
-		kubeObj := kubernetes.GetAppropriateObjectWithContext(*kubeconfig, args[0], "pyshell", target, podLabels)
+		kubeObj := kubernetes.GetAppropriateObjectWithContext(*kubeconfig, args[0], target, podLabels)
 		if reflect.DeepEqual(kubeObj, kubernetes.Kubeobject{}) {
 			return fmt.Errorf("no instance found")
 		}
