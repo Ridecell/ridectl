@@ -76,8 +76,8 @@ github.com/PuerkitoBio/urlesc v0.0.0-20170810143723-de5bf2ad4578/go.mod h1:uGdko
 github.com/Ridecell/ridecell-controllers v0.0.0-20210806070347-2df2a86faf79/go.mod h1:zxrt0MSuy7bGL3QxE4N9PzKK8OSFNq6yMvQjR+6yan8=
 github.com/Ridecell/ridecell-controllers v0.0.0-20210820121207-73cd3f5b12bc h1:NRFhAQvRlFfby+SYF03HwdxtRoVNssWk74BqtnFFO+k=
 github.com/Ridecell/ridecell-controllers v0.0.0-20210820121207-73cd3f5b12bc/go.mod h1:zxrt0MSuy7bGL3QxE4N9PzKK8OSFNq6yMvQjR+6yan8=
-github.com/Ridecell/summon-operator v0.0.0-20210824064123-59285fb3b472 h1:D2uvb4LshQqVtbfmlo6lAdO3nwDHS8fOvYUURY/dBWU=
-github.com/Ridecell/summon-operator v0.0.0-20210824064123-59285fb3b472/go.mod h1:db4lXRVwtYpeq/AVKaa3Mc4kAlNUJjl5c6d68qq/Z94=
+github.com/Ridecell/summon-operator v0.0.0-20210825111357-e01b1db74502 h1:80IxKu2BgiE+dcjgeMXvzjCJ2JNIv9cvRdzxFkYxhnI=
+github.com/Ridecell/summon-operator v0.0.0-20210825111357-e01b1db74502/go.mod h1:db4lXRVwtYpeq/AVKaa3Mc4kAlNUJjl5c6d68qq/Z94=
 github.com/Shopify/goreferrer v0.0.0-20181106222321-ec9c9a553398/go.mod h1:a1uqRtAwp2Xwc6WNPJEufxJ7fx3npB4UV/JOLmbu5I0=
 github.com/Shopify/sarama v1.19.0/go.mod h1:FVkBWblsNy7DGZRfXLU0O9RCGt5g3g3yEuWXgklEdEo=
 github.com/Shopify/toxiproxy v2.1.4+incompatible/go.mod h1:OXgGpZ6Cli1/URJOF1DMxUHB2q5Ap20/P/eIdh4G0pI=
