@@ -4,7 +4,7 @@ go 1.16
 
 require (
 	github.com/Ridecell/ridecell-controllers v0.0.0-20210820121207-73cd3f5b12bc
-	github.com/Ridecell/summon-operator v0.0.0-20210824064123-59285fb3b472
+	github.com/Ridecell/summon-operator v0.0.0-20210825111357-e01b1db74502
 	github.com/aws/aws-sdk-go v1.40.29
 	github.com/manifoldco/promptui v0.8.0
 	github.com/mitchellh/go-homedir v1.1.0
