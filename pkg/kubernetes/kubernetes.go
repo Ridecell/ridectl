@@ -20,6 +20,7 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/clientcmd"
@@ -86,7 +87,7 @@ func getKubeContexts() (map[string]*api.Context, error) {
 	return rawConfig.Contexts, nil
 }
 
-func fetchObject(channel chan Kubeobject, cluster string, client client.Client, subject Subject) {
+func fetchDBSecret(channel chan Kubeobject, cluster string, client client.Client, subject Subject) {
 
 	if subject.Type == "summon" || subject.Type == "microservice" {
 		secretObj := &corev1.Secret{}
@@ -102,7 +103,34 @@ func fetchObject(channel chan Kubeobject, cluster string, client client.Client, 
 
 }
 
-func GetAppropriateContext(kubeconfig string, subject string) Kubeobject {
+func fetchPodList(channel chan Kubeobject, cluster *api.Context, crclient client.Client, subject Subject, podLabels map[string]string) {
+
+	fmt.Println("getting podlist in ", cluster.Cluster)
+	labelSet := labels.Set{}
+	for k, v := range podLabels {
+		labelSet[k] = v
+	}
+	listOptions := &client.ListOptions{
+		Namespace:     subject.Namespace,
+		LabelSelector: labels.SelectorFromSet(labelSet),
+	}
+
+	podList := &corev1.PodList{}
+	err := crclient.List(context.Background(), podList, listOptions)
+	if err != nil {
+		fmt.Println("Instance not found in\n", cluster.Cluster)
+		return
+	}
+	if len(podList.Items) == 0 {
+		fmt.Println("Instance not found in\n", cluster.Cluster)
+		return
+	}
+	if err == nil {
+		channel <- Kubeobject{Client: crclient, Context: cluster, Object: &podList.Items[0]}
+	}
+}
+
+func GetAppropriateObjectWithContext(kubeconfig string, subject string, shellcmd string, podLabels map[string]string) Kubeobject {
 
 	contexts, err := getKubeContexts()
 	if err != nil {
@@ -124,7 +152,11 @@ func GetAppropriateContext(kubeconfig string, subject string) Kubeobject {
 		return Kubeobject{}
 	}
 	for cluster, client := range k8sClients {
-		go fetchObject(objChannel, cluster, client, sub)
+		if shellcmd == "dbshell" {
+			go fetchDBSecret(objChannel, cluster, client, sub)
+		} else if shellcmd == "pyshell" {
+			go fetchPodList(objChannel, contexts[cluster], client, sub, podLabels)
+		}
 	}
 	return <-objChannel
 }
