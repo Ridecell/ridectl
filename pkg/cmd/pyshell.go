@@ -17,17 +17,21 @@ limitations under the License.
 package cmd
 
 import (
+	"context"
 	"fmt"
-	"os/exec"
 	"reflect"
 
+	"github.com/Ridecell/ridectl/pkg/exec"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	ridectlexec "github.com/Ridecell/ridectl/pkg/exec"
+	osExec "os/exec"
+
 	kubernetes "github.com/Ridecell/ridectl/pkg/kubernetes"
 	utils "github.com/Ridecell/ridectl/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/labels"
 )
 
 func init() {
@@ -48,7 +52,7 @@ var pyShellCmd = &cobra.Command{
 		return nil
 	},
 	PreRunE: func(cmd *cobra.Command, args []string) error {
-		_, err := exec.LookPath("kubectl")
+		_, err := osExec.LookPath("kubectl")
 		if err != nil {
 			return errors.Wrap(err, "Unable to find kubectl")
 		}
@@ -77,11 +81,27 @@ var pyShellCmd = &cobra.Command{
 		if reflect.DeepEqual(kubeObj, kubernetes.Kubeobject{}) {
 			return fmt.Errorf("no instance found")
 		}
+		labelSet := labels.Set{}
+		for k, v := range podLabels {
+			labelSet[k] = v
+		}
+		listOptions := &client.ListOptions{
+			Namespace:     target.Namespace,
+			LabelSelector: labels.SelectorFromSet(labelSet),
+		}
+		podList := &corev1.PodList{}
+		err = kubeObj.Client.List(context.Background(), podList, listOptions)
+		if err != nil {
+			return fmt.Errorf("instance not found in %s", kubeObj.Context.Cluster)
+		}
+		if len(podList.Items) < 1 {
+			return fmt.Errorf("instance not found in %s", kubeObj.Context.Cluster)
+		}
 
-		pod := kubeObj.Object.(*corev1.Pod)
+		pod := podList.Items[0]
 		// Spawn kubectl exec.
 		kubectlArgs := []string{"kubectl", "exec", "-it", "-n", pod.Namespace, pod.Name, "--context", kubeObj.Context.Cluster, "--", "bash", "-l", "-c", "python manage.py shell"}
-		return ridectlexec.Exec(kubectlArgs)
+		return exec.Exec(kubectlArgs)
 
 	},
 }

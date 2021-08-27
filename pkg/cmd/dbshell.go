@@ -14,18 +14,21 @@ limitations under the License.
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"os"
-	"os/exec"
 	"reflect"
 
+	"github.com/Ridecell/ridectl/pkg/exec"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 
-	ridectlexec "github.com/Ridecell/ridectl/pkg/exec"
+	osExec "os/exec"
+
 	kubernetes "github.com/Ridecell/ridectl/pkg/kubernetes"
 	utils "github.com/Ridecell/ridectl/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/types"
 )
 
 func init() {
@@ -48,7 +51,7 @@ var dbShellCmd = &cobra.Command{
 		return nil
 	},
 	PreRunE: func(cmd *cobra.Command, args []string) error {
-		_, err := exec.LookPath("psql")
+		_, err := osExec.LookPath("psql")
 		if err != nil {
 			return errors.Wrap(err, "Unable to find psql")
 		}
@@ -65,10 +68,14 @@ var dbShellCmd = &cobra.Command{
 		if reflect.DeepEqual(kubeObj, kubernetes.Kubeobject{}) {
 			return fmt.Errorf("no instance found")
 		}
+		secretObj := &corev1.Secret{}
+		err = kubeObj.Client.Get(context.Background(), types.NamespacedName{Name: target.Name + ".postgres-user-password", Namespace: target.Namespace}, secretObj)
+		if err != nil {
+			return fmt.Errorf("instance not found in %s", kubeObj.Context.Cluster)
+		}
 
-		dbSecret := kubeObj.Object.(*corev1.Secret)
-		psqlCmd := []string{"psql", "-h", string(dbSecret.Data["host"]), "-U", string(dbSecret.Data["username"]), string(dbSecret.Data["dbname"])}
-		os.Setenv("PGPASSWORD", string(dbSecret.Data["password"]))
-		return ridectlexec.Exec(psqlCmd)
+		psqlCmd := []string{"psql", "-h", string(secretObj.Data["host"]), "-U", string(secretObj.Data["username"]), string(secretObj.Data["dbname"])}
+		os.Setenv("PGPASSWORD", string(secretObj.Data["password"]))
+		return exec.Exec(psqlCmd)
 	},
 }
