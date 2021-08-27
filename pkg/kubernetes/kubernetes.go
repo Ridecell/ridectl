@@ -108,7 +108,7 @@ func fetchContextForObject(channel chan Kubeobject, cluster *api.Context, crclie
 
 }
 
-func GetAppropriateObjectWithContext(kubeconfig string, instance string, subject Subject, podLabels map[string]string) Kubeobject {
+func GetAppropriateObjectWithContext(kubeconfig string, instance string, subject Subject) Kubeobject {
 
 	contexts, err := getKubeContexts()
 	if err != nil {
