@@ -18,11 +18,14 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 	osExec "os/exec"
 	"reflect"
+	"time"
 
 	kubernetes "github.com/Ridecell/ridectl/pkg/kubernetes"
 	"github.com/Ridecell/ridectl/pkg/utils"
+	"github.com/apoorvam/goterminal"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
@@ -95,7 +98,39 @@ var statusCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		fmt.Printf(sData + "\n" + dData + "\n")
+		if follow {
+			writer := goterminal.New(os.Stdout)
+			indicator := goterminal.New(os.Stdout)
+			spinner := []string{"|", "/", "-", "\\", "/"}
+			steps := 0
+			for true {
+				writer.Clear()
+				fmt.Fprintf(writer, "%s\n%s\n", sData, dData)
+				writer.Print()
+				// Wait 3 seconds before next command run and display. Also show progression
+				// with spinner steps. Note that goterminal seems to rely on new lines in order
+				// to appear as desired
+				for i := 0; i < 3; i++ {
+					fmt.Fprintf(indicator, "%s\n", spinner[steps%len(spinner)])
+					indicator.Print()
+					time.Sleep(time.Second)
+					indicator.Clear()
+					steps++
+				}
+				// Calling it at end of for loop since we made these calls right before.
+				sData, err = getData("summon", kubeObj.Context.Cluster, target.Namespace, args[0])
+				if err != nil {
+					return err
+				}
+
+				dData, err = getData("deployment", kubeObj.Context.Cluster, target.Namespace, args[0])
+				if err != nil {
+					return err
+				}
+			}
+		} else {
+			fmt.Printf(sData + "\n" + dData + "\n")
+		}
 		return nil
 	},
 }
