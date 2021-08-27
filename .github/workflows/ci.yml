@@ -7,7 +7,7 @@ jobs:
     name: Lint
     runs-on: ubuntu-20.04
     env:
-      TOKEN: ${{ secrets.USER_GITHUB_TOKEN }}
+      TOKEN: ${{ secrets.TEMP_GITHUB_TOKEN }}
     steps:
       - name: Setup go 1.16
         uses: actions/setup-go@v2
