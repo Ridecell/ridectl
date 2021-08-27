@@ -19,14 +19,15 @@ package cmd
 import (
 	"flag"
 	"fmt"
+	"os/exec"
 	"path/filepath"
 	"reflect"
 
-	"github.com/Ridecell/ridectl/pkg/exec"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"k8s.io/client-go/util/homedir"
 
+	ridectlexec "github.com/Ridecell/ridectl/pkg/exec"
 	kubernetes "github.com/Ridecell/ridectl/pkg/kubernetes"
 	corev1 "k8s.io/api/core/v1"
 )
@@ -45,6 +46,14 @@ var pyShellCmd = &cobra.Command{
 		}
 		if len(args) > 1 {
 			return fmt.Errorf("too many arguments")
+		}
+		return nil
+	},
+	PreRunE: func(cmd *cobra.Command, args []string) error {
+		fmt.Println("these are args", args)
+		_, err := exec.LookPath("kubectl")
+		if err != nil {
+			return errors.Wrap(err, "Unable to find kubectl")
 		}
 		return nil
 	},
@@ -81,7 +90,7 @@ var pyShellCmd = &cobra.Command{
 		pod := kubeObj.Object.(*corev1.Pod)
 		// Spawn kubectl exec.
 		kubectlArgs := []string{"kubectl", "exec", "-it", "-n", pod.Namespace, pod.Name, "--context", kubeObj.Context.Cluster, "--", "bash", "-l", "-c", "python manage.py shell"}
-		return exec.Exec(kubectlArgs)
+		return ridectlexec.Exec(kubectlArgs)
 
 	},
 }

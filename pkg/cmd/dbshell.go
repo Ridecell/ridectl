@@ -17,10 +17,11 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"reflect"
 
-	"github.com/Ridecell/ridectl/pkg/exec"
+	ridectlexec "github.com/Ridecell/ridectl/pkg/exec"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"k8s.io/client-go/util/homedir"
@@ -48,6 +49,14 @@ var dbShellCmd = &cobra.Command{
 		}
 		return nil
 	},
+	PreRunE: func(cmd *cobra.Command, args []string) error {
+		fmt.Println("these are args", args)
+		_, err := exec.LookPath("psql")
+		if err != nil {
+			return errors.Wrap(err, "Unable to find psql")
+		}
+		return nil
+	},
 	RunE: func(cmd *cobra.Command, args []string) error {
 		//ctx := context.Background()
 		var kubeconfig *string
@@ -69,6 +78,6 @@ var dbShellCmd = &cobra.Command{
 		dbSecret := kubeObj.Object.(*corev1.Secret)
 		psqlCmd := []string{"psql", "-h", string(dbSecret.Data["host"]), "-U", string(dbSecret.Data["username"]), string(dbSecret.Data["dbname"])}
 		os.Setenv("PGPASSWORD", string(dbSecret.Data["password"]))
-		return exec.Exec(psqlCmd)
+		return ridectlexec.Exec(psqlCmd)
 	},
 }
