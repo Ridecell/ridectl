@@ -197,7 +197,7 @@ func (o *Object) Decrypt(kmsService kmsiface.KMSAPI) error {
 		// If True, decrypt using data key
 		if useDataKey {
 			var p Payload
-			gob.NewDecoder(bytes.NewReader(decodedValue)).Decode(&p)
+			_ = gob.NewDecoder(bytes.NewReader(decodedValue)).Decode(&p)
 
 			plainDataKey, ok := keyMap[string(p.Key)]
 			if !ok {
@@ -282,7 +282,7 @@ func (o *Object) Encrypt(kmsService kmsiface.KMSAPI, defaultKeyId string, forceK
 				return errors.Wrapf(err, "error base64 decoding value for %s", key)
 			}
 			var p Payload
-			gob.NewDecoder(bytes.NewReader(decodedValue)).Decode(&p)
+			_ = gob.NewDecoder(bytes.NewReader(decodedValue)).Decode(&p)
 			plainDataKey, err = DecryptCipherDataKey(kmsService, p.Key)
 			if err != nil {
 				return errors.Wrapf(err, "error decrypting value for cipherDatakey")

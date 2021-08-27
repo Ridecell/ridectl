@@ -53,9 +53,9 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&kubeconfigFlag, "kubeconfig", filepath.Join(home, ".kube", "config"), "(optional) absolute path to the kubeconfig file")
 	rootCmd.Flags().BoolVar(&versionFlag, "version", true, "--version")
 	// Register all types from summon-operator and ridecell-controllers secrets
-	summonv1beta2.AddToScheme(scheme.Scheme)
-	secretsv1beta2.AddToScheme(scheme.Scheme)
-	hackapis.AddToScheme(scheme.Scheme)
+	_ = summonv1beta2.AddToScheme(scheme.Scheme)
+	_ = secretsv1beta2.AddToScheme(scheme.Scheme)
+	_ = hackapis.AddToScheme(scheme.Scheme)
 }
 
 func Execute() {

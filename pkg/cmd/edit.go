@@ -173,7 +173,7 @@ var editCmd = &cobra.Command{
 		}
 
 		// Match up the new objects with the old.
-		afterManifest.CorrelateWith(inManifest)
+		_ = afterManifest.CorrelateWith(inManifest)
 
 		// Re-encrypt anything that needs it.
 		keyId := keyIdFlag
@@ -196,7 +196,7 @@ var editCmd = &cobra.Command{
 			return errors.Wrapf(err, "error opening %s for writing", filename)
 		}
 		defer outFile.Close()
-		afterManifest.Serialize(outFile)
+		_ = afterManifest.Serialize(outFile)
 
 		return nil
 	},
@@ -211,14 +211,14 @@ func runEditor(filename string) error {
 	// Deal with an editor that has options.
 	editorParts := whitespaceRegexp.Split(editor, -1)
 	executable := editorParts[0]
-	executable, err := exec.LookPath(executable)
+	executable, _ = exec.LookPath(executable)
 
 	editorParts = append(editorParts, filename)
 	cmd := exec.Command(executable, editorParts[1:]...)
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	err = cmd.Run()
+	err := cmd.Run()
 	if err != nil {
 		return errors.Wrap(err, "error running editor")
 	}
@@ -246,8 +246,8 @@ func editObjects(manifest edit.Manifest, comment string) (edit.Manifest, error) 
 
 		// Make the YAML to show in the editor.
 		editorBuf := bytes.Buffer{}
-		commentReader.WriteTo(&editorBuf)
-		manifestBuf.WriteTo(&editorBuf)
+		_, _ = commentReader.WriteTo(&editorBuf)
+		_, _ = manifestBuf.WriteTo(&editorBuf)
 		editorReader := bytes.NewReader(editorBuf.Bytes())
 
 		// Open a temporary file.
@@ -257,8 +257,8 @@ func editObjects(manifest edit.Manifest, comment string) (edit.Manifest, error) 
 		}
 		defer tmpfile.Close()
 		defer os.Remove(tmpfile.Name())
-		editorReader.WriteTo(tmpfile)
-		tmpfile.Sync()
+		_, _ = editorReader.WriteTo(tmpfile)
+		_ = tmpfile.Sync()
 
 		// Show the editor.
 		err = runEditor(tmpfile.Name())
@@ -290,7 +290,7 @@ func editObjects(manifest edit.Manifest, comment string) (edit.Manifest, error) 
 		if bytes.Equal(commentBuf.Bytes(), afterBuf.Bytes()[:commentBuf.Len()]) {
 			seekPos = int64(commentBuf.Len())
 		}
-		afterReader.Seek(seekPos, 0)
+		_, _ = afterReader.Seek(seekPos, 0)
 
 		outManifest, err := edit.NewManifest(afterReader)
 		if err == nil {
@@ -301,8 +301,8 @@ func editObjects(manifest edit.Manifest, comment string) (edit.Manifest, error) 
 		// Some kind decoding error, probably bad syntax, show the editor again.
 		comment = fmt.Sprintf("Error parsing file:\n%s", err)
 		manifestBuf.Reset()
-		afterReader.Seek(seekPos, 0)
-		afterReader.WriteTo(&manifestBuf)
+		_, _ = afterReader.Seek(seekPos, 0)
+		_, _ = afterReader.WriteTo(&manifestBuf)
 	}
 }
 

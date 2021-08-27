@@ -78,7 +78,7 @@ func (m Manifest) Serialize(out io.Writer) error {
 	first := true
 	for _, obj := range m {
 		if !first {
-			out.Write([]byte("---\n"))
+			_, _ = out.Write([]byte("---\n"))
 		}
 		first = false
 		err := obj.Serialize(out)
