@@ -4,8 +4,8 @@ on:
 
 jobs:
   lint:
-    name: lint
-    runs-on: self-hosted
+    name: Lint
+    runs-on: ubuntu-20.04
     env:
       TOKEN: ${{ secrets.USER_GITHUB_TOKEN }}
     steps:
