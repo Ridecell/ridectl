@@ -81,14 +81,17 @@ var shellCmd = &cobra.Command{
 		if reflect.DeepEqual(kubeObj, kubernetes.Kubeobject{}) {
 			return fmt.Errorf("no instance found")
 		}
+
 		labelSet := labels.Set{}
 		for k, v := range podLabels {
 			labelSet[k] = v
 		}
+
 		listOptions := &client.ListOptions{
 			Namespace:     target.Namespace,
 			LabelSelector: labels.SelectorFromSet(labelSet),
 		}
+
 		podList := &corev1.PodList{}
 		err = kubeObj.Client.List(context.Background(), podList, listOptions)
 		if err != nil {

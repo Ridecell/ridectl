@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+	"sync"
 
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/types"
@@ -86,8 +87,9 @@ func getKubeContexts() (map[string]*api.Context, error) {
 	return rawConfig.Contexts, nil
 }
 
-func fetchContextForObject(channel chan Kubeobject, cluster *api.Context, crclient client.Client, subject Subject) {
+func fetchContextForObject(channel chan Kubeobject, cluster *api.Context, crclient client.Client, subject Subject, wg *sync.WaitGroup) {
 
+	defer wg.Done()
 	var objectName string
 	if subject.Type == "summon" {
 		objectName = fmt.Sprintf("%s-web", subject.Name)
@@ -122,10 +124,20 @@ func GetAppropriateObjectWithContext(kubeconfig string, instance string, subject
 		}
 		k8sClients[context.Cluster] = k8sClient
 	}
+	// Initialize a wait group
+	var wg sync.WaitGroup
+	wg.Add(len(k8sClients))
 
-	objChannel := make(chan Kubeobject)
+	objChannel := make(chan Kubeobject, len(k8sClients))
+	defer close(objChannel)
+
 	for cluster, client := range k8sClients {
-		go fetchContextForObject(objChannel, contexts[cluster], client, subject)
+		go fetchContextForObject(objChannel, contexts[cluster], client, subject, &wg)
+	}
+	// Block until all of my goroutines have processed their issues.
+	wg.Wait()
+	if len(objChannel) < 1 {
+		return Kubeobject{}
 	}
 	return <-objChannel
 }
