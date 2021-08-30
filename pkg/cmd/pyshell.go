@@ -73,8 +73,6 @@ var pyShellCmd = &cobra.Command{
 			podLabels["environment"] = target.Env
 			podLabels["region"] = target.Region
 			podLabels["role"] = "web"
-		} else {
-			return fmt.Errorf("cannot find pod without knowing the target's type: %#v", target)
 		}
 
 		kubeObj := kubernetes.GetAppropriateObjectWithContext(*kubeconfig, args[0], target)
