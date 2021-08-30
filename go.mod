@@ -6,6 +6,7 @@ require (
 	github.com/Ridecell/ridecell-controllers v0.0.0-20210820121207-73cd3f5b12bc
 	github.com/Ridecell/summon-operator v0.0.0-20210825111357-e01b1db74502
 	github.com/aws/aws-sdk-go v1.40.29
+	github.com/heroku/docker-registry-client v0.0.0-20190909225348-afc9e1acc3d5
 	github.com/manifoldco/promptui v0.8.0
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/pkg/errors v0.9.1
