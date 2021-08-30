@@ -26,8 +26,6 @@ import (
 	"github.com/spf13/cobra"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	osExec "os/exec"
-
 	kubernetes "github.com/Ridecell/ridectl/pkg/kubernetes"
 	utils "github.com/Ridecell/ridectl/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
@@ -54,9 +52,9 @@ var shellCmd = &cobra.Command{
 		return nil
 	},
 	PreRunE: func(cmd *cobra.Command, args []string) error {
-		_, err := osExec.LookPath("kubectl")
-		if err != nil {
-			return errors.Wrap(err, "Unable to find kubectl")
+		binaryExists := utils.CheckBinary("kubectl")
+		if !binaryExists {
+			return fmt.Errorf("kubectl is not installed. Follow the instructions here: https://kubernetes.io/docs/tasks/tools/#kubectl to install it")
 		}
 		return nil
 	},

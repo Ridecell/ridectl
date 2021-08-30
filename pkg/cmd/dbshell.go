@@ -23,8 +23,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 
-	osExec "os/exec"
-
 	kubernetes "github.com/Ridecell/ridectl/pkg/kubernetes"
 	utils "github.com/Ridecell/ridectl/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
@@ -51,9 +49,9 @@ var dbShellCmd = &cobra.Command{
 		return nil
 	},
 	PreRunE: func(cmd *cobra.Command, args []string) error {
-		_, err := osExec.LookPath("psql")
-		if err != nil {
-			return errors.Wrap(err, "Unable to find psql")
+		binaryExists := utils.CheckBinary("psql")
+		if !binaryExists {
+			return errors.New("psql is not installed. Follow the instructions here: https://www.compose.com/articles/postgresql-tips-installing-the-postgresql-client/ to install it")
 		}
 		return nil
 	},
