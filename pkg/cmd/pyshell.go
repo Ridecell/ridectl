@@ -41,7 +41,9 @@ func init() {
 var pyShellCmd = &cobra.Command{
 	Use:   "pyshell [flags] <cluster_name>",
 	Short: "Open a Python shell on a Summon instance",
-	Long:  `Open an interactive Python terminal on a Summon instance running on Kubernetes`,
+	Long: "Open an interactive Python shell for a Summon instance or microservice running on Kubernetes.\n" +
+		"For summon instances: pyshell <tenant>-<env>                   -- e.g. ridectl pyshell darwin-qa\n" +
+		"For microservices: pyshell svc-<region>-<env>-<microservice>   -- e.g. ridectl pyshell svc-us-master-dispatch",
 	Args: func(_ *cobra.Command, args []string) error {
 		if len(args) == 0 {
 			return fmt.Errorf("cluster name argument is required")

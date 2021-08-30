@@ -41,7 +41,9 @@ func init() {
 var shellCmd = &cobra.Command{
 	Use:   "shell [flags] <cluster_name>",
 	Short: "Open a shell on a Summon instance or microservice",
-	Long:  `Open an interactive bash terminal on a Summon instance or microservice running on Kubernetes`,
+	Long: "Open an interactive Bash shell for a Summon instance or microservice running on Kubernetes.\n" +
+		"For summon instances: shell <tenant>-<env>                   -- e.g. ridectl shell darwin-qa\n" +
+		"For microservices: shell svc-<region>-<env>-<microservice>   -- e.g. ridectl shell svc-us-master-dispatch",
 	Args: func(_ *cobra.Command, args []string) error {
 		if len(args) == 0 {
 			return fmt.Errorf("cluster name argument is required")
