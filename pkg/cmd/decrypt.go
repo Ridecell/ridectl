@@ -121,7 +121,7 @@ func GetDecryptedData(kmsService kmsiface.KMSAPI, encryptedData []byte) ([]byte,
 		return plaintext, errors.Wrap(err, "error base64 decoding value")
 	}
 
-	gob.NewDecoder(bytes.NewReader(decodedData)).Decode(&p)
+	_ = gob.NewDecoder(bytes.NewReader(decodedData)).Decode(&p)
 	plainDataKey, ok := keyMap[string(p.Key)]
 	if !ok {
 		// Decrypt cipherdatakey
