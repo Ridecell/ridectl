@@ -135,9 +135,9 @@ var lintCmd = &cobra.Command{
 				failedTests = true
 
 				keysMatch := true
-				var allObjNames []string
+				//var allObjNames []string
 				for _, location := range locationList {
-					allObjNames = append(allObjNames, location.ObjName)
+					//allObjNames = append(allObjNames, location.ObjName)
 					if location.KeyName != locationList[0].KeyName {
 						keysMatch = false
 					}
