@@ -52,7 +52,7 @@ var pyShellCmd = &cobra.Command{
 		return nil
 	},
 	PreRunE: func(cmd *cobra.Command, args []string) error {
-		binaryExists := utils.CheckBinary("kubectl1")
+		binaryExists := utils.CheckBinary("kubectl")
 		if !binaryExists {
 			return fmt.Errorf("kubectl is not installed. Follow the instructions here: https://kubernetes.io/docs/tasks/tools/#kubectl to install it")
 		}
@@ -77,7 +77,7 @@ var pyShellCmd = &cobra.Command{
 
 		kubeObj := kubernetes.GetAppropriateObjectWithContext(*kubeconfig, args[0], target)
 		if reflect.DeepEqual(kubeObj, kubernetes.Kubeobject{}) {
-			return fmt.Errorf("no instance found")
+			return errors.Wrapf(err, "no instance found %s", args[0])
 		}
 
 		labelSet := labels.Set{}

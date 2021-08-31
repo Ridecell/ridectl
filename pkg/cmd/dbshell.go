@@ -64,7 +64,7 @@ var dbShellCmd = &cobra.Command{
 		}
 		kubeObj := kubernetes.GetAppropriateObjectWithContext(*kubeconfig, args[0], target)
 		if reflect.DeepEqual(kubeObj, kubernetes.Kubeobject{}) {
-			return fmt.Errorf("no instance found")
+			return errors.Wrapf(err, "no instance found %s", args[0])
 		}
 		secretObj := &corev1.Secret{}
 		err = kubeObj.Client.Get(context.Background(), types.NamespacedName{Name: target.Name + ".postgres-user-password", Namespace: target.Namespace}, secretObj)

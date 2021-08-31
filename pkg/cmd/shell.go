@@ -77,7 +77,7 @@ var shellCmd = &cobra.Command{
 
 		kubeObj := kubernetes.GetAppropriateObjectWithContext(*kubeconfig, args[0], target)
 		if reflect.DeepEqual(kubeObj, kubernetes.Kubeobject{}) {
-			return fmt.Errorf("no instance found")
+			return errors.Wrapf(err, "no instance found %s", args[0])
 		}
 
 		labelSet := labels.Set{}

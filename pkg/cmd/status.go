@@ -99,7 +99,7 @@ var statusCmd = &cobra.Command{
 
 		kubeObj := kubernetes.GetAppropriateObjectWithContext(*kubeconfig, args[0], target)
 		if reflect.DeepEqual(kubeObj, kubernetes.Kubeobject{}) {
-			return fmt.Errorf("no instance found")
+			return errors.Wrapf(err, "no instance found %s", args[0])
 		}
 
 		sData, err := getData("summon", kubeObj.Context.Cluster, target.Namespace, args[0])
