@@ -245,7 +245,7 @@ var doctorTestPostgresql = &doctorTest{
 var doctorTestGcloud = &doctorTest{
 	subject:  "Google Cloud CLI",
 	checkCmd: "gcloud",
-	fixCmd:   `brew cask install google-cloud-sdk`,
+	fixCmd:   `brew install --cask google-cloud-sdk`,
 }
 
 // Check for kubectl.
