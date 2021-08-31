@@ -22,9 +22,10 @@ import (
 
 	"github.com/Ridecell/ridectl/pkg/exec"
 	"github.com/Ridecell/ridectl/pkg/kubernetes"
-	utils "github.com/Ridecell/ridectl/pkg/utils"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
+
+	utils "github.com/Ridecell/ridectl/pkg/utils"
 )
 
 func init() {
@@ -34,7 +35,8 @@ func init() {
 var rollingRestartCmd = &cobra.Command{
 	Use:   "restart [flags] <cluster_name> <pod_type>",
 	Short: "Performs a rolling restart of pods.",
-	Long:  `Restarts all pods of a certain type (web|celeryd|etc).`,
+	Long: "Restarts all pods of a certain type (web|celeryd|etc).\n" +
+		"restart <instance> <deployment> e.g ridectl restart summontest-dev web",
 	Args: func(_ *cobra.Command, args []string) error {
 		if len(args) == 0 {
 			return fmt.Errorf("Cluster name argument is required.")

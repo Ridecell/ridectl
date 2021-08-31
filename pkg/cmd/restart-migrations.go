@@ -34,7 +34,8 @@ func init() {
 var restartMigrationsCmd = &cobra.Command{
 	Use:   "restart-migrations [flags] <cluster_name> ",
 	Short: "Restart migrations for target summon instance.",
-	Long:  "Restart migrations for target summon instance.",
+	Long: "Restart migrations for target summon instance.\n" +
+		"restart-migrations <instance> e.g ridectl restart-migrations summontest-dev",
 	Args: func(_ *cobra.Command, args []string) error {
 		if len(args) == 0 {
 			return fmt.Errorf("Cluster name argument is required")
