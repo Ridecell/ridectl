@@ -14,19 +14,19 @@ limitations under the License.
 package cmd
 
 import (
-	"flag"
+	"context"
 	"fmt"
 	"os"
-	"path/filepath"
 	"reflect"
 
 	"github.com/Ridecell/ridectl/pkg/exec"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
-	"k8s.io/client-go/util/homedir"
 
 	kubernetes "github.com/Ridecell/ridectl/pkg/kubernetes"
+	utils "github.com/Ridecell/ridectl/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/types"
 )
 
 func init() {
@@ -48,27 +48,32 @@ var dbShellCmd = &cobra.Command{
 		}
 		return nil
 	},
-	RunE: func(cmd *cobra.Command, args []string) error {
-		//ctx := context.Background()
-		var kubeconfig *string
-		if home := homedir.HomeDir(); home != "" {
-			kubeconfig = flag.String("kubeconfig", filepath.Join(home, ".kube", "config"), "(optional) absolute path to the kubeconfig file")
-		} else {
-			kubeconfig = flag.String("kubeconfig", "", "absolute path to the kubeconfig file")
+	PreRunE: func(cmd *cobra.Command, args []string) error {
+		binaryExists := utils.CheckBinary("psql")
+		if !binaryExists {
+			return errors.New("psql is not installed. Follow the instructions here: https://www.compose.com/articles/postgresql-tips-installing-the-postgresql-client/ to install it")
 		}
-		flag.Parse()
+		return nil
+	},
+	RunE: func(cmd *cobra.Command, args []string) error {
+
+		kubeconfig := utils.GetKubeconfig()
 		target, err := kubernetes.ParseSubject(args[0])
 		if err != nil {
-			return errors.Wrap(err, "not a valid target")
+			return errors.Wrapf(err, "not a valid target %s", args[0])
 		}
-		kubeObj := kubernetes.GetAppropriateObjectWithContext(*kubeconfig, args[0], target, nil)
+		kubeObj := kubernetes.GetAppropriateObjectWithContext(*kubeconfig, args[0], target)
 		if reflect.DeepEqual(kubeObj, kubernetes.Kubeobject{}) {
-			return fmt.Errorf("no instance found")
+			return errors.Wrapf(err, "no instance found %s", args[0])
+		}
+		secretObj := &corev1.Secret{}
+		err = kubeObj.Client.Get(context.Background(), types.NamespacedName{Name: target.Name + ".postgres-user-password", Namespace: target.Namespace}, secretObj)
+		if err != nil {
+			return fmt.Errorf("instance not found in %s", kubeObj.Context.Cluster)
 		}
 
-		dbSecret := kubeObj.Object.(*corev1.Secret)
-		psqlCmd := []string{"psql", "-h", string(dbSecret.Data["host"]), "-U", string(dbSecret.Data["username"]), string(dbSecret.Data["dbname"])}
-		os.Setenv("PGPASSWORD", string(dbSecret.Data["password"]))
+		psqlCmd := []string{"psql", "-h", string(secretObj.Data["host"]), "-U", string(secretObj.Data["username"]), string(secretObj.Data["dbname"])}
+		os.Setenv("PGPASSWORD", string(secretObj.Data["password"]))
 		return exec.Exec(psqlCmd)
 	},
 }

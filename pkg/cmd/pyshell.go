@@ -17,18 +17,19 @@ limitations under the License.
 package cmd
 
 import (
-	"flag"
+	"context"
 	"fmt"
-	"path/filepath"
 	"reflect"
 
 	"github.com/Ridecell/ridectl/pkg/exec"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
-	"k8s.io/client-go/util/homedir"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kubernetes "github.com/Ridecell/ridectl/pkg/kubernetes"
+	utils "github.com/Ridecell/ridectl/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/labels"
 )
 
 func init() {
@@ -38,7 +39,9 @@ func init() {
 var pyShellCmd = &cobra.Command{
 	Use:   "pyshell [flags] <cluster_name>",
 	Short: "Open a Python shell on a Summon instance",
-	Long:  `Open an interactive Python terminal on a Summon instance running on Kubernetes`,
+	Long: "Open an interactive Python shell for a Summon instance or microservice running on Kubernetes.\n" +
+		"For summon instances: pyshell <tenant>-<env>                   -- e.g. ridectl pyshell darwin-qa\n" +
+		"For microservices: pyshell svc-<region>-<env>-<microservice>   -- e.g. ridectl pyshell svc-us-master-dispatch",
 	Args: func(_ *cobra.Command, args []string) error {
 		if len(args) == 0 {
 			return fmt.Errorf("cluster name argument is required")
@@ -48,17 +51,18 @@ var pyShellCmd = &cobra.Command{
 		}
 		return nil
 	},
-	RunE: func(_ *cobra.Command, args []string) error {
-		var kubeconfig *string
-		if home := homedir.HomeDir(); home != "" {
-			kubeconfig = flag.String("kubeconfig", filepath.Join(home, ".kube", "config"), "(optional) absolute path to the kubeconfig file")
-		} else {
-			kubeconfig = flag.String("kubeconfig", "", "absolute path to the kubeconfig file")
+	PreRunE: func(cmd *cobra.Command, args []string) error {
+		binaryExists := utils.CheckBinary("kubectl")
+		if !binaryExists {
+			return fmt.Errorf("kubectl is not installed. Follow the instructions here: https://kubernetes.io/docs/tasks/tools/#kubectl to install it")
 		}
-		flag.Parse()
+		return nil
+	},
+	RunE: func(_ *cobra.Command, args []string) error {
+		kubeconfig := utils.GetKubeconfig()
 		target, err := kubernetes.ParseSubject(args[0])
 		if err != nil {
-			return errors.Wrap(err, "not a valid target")
+			return errors.Wrapf(err, "not a valid target %s", args[0])
 		}
 
 		podLabels := make(map[string]string)
@@ -69,16 +73,33 @@ var pyShellCmd = &cobra.Command{
 			podLabels["environment"] = target.Env
 			podLabels["region"] = target.Region
 			podLabels["role"] = "web"
-		} else {
-			return fmt.Errorf("cannot find pod without knowing the target's type: %#v", target)
 		}
 
-		kubeObj := kubernetes.GetAppropriateObjectWithContext(*kubeconfig, args[0], target, podLabels)
+		kubeObj := kubernetes.GetAppropriateObjectWithContext(*kubeconfig, args[0], target)
 		if reflect.DeepEqual(kubeObj, kubernetes.Kubeobject{}) {
-			return fmt.Errorf("no instance found")
+			return errors.Wrapf(err, "no instance found %s", args[0])
 		}
 
-		pod := kubeObj.Object.(*corev1.Pod)
+		labelSet := labels.Set{}
+		for k, v := range podLabels {
+			labelSet[k] = v
+		}
+
+		listOptions := &client.ListOptions{
+			Namespace:     target.Namespace,
+			LabelSelector: labels.SelectorFromSet(labelSet),
+		}
+
+		podList := &corev1.PodList{}
+		err = kubeObj.Client.List(context.Background(), podList, listOptions)
+		if err != nil {
+			return fmt.Errorf("instance not found in %s", kubeObj.Context.Cluster)
+		}
+		if len(podList.Items) < 1 {
+			return fmt.Errorf("instance not found in %s", kubeObj.Context.Cluster)
+		}
+
+		pod := podList.Items[0]
 		// Spawn kubectl exec.
 		kubectlArgs := []string{"kubectl", "exec", "-it", "-n", pod.Namespace, pod.Name, "--context", kubeObj.Context.Cluster, "--", "bash", "-l", "-c", "python manage.py shell"}
 		return exec.Exec(kubectlArgs)

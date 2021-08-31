@@ -18,9 +18,9 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+	"sync"
 
 	"github.com/pkg/errors"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/clientcmd"
@@ -28,7 +28,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 
-	corev1 "k8s.io/api/core/v1"
+	appsv1 "k8s.io/api/apps/v1"
 )
 
 const namespacePrefix = "summon-"
@@ -87,47 +87,28 @@ func getKubeContexts() (map[string]*api.Context, error) {
 	return rawConfig.Contexts, nil
 }
 
-func fetchObject(channel chan Kubeobject, cluster *api.Context, crclient client.Client, subject Subject, podLabels map[string]string) {
+func fetchContextForObject(channel chan Kubeobject, cluster *api.Context, crclient client.Client, subject Subject, wg *sync.WaitGroup) {
 
-	if podLabels == nil {
-		// podLables is nil that means we are getting a secret i.e it is a dbshell call
-		secretObj := &corev1.Secret{}
-		err := crclient.Get(context.Background(), types.NamespacedName{Name: subject.Name + ".postgres-user-password", Namespace: subject.Namespace}, secretObj)
-		if err != nil {
-			fmt.Println("Instance not found in", cluster.Cluster)
-			return
-		}
-		if err == nil {
-			channel <- Kubeobject{Client: crclient, Context: cluster, Object: secretObj}
-		}
-	} else if podLabels != nil {
-		// podLables is not nil that means we are getting a pod i.e it is a pyshell call
-		labelSet := labels.Set{}
-		for k, v := range podLabels {
-			labelSet[k] = v
-		}
-		listOptions := &client.ListOptions{
-			Namespace:     subject.Namespace,
-			LabelSelector: labels.SelectorFromSet(labelSet),
-		}
-
-		podList := &corev1.PodList{}
-		err := crclient.List(context.Background(), podList, listOptions)
-		if err != nil {
-			fmt.Println("Instance not found in", cluster.Cluster)
-			return
-		}
-		if len(podList.Items) == 0 {
-			fmt.Println("Instance not found in", cluster.Cluster)
-			return
-		}
-		if err == nil {
-			channel <- Kubeobject{Client: crclient, Context: cluster, Object: &podList.Items[0]}
-		}
+	defer wg.Done()
+	var objectName string
+	if subject.Type == "summon" {
+		objectName = fmt.Sprintf("%s-web", subject.Name)
+	} else if subject.Type == "microservice" {
+		objectName = fmt.Sprintf("%s-svc-%s-web", subject.Env, subject.Namespace)
 	}
+	deploymentObj := &appsv1.Deployment{}
+	err := crclient.Get(context.Background(), types.NamespacedName{Name: objectName, Namespace: subject.Namespace}, deploymentObj)
+	if err != nil {
+		fmt.Printf("Instance %s not found in %s\n", subject.Name, cluster.Cluster)
+		return
+	}
+	if err == nil {
+		channel <- Kubeobject{Client: crclient, Context: cluster}
+	}
+
 }
 
-func GetAppropriateObjectWithContext(kubeconfig string, instance string, subject Subject, podLabels map[string]string) Kubeobject {
+func GetAppropriateObjectWithContext(kubeconfig string, instance string, subject Subject) Kubeobject {
 
 	contexts, err := getKubeContexts()
 	if err != nil {
@@ -143,10 +124,20 @@ func GetAppropriateObjectWithContext(kubeconfig string, instance string, subject
 		}
 		k8sClients[context.Cluster] = k8sClient
 	}
+	// Initialize a wait group
+	var wg sync.WaitGroup
+	wg.Add(len(k8sClients))
 
-	objChannel := make(chan Kubeobject)
+	objChannel := make(chan Kubeobject, len(k8sClients))
+	defer close(objChannel)
+
 	for cluster, client := range k8sClients {
-		go fetchObject(objChannel, contexts[cluster], client, subject, podLabels)
+		go fetchContextForObject(objChannel, contexts[cluster], client, subject, &wg)
+	}
+	// Block until all of my goroutines have processed their issues.
+	wg.Wait()
+	if len(objChannel) < 1 {
+		return Kubeobject{}
 	}
 	return <-objChannel
 }
