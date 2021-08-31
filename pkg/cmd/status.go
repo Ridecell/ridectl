@@ -52,6 +52,9 @@ func getData(objType string, context string, namespace string, tenant string) (s
 		}
 
 		data, err = osExec.Command("kubectl", "get", "summonplatform.app.summon.ridecell.io", "-n", namespace, "--context", context, tenant, "-o", "go-template="+string(summonData)).Output()
+		if err != nil {
+			return "", errors.Wrap(err, "error getting summon platform info")
+		}
 	} else if objType == "deployment" {
 		deploymentData, err := TempFS.ReadFile("templates/show_deployments.tpl")
 		if err != nil {
@@ -59,6 +62,9 @@ func getData(objType string, context string, namespace string, tenant string) (s
 		}
 
 		data, err = osExec.Command("kubectl", "get", "deployment", "-n", namespace, "--context", context, "-l", "app.kubernetes.io/part-of="+tenant, "-o", "go-template="+string(deploymentData)).Output()
+		if err != nil {
+			return "", errors.Wrap(err, "error getting deployment info")
+		}
 	}
 
 	return string(data), err
@@ -77,12 +83,18 @@ var statusCmd = &cobra.Command{
 		}
 		return nil
 	},
-
+	PreRunE: func(cmd *cobra.Command, args []string) error {
+		binaryExists := utils.CheckBinary("kubectl")
+		if !binaryExists {
+			return fmt.Errorf("kubectl is not installed. Follow the instructions here: https://kubernetes.io/docs/tasks/tools/#kubectl to install it")
+		}
+		return nil
+	},
 	RunE: func(_ *cobra.Command, args []string) error {
 		kubeconfig := utils.GetKubeconfig()
 		target, err := kubernetes.ParseSubject(args[0])
 		if err != nil {
-			return errors.Wrap(err, "not a valid target")
+			return errors.Wrapf(err, "not a valid target %s", args[0])
 		}
 
 		kubeObj := kubernetes.GetAppropriateObjectWithContext(*kubeconfig, args[0], target)
@@ -103,7 +115,7 @@ var statusCmd = &cobra.Command{
 			indicator := goterminal.New(os.Stdout)
 			spinner := []string{"|", "/", "-", "\\", "/"}
 			steps := 0
-			for true {
+			for {
 				writer.Clear()
 				fmt.Fprintf(writer, "%s\n%s\n", sData, dData)
 				writer.Print()

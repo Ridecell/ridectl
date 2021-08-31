@@ -33,8 +33,5 @@ func GetKubeconfig() *string {
 
 func CheckBinary(binary string) bool {
 	_, err := exec.LookPath(binary)
-	if err == nil {
-		return true
-	}
-	return false
+	return err == nil
 }
