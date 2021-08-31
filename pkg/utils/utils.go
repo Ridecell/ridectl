@@ -15,6 +15,7 @@ package utils
 
 import (
 	"flag"
+	"os/exec"
 	"path/filepath"
 
 	"k8s.io/client-go/util/homedir"
@@ -28,4 +29,9 @@ func GetKubeconfig() *string {
 		kubeconfig = flag.String("kubeconfig", "", "absolute path to the kubeconfig file")
 	}
 	return kubeconfig
+}
+
+func CheckBinary(binary string) bool {
+	_, err := exec.LookPath(binary)
+	return err == nil
 }

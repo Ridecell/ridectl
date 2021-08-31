@@ -23,8 +23,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 
-	osExec "os/exec"
-
 	kubernetes "github.com/Ridecell/ridectl/pkg/kubernetes"
 	utils "github.com/Ridecell/ridectl/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
@@ -51,9 +49,9 @@ var dbShellCmd = &cobra.Command{
 		return nil
 	},
 	PreRunE: func(cmd *cobra.Command, args []string) error {
-		_, err := osExec.LookPath("psql")
-		if err != nil {
-			return errors.Wrap(err, "Unable to find psql")
+		binaryExists := utils.CheckBinary("psql")
+		if !binaryExists {
+			return errors.New("psql is not installed. Follow the instructions here: https://www.compose.com/articles/postgresql-tips-installing-the-postgresql-client/ to install it")
 		}
 		return nil
 	},
@@ -62,11 +60,11 @@ var dbShellCmd = &cobra.Command{
 		kubeconfig := utils.GetKubeconfig()
 		target, err := kubernetes.ParseSubject(args[0])
 		if err != nil {
-			return errors.Wrap(err, "not a valid target")
+			return errors.Wrapf(err, "not a valid target %s", args[0])
 		}
 		kubeObj := kubernetes.GetAppropriateObjectWithContext(*kubeconfig, args[0], target)
 		if reflect.DeepEqual(kubeObj, kubernetes.Kubeobject{}) {
-			return fmt.Errorf("no instance found")
+			return errors.Wrapf(err, "no instance found %s", args[0])
 		}
 		secretObj := &corev1.Secret{}
 		err = kubeObj.Client.Get(context.Background(), types.NamespacedName{Name: target.Name + ".postgres-user-password", Namespace: target.Namespace}, secretObj)

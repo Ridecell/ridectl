@@ -26,8 +26,6 @@ import (
 	"github.com/spf13/cobra"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	osExec "os/exec"
-
 	kubernetes "github.com/Ridecell/ridectl/pkg/kubernetes"
 	utils "github.com/Ridecell/ridectl/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
@@ -41,7 +39,9 @@ func init() {
 var shellCmd = &cobra.Command{
 	Use:   "shell [flags] <cluster_name>",
 	Short: "Open a shell on a Summon instance or microservice",
-	Long:  `Open an interactive bash terminal on a Summon instance or microservice running on Kubernetes`,
+	Long: "Open an interactive Bash shell for a Summon instance or microservice running on Kubernetes.\n" +
+		"For summon instances: shell <tenant>-<env>                   -- e.g. ridectl shell darwin-qa\n" +
+		"For microservices: shell svc-<region>-<env>-<microservice>   -- e.g. ridectl shell svc-us-master-dispatch",
 	Args: func(_ *cobra.Command, args []string) error {
 		if len(args) == 0 {
 			return fmt.Errorf("cluster name argument is required")
@@ -52,9 +52,9 @@ var shellCmd = &cobra.Command{
 		return nil
 	},
 	PreRunE: func(cmd *cobra.Command, args []string) error {
-		_, err := osExec.LookPath("kubectl")
-		if err != nil {
-			return errors.Wrap(err, "Unable to find kubectl")
+		binaryExists := utils.CheckBinary("kubectl")
+		if !binaryExists {
+			return fmt.Errorf("kubectl is not installed. Follow the instructions here: https://kubernetes.io/docs/tasks/tools/#kubectl to install it")
 		}
 		return nil
 	},
@@ -62,7 +62,7 @@ var shellCmd = &cobra.Command{
 		kubeconfig := utils.GetKubeconfig()
 		target, err := kubernetes.ParseSubject(args[0])
 		if err != nil {
-			return errors.Wrap(err, "not a valid target")
+			return errors.Wrapf(err, "not a valid target %s", args[0])
 		}
 
 		podLabels := make(map[string]string)
@@ -73,13 +73,11 @@ var shellCmd = &cobra.Command{
 			podLabels["environment"] = target.Env
 			podLabels["region"] = target.Region
 			podLabels["role"] = "web"
-		} else {
-			return fmt.Errorf("cannot find pod without knowing the target's type: %#v", target)
 		}
 
 		kubeObj := kubernetes.GetAppropriateObjectWithContext(*kubeconfig, args[0], target)
 		if reflect.DeepEqual(kubeObj, kubernetes.Kubeobject{}) {
-			return fmt.Errorf("no instance found")
+			return errors.Wrapf(err, "no instance found %s", args[0])
 		}
 
 		labelSet := labels.Set{}

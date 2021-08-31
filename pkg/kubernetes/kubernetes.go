@@ -99,7 +99,7 @@ func fetchContextForObject(channel chan Kubeobject, cluster *api.Context, crclie
 	deploymentObj := &appsv1.Deployment{}
 	err := crclient.Get(context.Background(), types.NamespacedName{Name: objectName, Namespace: subject.Namespace}, deploymentObj)
 	if err != nil {
-		fmt.Println("Instance not found in", cluster.Cluster)
+		fmt.Printf("Instance %s not found in %s\n", subject.Name, cluster.Cluster)
 		return
 	}
 	if err == nil {
