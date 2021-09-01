@@ -208,7 +208,12 @@ func lintFile(filename string, imageTags []string) error {
 		return nil
 	}
 
-	if len(manifest) != 2 {
+	if len(manifest) == 0 {
+		// return here because we are ignoring old ridecell-operator manifests
+		return nil
+	}
+	// we need to do this because we don't want more than two objects in manifest but we already checked for empty manifest above
+	if len(manifest) > 2 || len(manifest) == 1 {
 		return fmt.Errorf("%s: expected two objects in file got %v", filename, len(manifest))
 	}
 
@@ -282,7 +287,7 @@ func lintFile(filename string, imageTags []string) error {
 		if object.Meta.GetName() != expectedName {
 			return fmt.Errorf("%s: %s name %s did not match expected value %s", filename, object.Kind, object.Meta.GetName(), expectedName)
 		}
-		if object.Meta.GetNamespace() != clusterEnv && object.Meta.GetNamespace() != fmt.Sprintf("summon-%s", clusterEnv) {
+		if object.Meta.GetNamespace() != clusterEnv && object.Meta.GetNamespace() != fmt.Sprintf("summon-%s", object.Meta.GetName()) {
 			return fmt.Errorf("%s: %s namespace %s did not match expected value %s", filename, object.Kind, object.Meta.GetNamespace(), clusterEnv)
 		}
 	}

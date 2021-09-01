@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"io"
 	"regexp"
+	"strings"
 
 	"github.com/aws/aws-sdk-go/service/kms/kmsiface"
 	"github.com/pkg/errors"
@@ -46,6 +47,11 @@ func NewManifest(in io.Reader) (Manifest, error) {
 			continue
 		}
 		obj, err := NewObject([]byte(chunk))
+		// we need to ignnore the error here because we don't want to lint the ridecell-operator objects here
+		if err != nil && (strings.Contains(err.Error(), "no kind \"SummonPlatform\" is registered for version \"summon.ridecell.io/v1beta1\"") || strings.Contains(err.Error(), "no kind \"EncryptedSecret\" is registered for version \"secrets.ridecell.io/v1beta1\"")) {
+			continue
+		}
+		// return the error if we have one which is not ignorable
 		if err != nil {
 			return nil, errors.Wrap(err, "error decoding object")
 		}
