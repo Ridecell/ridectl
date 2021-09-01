@@ -56,4 +56,3 @@ jobs:
         run: |
           make build_linux
           make build_macos
-          ls -la ./bin
