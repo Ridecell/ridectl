@@ -1,5 +1,5 @@
 /*
-Copyright 2019 Ridecell, Inc.
+Copyright 2021 Ridecell, Inc.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -17,11 +17,11 @@ limitations under the License.
 package edit
 
 import (
-	secretsv1beta1 "github.com/Ridecell/ridecell-operator/pkg/apis/secrets/v1beta1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 
-	hacksecretsv1beta1 "github.com/Ridecell/ridectl/pkg/apis/secrets/v1beta1"
+	secretsv1beta2 "github.com/Ridecell/ridecell-controllers/apis/secrets/v1beta2"
+	hacksecretsv1beta2 "github.com/Ridecell/ridectl/pkg/apis/secrets/v1beta2"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 type Manifest []*Object
@@ -34,10 +34,10 @@ type Object struct {
 	Meta   metav1.Object
 
 	// Tracking for the various stages of encryption and decryption.
-	OrigEnc  *secretsv1beta1.EncryptedSecret
-	OrigDec  *hacksecretsv1beta1.DecryptedSecret
-	AfterDec *hacksecretsv1beta1.DecryptedSecret
-	AfterEnc *secretsv1beta1.EncryptedSecret
+	OrigEnc  *secretsv1beta2.EncryptedSecret
+	OrigDec  *hacksecretsv1beta2.DecryptedSecret
+	AfterDec *hacksecretsv1beta2.DecryptedSecret
+	AfterEnc *secretsv1beta2.EncryptedSecret
 	Kind     string
 	Data     map[string]string
 

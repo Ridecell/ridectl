@@ -1,5 +1,5 @@
 /*
-Copyright 2019 Ridecell, Inc.
+Copyright 2021 Ridecell, Inc.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -28,7 +28,7 @@ import (
 	"github.com/heroku/docker-registry-client/registry"
 	"github.com/spf13/cobra"
 
-	summonv1beta1 "github.com/Ridecell/ridecell-operator/pkg/apis/summon/v1beta1"
+	summonv1beta2 "github.com/Ridecell/summon-operator/apis/app/v1beta2"
 )
 
 var skipSecretKeysPrefixFlag string
@@ -135,9 +135,9 @@ var lintCmd = &cobra.Command{
 				failedTests = true
 
 				keysMatch := true
-				var allObjNames []string
+				//var allObjNames []string
 				for _, location := range locationList {
-					allObjNames = append(allObjNames, location.ObjName)
+					//allObjNames = append(allObjNames, location.ObjName)
 					if location.KeyName != locationList[0].KeyName {
 						keysMatch = false
 					}
@@ -209,7 +209,7 @@ func lintFile(filename string, imageTags []string) error {
 	}
 
 	if len(manifest) == 0 {
-		// return here because we are ignoring new ridecell-controller/summon-operator manifests
+		// return here because we are ignoring old ridecell-operator manifests
 		return nil
 	}
 	// we need to do this because we don't want more than two objects in manifest but we already checked for empty manifest above
@@ -217,7 +217,7 @@ func lintFile(filename string, imageTags []string) error {
 		return fmt.Errorf("%s: expected two objects in file got %v", filename, len(manifest))
 	}
 
-	summonObj, ok := manifest[0].Object.(*summonv1beta1.SummonPlatform)
+	summonObj, ok := manifest[0].Object.(*summonv1beta2.SummonPlatform)
 	if !ok {
 		return fmt.Errorf("%s: SummonPlatform is required to be the first object in manifest", filename)
 	}
@@ -235,6 +235,10 @@ func lintFile(filename string, imageTags []string) error {
 	// Make sure that autodeploy and version are not both set
 	if summonObj.Spec.AutoDeploy != "" && summonObj.Spec.Version != "" {
 		return fmt.Errorf("%s: Autodeploy and Version both set, only one should be set at a time.", filename)
+	}
+	// Make sure that AWS_REGION is set
+	if len(summonObj.Spec.Config) == 0 || summonObj.Spec.Config["AWS_REGION"] == "" {
+		return fmt.Errorf("%s: AWS_REGION is required", filename)
 	}
 
 	// Check that the docker image exists
@@ -287,7 +291,7 @@ func lintFile(filename string, imageTags []string) error {
 		if object.Meta.GetName() != expectedName {
 			return fmt.Errorf("%s: %s name %s did not match expected value %s", filename, object.Kind, object.Meta.GetName(), expectedName)
 		}
-		if object.Meta.GetNamespace() != clusterEnv && object.Meta.GetNamespace() != fmt.Sprintf("summon-%s", clusterEnv) {
+		if object.Meta.GetNamespace() != clusterEnv && object.Meta.GetNamespace() != fmt.Sprintf("summon-%s", object.Meta.GetName()) {
 			return fmt.Errorf("%s: %s namespace %s did not match expected value %s", filename, object.Kind, object.Meta.GetNamespace(), clusterEnv)
 		}
 	}

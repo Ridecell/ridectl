@@ -11,12 +11,27 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package main
+package utils
 
 import (
-	"github.com/Ridecell/ridectl/pkg/cmd"
+	"flag"
+	"os/exec"
+	"path/filepath"
+
+	"k8s.io/client-go/util/homedir"
 )
 
-func main() {
-	cmd.Execute()
+func GetKubeconfig() *string {
+	var kubeconfig *string
+	if home := homedir.HomeDir(); home != "" {
+		kubeconfig = flag.String("kubeconfig", filepath.Join(home, ".kube", "config"), "(optional) absolute path to the kubeconfig file")
+	} else {
+		kubeconfig = flag.String("kubeconfig", "", "absolute path to the kubeconfig file")
+	}
+	return kubeconfig
+}
+
+func CheckBinary(binary string) bool {
+	_, err := exec.LookPath(binary)
+	return err == nil
 }

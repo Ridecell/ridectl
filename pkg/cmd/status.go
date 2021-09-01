@@ -1,5 +1,5 @@
 /*
-Copyright 2019 Ridecell, Inc.
+Copyright 2021 Ridecell, Inc.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -20,15 +20,14 @@ import (
 	"fmt"
 	"os"
 	osExec "os/exec"
+	"reflect"
 	"time"
 
+	kubernetes "github.com/Ridecell/ridectl/pkg/kubernetes"
+	"github.com/Ridecell/ridectl/pkg/utils"
 	"github.com/apoorvam/goterminal"
 	"github.com/pkg/errors"
-	"github.com/shurcooL/httpfs/vfsutil"
 	"github.com/spf13/cobra"
-
-	summonv1beta1 "github.com/Ridecell/ridecell-operator/pkg/apis/summon/v1beta1"
-	"github.com/Ridecell/ridectl/pkg/kubernetes"
 )
 
 func init() {
@@ -47,19 +46,25 @@ func getData(objType string, context string, namespace string, tenant string) (s
 	var err error
 
 	if objType == "summon" {
-		summonData, err := vfsutil.ReadFile(Templates, "show_summon.tpl")
+		summonData, err := TempFS.ReadFile("templates/show_summon.tpl")
 		if err != nil {
 			return "", errors.Wrap(err, "error reading show_summon.tpl")
 		}
 
-		data, err = osExec.Command("kubectl", "get", "summon", "-n", namespace, "--context", context, tenant, "-o", "go-template="+string(summonData)).Output()
+		data, err = osExec.Command("kubectl", "get", "summonplatform.app.summon.ridecell.io", "-n", namespace, "--context", context, tenant, "-o", "go-template="+string(summonData)).Output()
+		if err != nil {
+			return "", errors.Wrap(err, "error getting summon platform info")
+		}
 	} else if objType == "deployment" {
-		deploymentData, err := vfsutil.ReadFile(Templates, "show_deployments.tpl")
+		deploymentData, err := TempFS.ReadFile("templates/show_deployments.tpl")
 		if err != nil {
 			return "", errors.Wrap(err, "error reading show_deployments.tpl")
 		}
 
 		data, err = osExec.Command("kubectl", "get", "deployment", "-n", namespace, "--context", context, "-l", "app.kubernetes.io/part-of="+tenant, "-o", "go-template="+string(deploymentData)).Output()
+		if err != nil {
+			return "", errors.Wrap(err, "error getting deployment info")
+		}
 	}
 
 	return string(data), err
@@ -78,35 +83,39 @@ var statusCmd = &cobra.Command{
 		}
 		return nil
 	},
-
+	PreRunE: func(cmd *cobra.Command, args []string) error {
+		binaryExists := utils.CheckBinary("kubectl")
+		if !binaryExists {
+			return fmt.Errorf("kubectl is not installed. Follow the instructions here: https://kubernetes.io/docs/tasks/tools/#kubectl to install it")
+		}
+		return nil
+	},
 	RunE: func(_ *cobra.Command, args []string) error {
+		kubeconfig := utils.GetKubeconfig()
 		target, err := kubernetes.ParseSubject(args[0])
 		if err != nil {
-			return errors.Wrap(err, "not a valid target")
+			return errors.Wrapf(err, "not a valid target %s", args[0])
 		}
 
-		fetchObject := &kubernetes.KubeObject{Top: &summonv1beta1.SummonPlatform{}}
-		err = kubernetes.GetObject(kubeconfigFlag, target.Name, target.Namespace, fetchObject)
+		kubeObj := kubernetes.GetAppropriateObjectWithContext(*kubeconfig, args[0], target)
+		if reflect.DeepEqual(kubeObj, kubernetes.Kubeobject{}) {
+			return errors.Wrapf(err, "no instance found %s", args[0])
+		}
+
+		sData, err := getData("summon", kubeObj.Context.Cluster, target.Namespace, args[0])
 		if err != nil {
 			return err
 		}
-
-		sData, err := getData("summon", fetchObject.Context.Name, target.Namespace, args[0])
+		dData, err := getData("deployment", kubeObj.Context.Cluster, target.Namespace, args[0])
 		if err != nil {
 			return err
 		}
-
-		dData, err := getData("deployment", fetchObject.Context.Name, target.Namespace, args[0])
-		if err != nil {
-			return err
-		}
-
 		if follow {
 			writer := goterminal.New(os.Stdout)
 			indicator := goterminal.New(os.Stdout)
 			spinner := []string{"|", "/", "-", "\\", "/"}
 			steps := 0
-			for true {
+			for {
 				writer.Clear()
 				fmt.Fprintf(writer, "%s\n%s\n", sData, dData)
 				writer.Print()
@@ -121,12 +130,12 @@ var statusCmd = &cobra.Command{
 					steps++
 				}
 				// Calling it at end of for loop since we made these calls right before.
-				sData, err = getData("summon", fetchObject.Context.Name, target.Namespace, args[0])
+				sData, err = getData("summon", kubeObj.Context.Cluster, target.Namespace, args[0])
 				if err != nil {
 					return err
 				}
 
-				dData, err = getData("deployment", fetchObject.Context.Name, target.Namespace, args[0])
+				dData, err = getData("deployment", kubeObj.Context.Cluster, target.Namespace, args[0])
 				if err != nil {
 					return err
 				}
@@ -134,7 +143,6 @@ var statusCmd = &cobra.Command{
 		} else {
 			fmt.Printf(sData + "\n" + dData + "\n")
 		}
-
 		return nil
 	},
 }

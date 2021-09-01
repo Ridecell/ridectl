@@ -1,12 +1,9 @@
 /*
-Copyright 2019 Ridecell, Inc.
-
+Copyright 2021 Ridecell, Inc.
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
-
     http://www.apache.org/licenses/LICENSE-2.0
-
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -17,18 +14,19 @@ limitations under the License.
 package cmd
 
 import (
+	"context"
 	"fmt"
-	"io/ioutil"
 	"os"
-	"path/filepath"
+	"reflect"
 
 	"github.com/Ridecell/ridectl/pkg/exec"
-	"github.com/Ridecell/ridectl/pkg/kubernetes"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 
-	dbv1beta1 "github.com/Ridecell/ridecell-operator/pkg/apis/db/v1beta1"
+	kubernetes "github.com/Ridecell/ridectl/pkg/kubernetes"
+	utils "github.com/Ridecell/ridectl/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/types"
 )
 
 func init() {
@@ -43,59 +41,39 @@ var dbShellCmd = &cobra.Command{
 		"For microservices: dbshell svc-<region>-<env>-<microservice>   -- e.g. ridectl dbshell svc-us-master-dispatch",
 	Args: func(_ *cobra.Command, args []string) error {
 		if len(args) == 0 {
-			return fmt.Errorf("Cluster name argument is required")
+			return fmt.Errorf("cluster name argument is required")
 		}
 		if len(args) > 1 {
-			return fmt.Errorf("Too many arguments")
+			return fmt.Errorf("too many arguments")
 		}
 		return nil
 	},
-	RunE: func(_ *cobra.Command, args []string) error {
-		// Determine if we are trying to connect to a microservice or summonplatform db
+	PreRunE: func(cmd *cobra.Command, args []string) error {
+		binaryExists := utils.CheckBinary("psql")
+		if !binaryExists {
+			return errors.New("psql is not installed. Follow the instructions here: https://www.compose.com/articles/postgresql-tips-installing-the-postgresql-client/ to install it")
+		}
+		return nil
+	},
+	RunE: func(cmd *cobra.Command, args []string) error {
+
+		kubeconfig := utils.GetKubeconfig()
 		target, err := kubernetes.ParseSubject(args[0])
 		if err != nil {
-			return err
+			return errors.Wrapf(err, "not a valid target %s", args[0])
 		}
-		fetchObject := &kubernetes.KubeObject{Top: &dbv1beta1.PostgresDatabase{}}
-		err = kubernetes.GetObject(kubeconfigFlag, target.Name, target.Namespace, fetchObject)
+		kubeObj := kubernetes.GetAppropriateObjectWithContext(*kubeconfig, args[0], target)
+		if reflect.DeepEqual(kubeObj, kubernetes.Kubeobject{}) {
+			return errors.Wrapf(err, "no instance found %s", args[0])
+		}
+		secretObj := &corev1.Secret{}
+		err = kubeObj.Client.Get(context.Background(), types.NamespacedName{Name: target.Name + ".postgres-user-password", Namespace: target.Namespace}, secretObj)
 		if err != nil {
-			return err
+			return fmt.Errorf("instance not found in %s", kubeObj.Context.Cluster)
 		}
 
-		pgdbObject, ok := fetchObject.Top.(*dbv1beta1.PostgresDatabase)
-		if !ok {
-			return errors.New("unable to convert to PostgresDatabase object")
-		}
-		postgresConnection := pgdbObject.Status.Connection
-		fetchSecret := &corev1.Secret{}
-
-		err = kubernetes.GetObjectWithClient(fetchObject.Client, postgresConnection.PasswordSecretRef.Name, target.Namespace, fetchSecret)
-		if err != nil {
-			return err
-		}
-
-		tempfile, err := ioutil.TempFile("", "")
-		if err != nil {
-			return errors.Wrap(err, "failed to create tempfile")
-		}
-		defer os.Remove(tempfile.Name())
-
-		tempfilepath, err := filepath.Abs(tempfile.Name())
-		if err != nil {
-			return err
-		}
-
-		password := fetchSecret.Data[postgresConnection.PasswordSecretRef.Key]
-
-		// hostname:port:database:username:password
-		passwordFileString := fmt.Sprintf("%s:%s:%s:%s:%s", postgresConnection.Host, "*", postgresConnection.Database, postgresConnection.Username, password)
-		_, err = tempfile.Write([]byte(passwordFileString))
-		if err != nil {
-			return errors.Wrap(err, "failed to write password to tempfile")
-		}
-
-		psqlCmd := []string{"psql", "-h", postgresConnection.Host, "-U", postgresConnection.Username, postgresConnection.Database}
-		os.Setenv("PGPASSFILE", tempfilepath)
+		psqlCmd := []string{"psql", "-h", string(secretObj.Data["host"]), "-U", string(secretObj.Data["username"]), string(secretObj.Data["dbname"])}
+		os.Setenv("PGPASSWORD", string(secretObj.Data["password"]))
 		return exec.Exec(psqlCmd)
 	},
 }

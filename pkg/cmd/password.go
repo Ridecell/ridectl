@@ -1,5 +1,5 @@
 /*
-Copyright 2019 Ridecell, Inc.
+Copyright 2021 Ridecell, Inc.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -17,12 +17,15 @@ limitations under the License.
 package cmd
 
 import (
+	"context"
 	"fmt"
-
-	"github.com/pkg/errors"
-	"github.com/spf13/cobra"
+	"reflect"
 
 	"github.com/Ridecell/ridectl/pkg/kubernetes"
+	"github.com/Ridecell/ridectl/pkg/utils"
+	"github.com/pkg/errors"
+	"github.com/spf13/cobra"
+	"k8s.io/apimachinery/pkg/types"
 
 	corev1 "k8s.io/api/core/v1"
 )
@@ -44,20 +47,23 @@ var passwordCmd = &cobra.Command{
 		}
 		return nil
 	},
-	RunE: func(_ *cobra.Command, args []string) error {
+	RunE: func(cmd *cobra.Command, args []string) error {
+		ctx := context.Background()
+		kubeconfig := utils.GetKubeconfig()
 		target, err := kubernetes.ParseSubject(args[0])
 		if err != nil {
-			return errors.Wrap(err, "not a valid target")
+			return errors.Wrapf(err, "not a valid target %s", args[0])
 		}
-		secretName := fmt.Sprintf("%s-dispatcher.django-password", args[0])
-		fetchObject := &kubernetes.KubeObject{Top: &corev1.Secret{}}
-		err = kubernetes.GetObject(kubeconfigFlag, secretName, target.Namespace, fetchObject)
+
+		kubeObj := kubernetes.GetAppropriateObjectWithContext(*kubeconfig, args[0], target)
+		if reflect.DeepEqual(kubeObj, kubernetes.Kubeobject{}) {
+			return errors.Wrapf(err, "no instance found %s", args[0])
+		}
+
+		secret := &corev1.Secret{}
+		err = kubeObj.Client.Get(ctx, types.NamespacedName{Name: fmt.Sprintf("%s.django-password", args[0]), Namespace: target.Namespace}, secret)
 		if err != nil {
-			return errors.Wrap(err, "unable to find secret")
-		}
-		secret, ok := fetchObject.Top.(*corev1.Secret)
-		if !ok {
-			return errors.New("unable to convert to secret object")
+			return errors.Wrapf(err, "error getting secret  for instance %s", args[0])
 		}
 
 		fmt.Printf("Password for %s: %s\n", args[0], string(secret.Data["password"]))

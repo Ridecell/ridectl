@@ -1,12 +1,9 @@
 /*
-Copyright 2019 Ridecell, Inc.
-
+Copyright 2021 Ridecell, Inc.
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
-
     http://www.apache.org/licenses/LICENSE-2.0
-
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -20,25 +17,27 @@ import (
 	"context"
 	"fmt"
 	"regexp"
-	"sort"
 	"strings"
+	"sync"
 
 	"github.com/pkg/errors"
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
-	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/clientcmd/api"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 
-	"github.com/Ridecell/ridecell-operator/pkg/apis"
-	summonv1beta1 "github.com/Ridecell/ridecell-operator/pkg/apis/summon/v1beta1"
+	appsv1 "k8s.io/api/apps/v1"
 )
 
 const namespacePrefix = "summon-"
+
+type Kubeobject struct {
+	Object  client.Object
+	Context *api.Context
+	Client  client.Client
+}
 
 type Subject struct {
 	Region    string
@@ -46,168 +45,6 @@ type Subject struct {
 	Namespace string
 	Name      string
 	Type      string
-}
-
-type KubeObject struct {
-	Top     runtime.Object
-	Client  client.Client
-	Context *kubeContext
-}
-
-type kubeContext struct {
-	Name    string
-	Context *api.Context
-}
-
-func init() {
-	err := apis.AddToScheme(scheme.Scheme)
-	if err != nil {
-		// Panic cause this should not happen.
-		panic(err)
-	}
-}
-
-func listPodsWithContext(kubeconfig string, contextObj *kubeContext, listOptions *client.ListOptions, podList chan *KubeObject) {
-	contextClient, err := getClientByContext(kubeconfig, contextObj.Context)
-	if err != nil {
-		// User may have an invalid context that causes this to fail. Just return nil and continue.
-		podList <- nil
-		return
-	}
-
-	fetchPodList := &corev1.PodList{}
-	err = contextClient.List(context.Background(), listOptions, fetchPodList)
-	if err != nil {
-		podList <- nil
-		return
-	}
-
-	if len(fetchPodList.Items) == 0 {
-		podList <- nil
-		return
-	}
-
-	newKubeObject := &KubeObject{
-		Top:     fetchPodList,
-		Client:  contextClient,
-		Context: contextObj,
-	}
-	podList <- newKubeObject
-}
-
-func GetPod(kubeconfig string, nameRegex *string, labelSelector *string, namespace string, fetchObject *KubeObject) error {
-	listOptions := &client.ListOptions{
-		Namespace: namespace,
-	}
-
-	if labelSelector != nil {
-		listOptions.SetLabelSelector(*labelSelector)
-	}
-
-	kubeContexts, err := getKubeContexts()
-	if err != nil {
-		return err
-	}
-
-	ch := make(chan *KubeObject, len(kubeContexts))
-	for contextName, contextObj := range kubeContexts {
-		kubeContextObj := &kubeContext{
-			Name:    contextName,
-			Context: contextObj,
-		}
-		go listPodsWithContext(kubeconfig, kubeContextObj, listOptions, ch)
-	}
-
-	tempObject, err := getChannelOutput(len(kubeContexts), ch)
-	if err != nil {
-		return err
-	}
-	fetchObject.Client = tempObject.Client
-	fetchObject.Context = tempObject.Context
-
-	podList, ok := tempObject.Top.(*corev1.PodList)
-	if !ok {
-		return errors.New("unable to convert top object to podlist")
-	}
-
-	if nameRegex != nil {
-		for _, pod := range podList.Items {
-			match := regexp.MustCompile(*nameRegex).Match([]byte(pod.Name))
-			if match {
-				fetchObject.Top = &pod
-				return nil
-			}
-		}
-		return errors.New("unable to find pod matching regex")
-	}
-	fetchObject.Top = &podList.Items[0]
-	return nil
-}
-
-func GetObject(kubeconfig string, name string, namespace string, fetchObject *KubeObject) error {
-	kubeContexts, err := getKubeContexts()
-	if err != nil {
-		return err
-	}
-
-	ch := make(chan *KubeObject, len(kubeContexts))
-	for contextName, contextObj := range kubeContexts {
-		kubeContextObj := &kubeContext{
-			Name:    contextName,
-			Context: contextObj,
-		}
-		go getObjectWithContext(kubeconfig, fetchObject.Top, name, namespace, kubeContextObj, ch)
-	}
-
-	tempObject, err := getChannelOutput(len(kubeContexts), ch)
-	if err != nil {
-		return err
-	}
-	fetchObject.Top = tempObject.Top
-	fetchObject.Client = tempObject.Client
-	fetchObject.Context = tempObject.Context
-	return nil
-}
-
-func GetObjectWithClient(contextClient client.Client, name string, namespace string, runtimeObj runtime.Object) error {
-	err := contextClient.Get(context.Background(), types.NamespacedName{Name: name, Namespace: namespace}, runtimeObj)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func getObjectWithContext(kubeconfig string, runtimeObj runtime.Object, name string, namespace string, contextObj *kubeContext, fetchObject chan *KubeObject) {
-	contextClient, err := getClientByContext(kubeconfig, contextObj.Context)
-	if err != nil {
-		// User may have an invalid context that causes this to fail. Just return nil and continue.
-		fetchObject <- nil
-		return
-	}
-
-	err = contextClient.Get(context.Background(), types.NamespacedName{Name: name, Namespace: namespace}, runtimeObj)
-	if err != nil {
-		fetchObject <- nil
-		return
-	}
-
-	newKubeObject := &KubeObject{
-		Top:     runtimeObj,
-		Client:  contextClient,
-		Context: contextObj,
-	}
-	fetchObject <- newKubeObject
-}
-
-func getKubeContexts() (map[string]*api.Context, error) {
-	config := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
-		clientcmd.NewDefaultClientConfigLoadingRules(),
-		&clientcmd.ConfigOverrides{})
-	rawConfig, err := config.RawConfig()
-	if err != nil {
-		return nil, err
-	}
-	return rawConfig.Contexts, nil
 }
 
 func getClientByContext(kubeconfig string, kubeContext *api.Context) (client.Client, error) {
@@ -239,6 +76,72 @@ func getClientByContext(kubeconfig string, kubeContext *api.Context) (client.Cli
 	return client, nil
 }
 
+func getKubeContexts() (map[string]*api.Context, error) {
+	config := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
+		clientcmd.NewDefaultClientConfigLoadingRules(),
+		&clientcmd.ConfigOverrides{})
+	rawConfig, err := config.RawConfig()
+	if err != nil {
+		return nil, err
+	}
+	return rawConfig.Contexts, nil
+}
+
+func fetchContextForObject(channel chan Kubeobject, cluster *api.Context, crclient client.Client, subject Subject, wg *sync.WaitGroup) {
+
+	defer wg.Done()
+	var objectName string
+	if subject.Type == "summon" {
+		objectName = fmt.Sprintf("%s-web", subject.Name)
+	} else if subject.Type == "microservice" {
+		objectName = fmt.Sprintf("%s-svc-%s-web", subject.Env, subject.Namespace)
+	}
+	deploymentObj := &appsv1.Deployment{}
+	err := crclient.Get(context.Background(), types.NamespacedName{Name: objectName, Namespace: subject.Namespace}, deploymentObj)
+	if err != nil {
+		fmt.Printf("Instance %s not found in %s\n", subject.Name, cluster.Cluster)
+		return
+	}
+	if err == nil {
+		channel <- Kubeobject{Client: crclient, Context: cluster}
+	}
+
+}
+
+func GetAppropriateObjectWithContext(kubeconfig string, instance string, subject Subject) Kubeobject {
+
+	contexts, err := getKubeContexts()
+	if err != nil {
+		fmt.Println("Error getting kubecontexts", err)
+		return Kubeobject{}
+	}
+
+	k8sClients := make(map[string]client.Client)
+	for _, context := range contexts {
+		k8sClient, err := getClientByContext(kubeconfig, context)
+		if err != nil {
+			continue
+		}
+		k8sClients[context.Cluster] = k8sClient
+	}
+	// Initialize a wait group
+	var wg sync.WaitGroup
+	wg.Add(len(k8sClients))
+
+	objChannel := make(chan Kubeobject, len(k8sClients))
+	defer close(objChannel)
+
+	for cluster, client := range k8sClients {
+		go fetchContextForObject(objChannel, contexts[cluster], client, subject, &wg)
+	}
+	// Block until all of my goroutines have processed their issues.
+	wg.Wait()
+	if len(objChannel) < 1 {
+		return Kubeobject{}
+	}
+	return <-objChannel
+}
+
 // Parses the instance and returns an array of strings denoting: [region, env, subject, namespace]
 func ParseSubject(instanceName string) (Subject, error) {
 	var subject Subject
@@ -263,113 +166,10 @@ func ParseSubject(instanceName string) (Subject, error) {
 		// summon instances can only parse out name, env and namespace
 		subject.Name = fields[0] // want summon name to keep env as well
 		subject.Env = fields[2]
-		subject.Namespace = namespacePrefix + subject.Env
+		subject.Namespace = namespacePrefix + subject.Name
 		subject.Type = "summon"
 		return subject, nil
 	}
 	// Nothing matched, return empty with error
-	return subject, fmt.Errorf("Could not parse out information from %s", instanceName)
-}
-
-func getChannelOutput(maxFails int, ch chan *KubeObject) (*KubeObject, error) {
-	fails := 0
-	for {
-		select {
-		case s := <-ch:
-			if s == nil {
-				fails++
-				if fails >= maxFails {
-					return nil, errors.New("unable to locate object")
-				}
-			} else {
-				return s, nil
-			}
-		}
-	}
-}
-
-func listSummonPlatformWithContext(kubeconfig string, contextObj *kubeContext, listOptions *client.ListOptions, summonList chan *KubeObject) {
-	contextClient, err := getClientByContext(kubeconfig, contextObj.Context)
-	if err != nil {
-		// User may have an invalid context that causes this to fail. Just return nil and continue.
-		summonList <- nil
-		return
-	}
-
-	fetchSummonList := &summonv1beta1.SummonPlatformList{}
-	err = contextClient.List(context.Background(), listOptions, fetchSummonList)
-	if err != nil {
-		summonList <- nil
-		return
-	}
-
-	if len(fetchSummonList.Items) == 0 {
-		summonList <- nil
-		return
-	}
-
-	newKubeObject := &KubeObject{
-		Top:     fetchSummonList,
-		Client:  contextClient,
-		Context: contextObj,
-	}
-	summonList <- newKubeObject
-}
-
-func ListSummonPlatforms(kubeconfig string, nameregex string, namespace string) (summonv1beta1.SummonPlatformList, error) {
-	summonPlatformLists := &summonv1beta1.SummonPlatformList{}
-	listOptions := &client.ListOptions{
-		Namespace: namespace,
-	}
-
-	kubeContexts, err := getKubeContexts()
-	if err != nil {
-		return *summonPlatformLists, err
-	}
-
-	ch := make(chan *KubeObject, len(kubeContexts))
-	for contextName, contextObj := range kubeContexts {
-		kubeContextObj := &kubeContext{
-			Name:    contextName,
-			Context: contextObj,
-		}
-		go listSummonPlatformWithContext(kubeconfig, kubeContextObj, listOptions, ch)
-	}
-
-	// go through each cluster and grab summon platforms
-	for i := 0; i < len(kubeContexts); i++ {
-		tempObject := <-ch
-		if tempObject == nil {
-			continue
-		}
-
-		summonPlatformList, ok := tempObject.Top.(*summonv1beta1.SummonPlatformList)
-		if !ok {
-			return *summonPlatformList, errors.New("unable to convert top object to summonPlatformList")
-		}
-
-		// if searching for a single tenant, just return a summonPlatformList with that single tenant
-		if nameregex != "" {
-			for _, summonplatform := range summonPlatformList.Items {
-				match := regexp.MustCompile(nameregex).Match([]byte(summonplatform.Name))
-				if match {
-					summonPlatformLists.Items = append(summonPlatformLists.Items, summonplatform)
-					return *summonPlatformLists, nil
-				}
-			}
-		} else {
-			summonPlatformLists.Items = append(summonPlatformLists.Items, summonPlatformList.Items...)
-		}
-	}
-
-	// if we went through all the clusters and still haven't found a match, return error
-	if nameregex != "" {
-		return *summonPlatformLists, errors.New("unable to find %s" + nameregex + "\n")
-	}
-	// Sort the list in alphabetical order
-	sort.Slice(summonPlatformLists.Items, func(i, j int) bool {
-		return summonPlatformLists.Items[i].Name < summonPlatformLists.Items[j].Name
-	})
-
-	return *summonPlatformLists, nil
+	return subject, fmt.Errorf("could not parse out information from %s", instanceName)
 }

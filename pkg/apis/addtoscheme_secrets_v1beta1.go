@@ -1,5 +1,5 @@
 /*
-Copyright 2019 Ridecell, Inc..
+Copyright 2021 Ridecell, Inc..
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -17,10 +17,10 @@ limitations under the License.
 package apis
 
 import (
-	"github.com/Ridecell/ridectl/pkg/apis/secrets/v1beta1"
+	"github.com/Ridecell/ridectl/pkg/apis/secrets/v1beta2"
 )
 
 func init() {
 	// Register the types with the Scheme so the components can map objects to GroupVersionKinds and back
-	AddToSchemes = append(AddToSchemes, v1beta1.SchemeBuilder.AddToScheme)
+	AddToSchemes = append(AddToSchemes, v1beta2.SchemeBuilder.AddToScheme)
 }
