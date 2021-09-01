@@ -36,3 +36,5 @@ chmod 0755 ridectl
 cp ridectl /usr/local/bin/ridectl
 ridectl -h
 ```
+Note:
+Old ridectl code is still present [here](https://github.com/Ridecell/ridectl/tree/ridectl-v0.0.0). Ref:- ridectl-v0.0.0
