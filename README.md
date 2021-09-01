@@ -20,11 +20,19 @@ You can find pre-compiled macOS and Linux binaries for `ridectl` [on the GitHub 
 
 Download the one appropriate to your platform, unzip it, and copy it to `/usr/local/bin/ridectl` or similar. Run `ridectl -h` to confirm it is installed correctly.
 
-Example:
+# Mac-os
 ```
-wget https://github.com/Ridecell/ridectl/releases/download/{latest_release_number}/ridectl_linux.zip
+curl -L "https://github.com/Ridecell/ridectl/releases/latest/download/ridectl_macos.zip" -o ./ridectl_macos.zip
+unzip ridectl_macos.zip
+chmod 0755 ridectl
+cp ridectl /usr/local/bin/ridectl
+ridectl -h
+```
+# Linux
+```
+curl -L "https://github.com/Ridecell/ridectl/releases/latest/download/ridectl_linux.zip" -o ./ridectl_linux.zip
 unzip ridectl_linux.zip
-chmod 0555 ridectl
+chmod 0755 ridectl
 cp ridectl /usr/local/bin/ridectl
 ridectl -h
 ```
