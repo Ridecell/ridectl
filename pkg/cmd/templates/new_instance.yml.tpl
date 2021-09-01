@@ -5,9 +5,11 @@ metadata:
   namespace: {{ .Namespace }}
 spec:
   version: fill_in_version
+  config:
+    AWS_REGION: "{{ .AWS_REGION }}"
   {{- if .SlackChannels }}
   notifications:
-    slackChannels: 
+    publicSlackChannels:
     {{- range .SlackChannels }}
     - "{{ . }}"
     {{- end }}

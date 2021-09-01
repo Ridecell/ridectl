@@ -50,7 +50,6 @@ var newCmd = &cobra.Command{
 		if err != nil {
 			return errors.Wrapf(err, "not a valid target %s", args[0])
 		}
-		fmt.Printf("this is target: \n%+v\n", target)
 
 		newInstance, err := TempFS.ReadFile("templates/new_instance.yml.tpl")
 		if err != nil {
@@ -60,6 +59,21 @@ var newCmd = &cobra.Command{
 		template, err := template.New("new_instance.yml.tpl").Parse(string(newInstance))
 		if err != nil {
 			return errors.Wrap(err, "error parsing new_instance.yml.tpl")
+		}
+
+		// Promt user to choose AWS_REGION
+		awsRegionPrompt := promptui.Prompt{
+			Label: "Enter AWS region",
+			Validate: func(input string) error {
+				if input == "" || !strings.Contains(input, "-") {
+					return errors.New("AWS region is required and needs to be valid")
+				}
+				return nil
+			},
+		}
+		awsRegion, err := awsRegionPrompt.Run()
+		if err != nil {
+			return errors.Wrap(err, "error getting AWS region")
 		}
 
 		// Prompt user for a slack channel to alert to
@@ -72,7 +86,6 @@ var newCmd = &cobra.Command{
 				return nil
 			},
 		}
-
 		slackChannelNames, err := slackChannelsPrompt.Run()
 		if err != nil {
 			return err
@@ -83,10 +96,12 @@ var newCmd = &cobra.Command{
 		err = template.Execute(buffer, struct {
 			Name          string
 			Namespace     string
+			AWS_REGION    string
 			SlackChannels []string
 		}{
 			Name:          args[0],
 			Namespace:     target.Namespace,
+			AWS_REGION:    awsRegion,
 			SlackChannels: slackChannels,
 		})
 		if err != nil {
