@@ -213,13 +213,13 @@ func lintFile(filename string, imageTags []string) error {
 		return nil
 	}
 	// we need to do this because we don't want more than two objects in manifest but we already checked for empty manifest above
-	if len(manifest) > 2 || len(manifest) == 1 {
+	if len(manifest) > 3 || len(manifest) == 1 {
 		return fmt.Errorf("%s: expected two objects in file got %v", filename, len(manifest))
 	}
 
-	summonObj, ok := manifest[0].Object.(*summonv1beta2.SummonPlatform)
+	summonObj, ok := manifest[1].Object.(*summonv1beta2.SummonPlatform)
 	if !ok {
-		return fmt.Errorf("%s: SummonPlatform is required to be the first object in manifest", filename)
+		return fmt.Errorf("%s: SummonPlatform is required to be the second object in manifest", filename)
 	}
 	existingFilename, ok := foundNames[summonObj.Name]
 	if ok {
@@ -258,13 +258,13 @@ func lintFile(filename string, imageTags []string) error {
 		}
 	}
 
-	if manifest[1].Kind != "EncryptedSecret" {
-		return fmt.Errorf("%s: EncryptedSecret is required to be the second object in manifest", filename)
+	if manifest[2].Kind != "EncryptedSecret" {
+		return fmt.Errorf("%s: EncryptedSecret is required to be the third object in manifest", filename)
 	}
 
 	var fernetKeyFound bool
 	var unencryptedValueFound bool
-	for secretKey, secretValue := range manifest[1].Data {
+	for secretKey, secretValue := range manifest[2].Data {
 		if !strings.HasPrefix(secretValue, "AQICAH") && !strings.HasPrefix(secretValue, "crypto ") {
 			unencryptedValueFound = true
 			fmt.Printf("%s: EncryptedSecret %s missing preamble, may not be encrypted.", filename, secretKey)
@@ -287,8 +287,10 @@ func lintFile(filename string, imageTags []string) error {
 		return fmt.Errorf("%s: Key FERNET_KEYS is not present in EncryptedSecret, please refer https://github.com/Ridecell/kubernetes-summon#adding-fernet-keys for help.", filename)
 	}
 
-	for _, object := range manifest {
+	// Start checking from the second object in the manifest, ignore the namespace object
+	for _, object := range manifest[1:] {
 		if object.Meta.GetName() != expectedName {
+
 			return fmt.Errorf("%s: %s name %s did not match expected value %s", filename, object.Kind, object.Meta.GetName(), expectedName)
 		}
 		if object.Meta.GetNamespace() != clusterEnv && object.Meta.GetNamespace() != fmt.Sprintf("summon-%s", object.Meta.GetName()) {
