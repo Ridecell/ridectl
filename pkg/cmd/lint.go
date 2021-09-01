@@ -236,6 +236,10 @@ func lintFile(filename string, imageTags []string) error {
 	if summonObj.Spec.AutoDeploy != "" && summonObj.Spec.Version != "" {
 		return fmt.Errorf("%s: Autodeploy and Version both set, only one should be set at a time.", filename)
 	}
+	// Make sure that AWS_REGION is set
+	if len(summonObj.Spec.Config) == 0 || summonObj.Spec.Config["AWS_REGION"] == "" {
+		return fmt.Errorf("%s: AWS_REGION is required", filename)
+	}
 
 	// Check that the docker image exists
 	if summonObj.Spec.AutoDeploy == "" {
