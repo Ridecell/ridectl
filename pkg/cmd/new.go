@@ -63,7 +63,7 @@ var newCmd = &cobra.Command{
 		}
 
 		// Prompt user for a slack channel to alert to
-		slackChannelPrompt := promptui.Prompt{
+		slackChannelsPrompt := promptui.Prompt{
 			Label: "Enter a slack channel name (#channel-name, blank to skip)",
 			Validate: func(input string) error {
 				if !strings.HasPrefix(input, "#") && input != "" {
@@ -73,7 +73,7 @@ var newCmd = &cobra.Command{
 			},
 		}
 
-		slackChannelNames, err := slackChannelPrompt.Run()
+		slackChannelNames, err := slackChannelsPrompt.Run()
 		if err != nil {
 			return err
 		}
@@ -99,7 +99,7 @@ var newCmd = &cobra.Command{
 			return errors.Wrap(err, "error creating file")
 		}
 
-		// Write the contents of the buffer to the file instance-name.yml
+		// Write the contents of the buffer to the file instance.yml
 		_, err = newInstnaceFile.Write(buffer.Bytes())
 		if err != nil {
 			return errors.Wrap(err, "error writing to file")
