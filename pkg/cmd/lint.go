@@ -208,11 +208,17 @@ func lintFile(filename string, imageTags []string) error {
 		return nil
 	}
 
+	// return here because we are ignoring new ridecell-controller/summon-operator manifests
 	if len(manifest) == 0 {
-		// return here because we are ignoring old ridecell-operator manifests
 		return nil
 	}
-	// we need to do this because we don't want more than two objects in manifest but we already checked for empty manifest above
+
+	// return here because we are ignoring namespace kind from new ridecell-controller/summon-operator manifests
+	if len(manifest) == 1 && manifest[0].Kind == "Namespace" {
+		return nil
+	}
+	// we need to do this because we don't want more than two objects in manifest but we already checked for empty manifest above.
+	// we are again checking 1 object in manifest because if its other than Namespace, then we should return error.
 	if len(manifest) > 2 || len(manifest) == 1 {
 		return fmt.Errorf("%s: expected two objects in file got %v", filename, len(manifest))
 	}
