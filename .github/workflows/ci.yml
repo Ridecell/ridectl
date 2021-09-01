@@ -33,6 +33,7 @@ jobs:
   build:
     name: Build
     runs-on: ubuntu-20.04
+    needs: lint
     env:
       TOKEN: ${{ secrets.TEMP_GITHUB_TOKEN }}
     steps:
@@ -55,3 +56,4 @@ jobs:
         run: |
           make build_linux
           make build_macos
+          ls -la ./bin
