@@ -18,14 +18,15 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/Ridecell/ridectl/pkg/cmd/edit"
-	"github.com/heroku/docker-registry-client/registry"
-	"github.com/spf13/cobra"
 	"net/http"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
+
+	"github.com/Ridecell/ridectl/pkg/cmd/edit"
+	"github.com/heroku/docker-registry-client/registry"
+	"github.com/spf13/cobra"
 
 	summonv1beta1 "github.com/Ridecell/ridecell-operator/pkg/apis/summon/v1beta1"
 )
@@ -207,7 +208,12 @@ func lintFile(filename string, imageTags []string) error {
 		return nil
 	}
 
-	if len(manifest) != 2 {
+	if len(manifest) == 0 {
+		// return here because we are ignoring new ridecell-controller/summon-operator manifests
+		return nil
+	}
+	// we need to do this because we don't want more than two objects in manifest but we already checked for empty manifest above
+	if len(manifest) > 2 || len(manifest) == 1 {
 		return fmt.Errorf("%s: expected two objects in file got %v", filename, len(manifest))
 	}
 
