@@ -52,7 +52,15 @@ jobs:
       - name: Install dependencies
         run: |
           go get -d ./...
-      - name: Build
+      - name: build
         run: |
-          make build_linux
-          make build_macos
+          make build_macos build_linux
+      - name: Release
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GITHUB_TOKEN: ${{ secrets.TEMP_GITHUB_TOKEN }}
+        run: |
+          mv bin/ridectl.macos bin/ridectl && zip -jrm bin/ridectl_macos.zip bin/ridectl
+          mv bin/ridectl.linux bin/ridectl && zip -jrm bin/ridectl_linux.zip bin/ridectl
+          go get github.com/tcnksm/ghr
+          ghr -c ${CI_SHA_SHORT} ${CI_ACTION_REF_NAME} bin/
