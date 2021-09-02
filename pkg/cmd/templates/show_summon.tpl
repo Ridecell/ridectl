@@ -1,15 +1,7 @@
 TENANT: {{ .metadata.name}}
 STATE: {{.status.status}} ({{.status.message}})
 
-  Postgres: {{.status.postgresStatus}}
-    host: {{.status.postgresConnection.host}}
-    database: {{.status.postgresConnection.database}}
-    username: {{.status.postgresConnection.username}}
-
-  RabbitMQ: {{.status.rabbitmqStatus}}
-    host: {{.status.rabbitmqConnection.host}}
-
-DESIRED VERSIONS: 
+DESIRED VERSIONS:
   {{- /* will need to update components manually */}}
   Summon: {{.spec.version}}
 {{- if .spec.hwAux.version}}
@@ -23,6 +15,6 @@ DESIRED VERSIONS:
 {{- if .spec.tripShare.version}}
   TripShare: {{.spec.tripShare.version}}{{end}}
 
-CURRENT VERSIONS: 
+CURRENT VERSIONS:
   Summon: {{.status.notification.notifyVersion}}
   {{range $key, $val := .status.notification}}{{if ne $key "notifyVersion"}}{{$key}}: {{$val}}{{"\n  "}}{{end}}{{end}}

@@ -1,12 +1,9 @@
 /*
-Copyright 2019 Ridecell, Inc.
-
+Copyright 2021 Ridecell, Inc.
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
-
     http://www.apache.org/licenses/LICENSE-2.0
-
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -36,6 +33,7 @@ func init() {
 }
 
 func NewManifest(in io.Reader) (Manifest, error) {
+
 	// Read in the whole file.
 	buf := bytes.Buffer{}
 	_, err := buf.ReadFrom(in)
@@ -49,11 +47,10 @@ func NewManifest(in io.Reader) (Manifest, error) {
 			continue
 		}
 		obj, err := NewObject([]byte(chunk))
-		// we need to ignnore the error here because we don't want to lint the new ridecell-controller/summon-operator objects here
-		if err != nil && (strings.Contains(err.Error(), "no kind \"SummonPlatform\" is registered for version \"app.summon.ridecell.io/v1beta2\"") || strings.Contains(err.Error(), "no kind \"EncryptedSecret\" is registered for version \"secrets.controllers.ridecell.io/v1beta2\"")) {
+		// we need to ignnore the error here because we don't want to lint the ridecell-operator objects here
+		if err != nil && (strings.Contains(err.Error(), "no kind \"SummonPlatform\" is registered for version \"summon.ridecell.io/v1beta1\"") || strings.Contains(err.Error(), "no kind \"EncryptedSecret\" is registered for version \"secrets.ridecell.io/v1beta1\"")) {
 			continue
 		}
-
 		// return the error if we have one which is not ignorable
 		if err != nil {
 			return nil, errors.Wrap(err, "error decoding object")
@@ -87,7 +84,7 @@ func (m Manifest) Serialize(out io.Writer) error {
 	first := true
 	for _, obj := range m {
 		if !first {
-			out.Write([]byte("---\n"))
+			_, _ = out.Write([]byte("---\n"))
 		}
 		first = false
 		err := obj.Serialize(out)

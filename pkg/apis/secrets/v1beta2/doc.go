@@ -1,5 +1,5 @@
 /*
-Copyright 2019 Ridecell, Inc.
+Copyright 2021 Ridecell, Inc.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -14,16 +14,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package cmd_test
-
-import (
-	"testing"
-
-	"github.com/onsi/ginkgo"
-	"github.com/onsi/gomega"
-)
-
-func TestCmd(t *testing.T) {
-	gomega.RegisterFailHandler(ginkgo.Fail)
-	ginkgo.RunSpecs(t, "Cmd Suite")
-}
+// Package v1beta2 contains API Schema definitions for the secrets v1beta2 API group
+// +k8s:openapi-gen=true
+// +k8s:deepcopy-gen=package,register
+// +k8s:conversion-gen=github.com/Ridecell/ridectl/pkg/apis/secrets
+// +k8s:defaulter-gen=TypeMeta
+// +groupName=secrets.ridecell.io
+package v1beta2

@@ -1,5 +1,5 @@
 /*
-Copyright 2019 Ridecell, Inc.
+Copyright 2011 Ridecell, Inc.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -19,7 +19,6 @@ package cmd
 import (
 	"bytes"
 	"fmt"
-	"html/template"
 	"io"
 	"io/ioutil"
 	"os"
@@ -29,13 +28,12 @@ import (
 	"strings"
 
 	"github.com/Ridecell/ridectl/pkg/cmd/edit"
-	"github.com/Ridecell/ridectl/pkg/kubernetes"
+	//"github.com/Ridecell/ridectl/pkg/kubernetes"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/kms"
 	"github.com/manifoldco/promptui"
 	"github.com/pkg/errors"
-	"github.com/shurcooL/httpfs/vfsutil"
 	"github.com/spf13/cobra"
 )
 
@@ -131,11 +129,13 @@ var editCmd = &cobra.Command{
 		if err != nil {
 			if os.IsNotExist(err) && filenameFlag == "" {
 				// No file, render the template with the default content.
-				buffer, err := createDefaultData(args[0])
-				if err != nil {
-					return errors.Wrap(err, "error creating default data")
-				}
-				inStream = buffer
+				//return error for now
+				return errors.Wrapf(err, "error reading input file %s", filename)
+				// buffer, err := createDefaultData(args[0])
+				// if err != nil {
+				// 	return errors.Wrap(err, "error creating default data")
+				// }
+				// inStream = buffer
 			} else {
 				return errors.Wrapf(err, "error reading input file %s", filename)
 			}
@@ -173,7 +173,7 @@ var editCmd = &cobra.Command{
 		}
 
 		// Match up the new objects with the old.
-		afterManifest.CorrelateWith(inManifest)
+		_ = afterManifest.CorrelateWith(inManifest)
 
 		// Re-encrypt anything that needs it.
 		keyId := keyIdFlag
@@ -196,7 +196,7 @@ var editCmd = &cobra.Command{
 			return errors.Wrapf(err, "error opening %s for writing", filename)
 		}
 		defer outFile.Close()
-		afterManifest.Serialize(outFile)
+		_ = afterManifest.Serialize(outFile)
 
 		return nil
 	},
@@ -211,14 +211,14 @@ func runEditor(filename string) error {
 	// Deal with an editor that has options.
 	editorParts := whitespaceRegexp.Split(editor, -1)
 	executable := editorParts[0]
-	executable, err := exec.LookPath(executable)
+	executable, _ = exec.LookPath(executable)
 
 	editorParts = append(editorParts, filename)
 	cmd := exec.Command(executable, editorParts[1:]...)
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	err = cmd.Run()
+	err := cmd.Run()
 	if err != nil {
 		return errors.Wrap(err, "error running editor")
 	}
@@ -246,8 +246,8 @@ func editObjects(manifest edit.Manifest, comment string) (edit.Manifest, error) 
 
 		// Make the YAML to show in the editor.
 		editorBuf := bytes.Buffer{}
-		commentReader.WriteTo(&editorBuf)
-		manifestBuf.WriteTo(&editorBuf)
+		_, _ = commentReader.WriteTo(&editorBuf)
+		_, _ = manifestBuf.WriteTo(&editorBuf)
 		editorReader := bytes.NewReader(editorBuf.Bytes())
 
 		// Open a temporary file.
@@ -257,8 +257,8 @@ func editObjects(manifest edit.Manifest, comment string) (edit.Manifest, error) 
 		}
 		defer tmpfile.Close()
 		defer os.Remove(tmpfile.Name())
-		editorReader.WriteTo(tmpfile)
-		tmpfile.Sync()
+		_, _ = editorReader.WriteTo(tmpfile)
+		_ = tmpfile.Sync()
 
 		// Show the editor.
 		err = runEditor(tmpfile.Name())
@@ -290,7 +290,7 @@ func editObjects(manifest edit.Manifest, comment string) (edit.Manifest, error) 
 		if bytes.Equal(commentBuf.Bytes(), afterBuf.Bytes()[:commentBuf.Len()]) {
 			seekPos = int64(commentBuf.Len())
 		}
-		afterReader.Seek(seekPos, 0)
+		_, _ = afterReader.Seek(seekPos, 0)
 
 		outManifest, err := edit.NewManifest(afterReader)
 		if err == nil {
@@ -301,52 +301,52 @@ func editObjects(manifest edit.Manifest, comment string) (edit.Manifest, error) 
 		// Some kind decoding error, probably bad syntax, show the editor again.
 		comment = fmt.Sprintf("Error parsing file:\n%s", err)
 		manifestBuf.Reset()
-		afterReader.Seek(seekPos, 0)
-		afterReader.WriteTo(&manifestBuf)
+		_, _ = afterReader.Seek(seekPos, 0)
+		_, _ = afterReader.WriteTo(&manifestBuf)
 	}
 }
 
-func createDefaultData(instance string) (io.Reader, error) {
-	target, err := kubernetes.ParseSubject(instance)
-	if err != nil {
-		return nil, fmt.Errorf("unable to parse instance name %s", instance)
-	}
-	templateData, err := vfsutil.ReadFile(Templates, "new_instance.yml.tpl")
-	if err != nil {
-		return nil, errors.Wrap(err, "error reading new instance template")
-	}
-	template, err := template.New("new_instance.yml.tpl").Parse(string(templateData))
-	if err != nil {
-		return nil, errors.Wrap(err, "error parsing new instance template")
-	}
+// func createDefaultData(instance string) (io.Reader, error) {
+// 	target, err := kubernetes.ParseSubject(instance)
+// 	if err != nil {
+// 		return nil, fmt.Errorf("unable to parse instance name %s", instance)
+// 	}
+// 	templateData, err := vfsutil.ReadFile(Templates, "new_instance.yml.tpl")
+// 	if err != nil {
+// 		return nil, errors.Wrap(err, "error reading new instance template")
+// 	}
+// 	template, err := template.New("new_instance.yml.tpl").Parse(string(templateData))
+// 	if err != nil {
+// 		return nil, errors.Wrap(err, "error parsing new instance template")
+// 	}
 
-	// Prompt user for a slack channel to alert to
-	slackChannelPrompt := promptui.Prompt{
-		Label: "Enter a slack channel name (#channel-name, blank to skip)",
-		Validate: func(input string) error {
-			if !strings.HasPrefix(input, "#") && input != "" {
-				return errors.New(`Channel name must have prefix "#"`)
-			}
-			return nil
-		},
-	}
-	slackChannelName, err := slackChannelPrompt.Run()
-	if err != nil {
-		return nil, err
-	}
+// 	// Prompt user for a slack channel to alert to
+// 	slackChannelPrompt := promptui.Prompt{
+// 		Label: "Enter a slack channel name (#channel-name, blank to skip)",
+// 		Validate: func(input string) error {
+// 			if !strings.HasPrefix(input, "#") && input != "" {
+// 				return errors.New(`Channel name must have prefix "#"`)
+// 			}
+// 			return nil
+// 		},
+// 	}
+// 	slackChannelName, err := slackChannelPrompt.Run()
+// 	if err != nil {
+// 		return nil, err
+// 	}
 
-	buffer := &bytes.Buffer{}
-	err = template.Execute(buffer, struct {
-		Name         string
-		Namespace    string
-		SlackChannel string
-	}{
-		Name:         instance,
-		Namespace:    target.Namespace,
-		SlackChannel: slackChannelName,
-	})
-	if err != nil {
-		return nil, errors.Wrap(err, "error rendering new instance template")
-	}
-	return buffer, nil
-}
+// 	buffer := &bytes.Buffer{}
+// 	err = template.Execute(buffer, struct {
+// 		Name         string
+// 		Namespace    string
+// 		SlackChannel string
+// 	}{
+// 		Name:         instance,
+// 		Namespace:    target.Namespace,
+// 		SlackChannel: slackChannelName,
+// 	})
+// 	if err != nil {
+// 		return nil, errors.Wrap(err, "error rendering new instance template")
+// 	}
+// 	return buffer, nil
+// }
