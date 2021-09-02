@@ -214,7 +214,7 @@ func lintFile(filename string, imageTags []string) error {
 	}
 
 	// return here because we are ignoring namespace kind from new ridecell-controller/summon-operator manifests
-	if len(manifest) == 1 && manifest[0].Kind == "Namespace" {
+	if len(manifest) == 1 && manifest[0].Object.DeepCopyObject().GetObjectKind().GroupVersionKind().Kind == "Namespace" {
 		return nil
 	}
 	// we need to do this because we don't want more than two objects in manifest but we already checked for empty manifest above.
