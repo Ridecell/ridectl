@@ -213,7 +213,7 @@ func lintFile(filename string, imageTags []string) error {
 		return nil
 	}
 	// we need to do this because we don't want more than two objects in manifest but we already checked for empty manifest above
-	if len(manifest) > 3 || len(manifest) == 1 {
+	if len(manifest) != 3 {
 		return fmt.Errorf("%s: expected two objects in file got %v", filename, len(manifest))
 	}
 
