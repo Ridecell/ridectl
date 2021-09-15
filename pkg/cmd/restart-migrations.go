@@ -1,12 +1,9 @@
 /*
-Copyright 2019-2020 Ridecell, Inc.
-
+Copyright 2021 Ridecell, Inc.
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
-
     http://www.apache.org/licenses/LICENSE-2.0
-
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -19,12 +16,15 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"reflect"
 
 	"github.com/Ridecell/ridectl/pkg/kubernetes"
+	"github.com/Ridecell/ridectl/pkg/utils"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 
 	batchv1 "k8s.io/api/batch/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func init() {
@@ -34,7 +34,8 @@ func init() {
 var restartMigrationsCmd = &cobra.Command{
 	Use:   "restart-migrations [flags] <cluster_name> ",
 	Short: "Restart migrations for target summon instance.",
-	Long:  "Restart migrations for target summon instance.",
+	Long: "Restart migrations for target summon instance.\n" +
+		"restart-migrations <instance> e.g ridectl restart-migrations summontest-dev",
 	Args: func(_ *cobra.Command, args []string) error {
 		if len(args) == 0 {
 			return fmt.Errorf("Cluster name argument is required")
@@ -44,29 +45,28 @@ var restartMigrationsCmd = &cobra.Command{
 		}
 		return nil
 	},
-	RunE: func(_ *cobra.Command, args []string) error {
+	RunE: func(cmd *cobra.Command, args []string) error {
+		ctx := context.Background()
+		kubeconfig := utils.GetKubeconfig()
 		target, err := kubernetes.ParseSubject(args[0])
 		if err != nil {
-			return errors.Wrap(err, "not a valid target")
+			return errors.Wrapf(err, "not a valid target %s", args[0])
 		}
-		fetchObject := &kubernetes.KubeObject{
-			Top: &batchv1.Job{},
+
+		kubeObj := kubernetes.GetAppropriateObjectWithContext(*kubeconfig, args[0], target)
+		if reflect.DeepEqual(kubeObj, kubernetes.Kubeobject{}) {
+			return errors.Wrapf(err, "no instance found %s", args[0])
 		}
-		err = kubernetes.GetObject(kubeconfigFlag, fmt.Sprintf("%s-migrations", target.Name), target.Namespace, fetchObject)
+
+		job := &batchv1.Job{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      fmt.Sprintf("%s-migrations", target.Name),
+				Namespace: target.Namespace},
+		}
+		// deleting the migrations job restarts the migrations
+		err = kubeObj.Client.Delete(ctx, job)
 		if err != nil {
-			return errors.Wrap(err, "unable to find job")
-		}
-
-		job, ok := fetchObject.Top.(*batchv1.Job)
-		if !ok {
-			return errors.New("unable to convert runtime.object to batchv1.Job")
-		}
-
-		fmt.Printf("Restarting migrations for %s\n", args[0])
-
-		err = fetchObject.Client.Delete(context.Background(), job)
-		if err != nil {
-			return err
+			return errors.Wrap(err, "failed to restart job")
 		}
 
 		return nil

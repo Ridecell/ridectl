@@ -1,5 +1,5 @@
 /*
-Copyright 2019 Ridecell, Inc.
+Copyright 2021 Ridecell, Inc.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -21,12 +21,13 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/Ridecell/ridecell-operator/pkg/apis"
 	"github.com/mitchellh/go-homedir"
 	"github.com/spf13/cobra"
 	"k8s.io/client-go/kubernetes/scheme"
 
+	secretsv1beta2 "github.com/Ridecell/ridecell-controllers/apis/secrets/v1beta2"
 	hackapis "github.com/Ridecell/ridectl/pkg/apis"
+	summonv1beta2 "github.com/Ridecell/summon-operator/apis/app/v1beta2"
 )
 
 var kubeconfigFlag string
@@ -51,9 +52,10 @@ func init() {
 	}
 	rootCmd.PersistentFlags().StringVar(&kubeconfigFlag, "kubeconfig", filepath.Join(home, ".kube", "config"), "(optional) absolute path to the kubeconfig file")
 	rootCmd.Flags().BoolVar(&versionFlag, "version", true, "--version")
-	// Register all types from ridecell-operator.
-	apis.AddToScheme(scheme.Scheme)
-	hackapis.AddToScheme(scheme.Scheme)
+	// Register all types from summon-operator and ridecell-controllers secrets
+	_ = summonv1beta2.AddToScheme(scheme.Scheme)
+	_ = secretsv1beta2.AddToScheme(scheme.Scheme)
+	_ = hackapis.AddToScheme(scheme.Scheme)
 }
 
 func Execute() {
