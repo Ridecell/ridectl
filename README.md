@@ -28,6 +28,7 @@ chmod 0755 ridectl
 cp ridectl /usr/local/bin/ridectl
 ridectl -h
 ```
+When running ridectl for first time, mac os will not allow the binary to execute. So solve this issue, navigate to System Prefrences > Security & Privacy and in General section, allow ridectl to open.
 # Linux
 ```
 curl -L "https://github.com/Ridecell/ridectl/releases/latest/download/ridectl_linux.zip" -o ./ridectl_linux.zip
