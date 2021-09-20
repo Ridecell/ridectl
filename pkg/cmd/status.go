@@ -23,11 +23,12 @@ import (
 	"reflect"
 	"time"
 
-	kubernetes "github.com/Ridecell/ridectl/pkg/kubernetes"
 	"github.com/Ridecell/ridectl/pkg/utils"
 	"github.com/apoorvam/goterminal"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
+
+	kubernetes "github.com/Ridecell/ridectl/pkg/kubernetes"
 )
 
 func init() {
