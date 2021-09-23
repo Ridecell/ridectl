@@ -30,7 +30,6 @@ import (
 
 	summonv1beta2 "github.com/Ridecell/summon-operator/apis/app/v1beta2"
 	appsv1 "k8s.io/api/apps/v1"
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 )
 
 const namespacePrefix = "summon-"
@@ -98,14 +97,10 @@ func fetchContextForObject(channel chan Kubeobject, cluster *api.Context, crclie
 		summonObj := &summonv1beta2.SummonPlatform{}
 		err := crclient.Get(context.TODO(), types.NamespacedName{Name: subject.Name, Namespace: subject.Namespace}, summonObj)
 		if err != nil {
-			if k8serrors.IsUnauthorized(err) {
-				fmt.Printf("You do not have enough privileges to access %s", subject.Name)
-				return
-			}
-			fmt.Printf("Instance %s not found in %s\n", subject.Name, cluster.Cluster)
+			fmt.Printf("\nError getting summon object in %s : %s\n", cluster.Cluster, err.Error())
 			return
-
 		}
+
 		if err == nil {
 			channel <- Kubeobject{Object: summonObj, Context: cluster, Client: crclient}
 			return
@@ -117,13 +112,10 @@ func fetchContextForObject(channel chan Kubeobject, cluster *api.Context, crclie
 		deploymentObj := &appsv1.Deployment{}
 		err := crclient.Get(context.Background(), types.NamespacedName{Name: objectName, Namespace: subject.Namespace}, deploymentObj)
 		if err != nil {
-			if k8serrors.IsUnauthorized(err) {
-				fmt.Printf("You do not have enough privileges to access %s", subject.Name)
-				return
-			}
-			fmt.Printf("Instance %s not found in %s\n", subject.Name, cluster.Cluster)
+			fmt.Printf("\nError getting deployment object in %s : %s\n", cluster.Cluster, err.Error())
 			return
 		}
+
 		if err == nil {
 			channel <- Kubeobject{Client: crclient, Context: cluster}
 		}
