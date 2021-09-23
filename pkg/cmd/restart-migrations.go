@@ -69,6 +69,7 @@ var restartMigrationsCmd = &cobra.Command{
 			return errors.Wrap(err, "failed to restart job")
 		}
 
+		fmt.Printf("Restarted migrations for %s\n", target.Name)
 		return nil
 	},
 }
