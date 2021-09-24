@@ -28,6 +28,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 
+	summonv1beta2 "github.com/Ridecell/summon-operator/apis/app/v1beta2"
 	appsv1 "k8s.io/api/apps/v1"
 )
 
@@ -90,20 +91,34 @@ func getKubeContexts() (map[string]*api.Context, error) {
 func fetchContextForObject(channel chan Kubeobject, cluster *api.Context, crclient client.Client, subject Subject, wg *sync.WaitGroup) {
 
 	defer wg.Done()
+
 	var objectName string
 	if subject.Type == "summon" {
-		objectName = fmt.Sprintf("%s-web", subject.Name)
+		summonObj := &summonv1beta2.SummonPlatform{}
+		err := crclient.Get(context.TODO(), types.NamespacedName{Name: subject.Name, Namespace: subject.Namespace}, summonObj)
+		if err != nil {
+			fmt.Printf("\nError getting summon object in %s : %s\n", cluster.Cluster, err.Error())
+			return
+		}
+
+		if err == nil {
+			channel <- Kubeobject{Object: summonObj, Context: cluster, Client: crclient}
+			return
+		}
+
 	} else if subject.Type == "microservice" {
 		objectName = fmt.Sprintf("%s-svc-%s-web", subject.Env, subject.Namespace)
-	}
-	deploymentObj := &appsv1.Deployment{}
-	err := crclient.Get(context.Background(), types.NamespacedName{Name: objectName, Namespace: subject.Namespace}, deploymentObj)
-	if err != nil {
-		fmt.Printf("Instance %s not found in %s\n", subject.Name, cluster.Cluster)
-		return
-	}
-	if err == nil {
-		channel <- Kubeobject{Client: crclient, Context: cluster}
+
+		deploymentObj := &appsv1.Deployment{}
+		err := crclient.Get(context.Background(), types.NamespacedName{Name: objectName, Namespace: subject.Namespace}, deploymentObj)
+		if err != nil {
+			fmt.Printf("\nError getting deployment object in %s : %s\n", cluster.Cluster, err.Error())
+			return
+		}
+
+		if err == nil {
+			channel <- Kubeobject{Client: crclient, Context: cluster}
+		}
 	}
 
 }
