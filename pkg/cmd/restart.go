@@ -26,7 +26,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -45,7 +44,8 @@ var rollingRestartCmd = &cobra.Command{
 	Use:   "restart [flags] <cluster_name> <pod_type>",
 	Short: "Performs a rolling restart of pods.",
 	Long: "Restarts all pods of a certain type (web|celeryd|etc).\n" +
-		"restart <instance> <deployment> e.g ridectl restart summontest-dev web",
+		"For summon instances: restart <tenant>-<env> <type>                 -- e.g. ridectl restart summontest-dev web\n" +
+		"For microservices: restart svc-<region>-<env>-<microservice> <type>  -- e.g. ridectl svc-us-master-webhook-sms web",
 	Args: func(_ *cobra.Command, args []string) error {
 		if len(args) == 0 {
 			return fmt.Errorf("Cluster name argument is required.")
@@ -73,28 +73,44 @@ var rollingRestartCmd = &cobra.Command{
 			return errors.Wrapf(err, "not a valid target %s", args[0])
 		}
 
+		var deploymentName string
+		podLabels := make(map[string]string)
+
+		if target.Type == "summon" {
+			podLabels["app.kubernetes.io/instance"] = fmt.Sprintf("%s-web", args[0])
+			deploymentName = fmt.Sprintf("%s-%s", args[0], args[1])
+		} else if target.Type == "microservice" {
+			podLabels["app"] = fmt.Sprintf("%s-svc-%s", target.Env, target.Namespace)
+			podLabels["environment"] = target.Env
+			podLabels["region"] = target.Region
+			podLabels["role"] = args[1]
+			fmt.Printf("\n%+v\n", target)
+			deploymentName = fmt.Sprintf("%s-svc-%s-%s", target.Env, target.Namespace, args[1])
+		}
+
 		kubeObj := kubernetes.GetAppropriateObjectWithContext(*kubeconfig, args[0], target)
 		if reflect.DeepEqual(kubeObj, kubernetes.Kubeobject{}) {
 			return errors.Wrapf(err, "no instance found %s", args[0])
 		}
 
-		pods := &corev1.PodList{}
-		requirement, err := labels.NewRequirement("app.kubernetes.io/instance", selection.Equals, []string{fmt.Sprintf("%s-%s", args[0], args[1])})
-		if err != nil {
-			return errors.Wrap(err, "error creating label requirement")
+		labelSet := labels.Set{}
+		for k, v := range podLabels {
+			labelSet[k] = v
 		}
 
 		listOptions := &client.ListOptions{
 			Namespace:     target.Namespace,
-			LabelSelector: labels.SelectorFromSet(labels.Set{}).Add(*requirement),
+			LabelSelector: labels.SelectorFromSet(labelSet),
 		}
 
+		pods := &corev1.PodList{}
 		err = kubeObj.Client.List(context.TODO(), pods, listOptions)
 		if err != nil {
 			return errors.Wrap(err, "error listing pods")
 		}
 
 		deployment := &appsv1.Deployment{}
+
 		var restartSuccess bool
 		for !restartSuccess {
 			for _, pod := range pods.Items {
@@ -110,7 +126,7 @@ var rollingRestartCmd = &cobra.Command{
 
 				// waiting for the deployment to be ready
 				err = wait.Poll(time.Second*5, time.Minute*3, func() (bool, error) {
-					_ = kubeObj.Client.Get(context.TODO(), types.NamespacedName{Name: fmt.Sprintf("%s-%s", args[0], args[1]), Namespace: target.Namespace}, deployment)
+					_ = kubeObj.Client.Get(context.TODO(), types.NamespacedName{Name: deploymentName, Namespace: target.Namespace}, deployment)
 
 					if deployment.Status.ReadyReplicas == deployment.Status.Replicas {
 						return true, nil
