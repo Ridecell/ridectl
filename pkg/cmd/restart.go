@@ -17,15 +17,24 @@ limitations under the License.
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"reflect"
+	"time"
 
-	"github.com/Ridecell/ridectl/pkg/exec"
 	"github.com/Ridecell/ridectl/pkg/kubernetes"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/selection"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/wait"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	utils "github.com/Ridecell/ridectl/pkg/utils"
+	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func init() {
@@ -54,6 +63,7 @@ var rollingRestartCmd = &cobra.Command{
 		if !binaryExists {
 			return fmt.Errorf("kubectl is not installed. Follow the instructions here: https://kubernetes.io/docs/tasks/tools/#kubectl to install it")
 		}
+		fmt.Printf("\nWarning: This might cause downtime for your services\n")
 		return nil
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -68,7 +78,52 @@ var rollingRestartCmd = &cobra.Command{
 			return errors.Wrapf(err, "no instance found %s", args[0])
 		}
 
-		kubectlArgs := []string{"kubectl", "rollout", "restart", "deployment", "-n", target.Namespace, fmt.Sprintf("%s-%s", target.Name, args[1]), "--context", kubeObj.Context.Cluster}
-		return exec.Exec(kubectlArgs)
+		pods := &corev1.PodList{}
+		requirement, err := labels.NewRequirement("app.kubernetes.io/instance", selection.Equals, []string{fmt.Sprintf("%s-%s", args[0], args[1])})
+		if err != nil {
+			return errors.Wrap(err, "error creating label requirement")
+		}
+
+		listOptions := &client.ListOptions{
+			Namespace:     target.Namespace,
+			LabelSelector: labels.SelectorFromSet(labels.Set{}).Add(*requirement),
+		}
+
+		err = kubeObj.Client.List(context.TODO(), pods, listOptions)
+		if err != nil {
+			return errors.Wrap(err, "error listing pods")
+		}
+
+		deployment := &appsv1.Deployment{}
+		var restartSuccess bool
+		for !restartSuccess {
+			for _, pod := range pods.Items {
+				err = kubeObj.Client.Delete(context.TODO(), &corev1.Pod{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      pod.Name,
+						Namespace: target.Namespace,
+					},
+				})
+				if err != nil {
+					return errors.Wrap(err, "error deleting pod")
+				}
+
+				// waiting for the deployment to be ready
+				err = wait.Poll(time.Second*5, time.Minute*3, func() (bool, error) {
+					_ = kubeObj.Client.Get(context.TODO(), types.NamespacedName{Name: fmt.Sprintf("%s-%s", args[0], args[1]), Namespace: target.Namespace}, deployment)
+
+					if deployment.Status.ReadyReplicas == deployment.Status.Replicas {
+						return true, nil
+					}
+					return false, nil
+				})
+				if err != nil {
+					return errors.Wrap(err, "error waiting for deployment to re ready")
+				}
+			}
+			restartSuccess = true
+		}
+		fmt.Printf("\nSuccessfully restarted pods for %s : %s\n", args[0], args[1])
+		return nil
 	},
 }
