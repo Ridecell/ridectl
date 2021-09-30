@@ -9,7 +9,8 @@ Some key features are:
 3. shelling into the instance's database (`dbshell`)
 4. Obtaining dispatcher/support/reports account password (`password`)
 5. Restart migrations for a summon instance(`restart-migrations`)
-6. Create new summon-platform instance yml (`new`)
+6. Restart all pods of a certain type (web|celeryd|etc) (`restart`). Note: Only summon-platform is supported as of now
+7. Create new summon-platform instance yml (`new`)
 
 For a full list of functionalities, run `ridectl --help`
 
