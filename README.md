@@ -4,7 +4,7 @@
 `ridectl` is Ridecell's internal tool that enables employees access and ways to interact with SummonPlatform/Microservice instances. Employee's permissions are restricted to certain environments or features, depending on their role.
 
 Some key features are:
-1. Shelling into an instance (`shell`)
+1. Shelling into an instance (`shell`)\
     a. Summon-platform
     ```
     ridectl shell summontest-dev
@@ -13,7 +13,7 @@ Some key features are:
     ```
     ridectl shell svc-us-master-webhook-sms
     ```
-2. Shelling into an instance under the python environment (`pyshell`)
+2. Shelling into an instance under the python environment (`pyshell`)\
     a. Summon-platform
     ```
     ridectl pyshell summontest-dev
@@ -22,7 +22,7 @@ Some key features are:
     ```
     ridectl pyshell svc-us-master-webhook-sms
     ```
-3. Shelling into the instance's database (`dbshell`)
+3. Shelling into the instance's database (`dbshell`)\
     a. Summon-platform
     ```
     ridectl dbshell summontest-dev
@@ -31,12 +31,12 @@ Some key features are:
     ```
     ridectl dbshell svc-us-master-webhook-sms
     ```
-4. Obtaining dispatcher account password (`password`)
+4. Obtaining dispatcher account password (`password`)\
     a. Summon-platform
     ```
     ridectl password summontest-dev
     ```
-5. Restart migrations for a summon instance(`restart-migrations`)
+5. Restart migrations for a summon instance(`restart-migrations`)\
     a. Summon-platform
     ```
     ridectl restart-migrations summontest-dev
