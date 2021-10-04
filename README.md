@@ -1,16 +1,55 @@
 # Ridectl
 
 ## Overview
-`ridectl` is Ridecell's internal tool that enables employees access and ways to interact with SummonPlatform instances. Employee's permissions are restricted to certain environments or features, depending on their role.
+`ridectl` is Ridecell's internal tool that enables employees access and ways to interact with SummonPlatform/Microservice instances. Employee's permissions are restricted to certain environments or features, depending on their role.
 
 Some key features are:
-1. shelling into an instance (`shell`)
-2. shelling into an instance under the python environment (`pyshell`)
-3. shelling into the instance's database (`dbshell`)
-4. Obtaining dispatcher/support/reports account password (`password`)
-5. Restart migrations for a summon instance(`restart-migrations`)
-6. Create new summon-platform instance yml (`new`)
-
+1. Shelling into an instance (`shell`)\
+    a. Summon-platform
+    ```
+    ridectl shell summontest-dev
+    ```
+    b. Microservice
+    ```
+    ridectl shell svc-us-master-webhook-sms
+    ```
+2. Shelling into an instance under the python environment (`pyshell`)\
+    a. Summon-platform
+    ```
+    ridectl pyshell summontest-dev
+    ```
+    b. Microservice
+    ```
+    ridectl pyshell svc-us-master-webhook-sms
+    ```
+3. Shelling into the instance's database (`dbshell`)\
+    a. Summon-platform
+    ```
+    ridectl dbshell summontest-dev
+    ```
+    b. Microservice
+    ```
+    ridectl dbshell svc-us-master-webhook-sms
+    ```
+4. Obtaining dispatcher account password (`password`)\
+    a. Summon-platform
+    ```
+    ridectl password summontest-dev
+    ```
+5. Restart migrations for a summon instance(`restart-migrations`)\
+    a. Summon-platform
+    ```
+    ridectl restart-migrations summontest-dev
+    ```
+6. Restart all pods of a certain type (web|celeryd|etc) (`restart`)\
+    a. Summon-platform
+    ```
+    ridectl restart summontest-dev web
+    ```
+    b. Microservice
+    ```
+    ridectl restart svc-us-master-webhook-sms web
+    ```
 For a full list of functionalities, run `ridectl --help`
 
 ## Installing `ridectl`
