@@ -12,9 +12,13 @@ Some key features are:
 6. Restart all pods of a certain type (web|celeryd|etc) (`restart`)
 e.g.
     a. Summon-platform
-    `ridectl restart summontest-dev web`
+    ```
+        ridectl restart summontest-dev web
+    ```
     b. Microservice
-    `ridectl restart svc-us-master-webhook-sms web`
+    ```
+        ridectl restart svc-us-master-webhook-sms web
+    ```
 7. Create new summon-platform instance yml (`new`)
 
 For a full list of functionalities, run `ridectl --help`
