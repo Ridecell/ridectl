@@ -40,6 +40,13 @@ func init() {
 	rootCmd.AddCommand(rollingRestartCmd)
 }
 
+/*
+We are using summon-operator to create deployments of summon-platform. So when we try to do rollout restart,
+it does not behave as expected because summon-operator is constantly watching the deployments and reconciles if anything changes.
+So when we do rollout restart k8s starts a new pod but it gets terminated immediately because summon-operator restarts.
+This becomes very tricky to handle in operator-itself. Hence we have implemented another way to do this
+Ref: https://ridecell.atlassian.net/browse/DEVOPS-2925
+*/
 var rollingRestartCmd = &cobra.Command{
 	Use:   "restart [flags] <cluster_name> <pod_type>",
 	Short: "Performs a rolling restart of pods.",
