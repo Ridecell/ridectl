@@ -84,7 +84,6 @@ var rollingRestartCmd = &cobra.Command{
 			podLabels["environment"] = target.Env
 			podLabels["region"] = target.Region
 			podLabels["role"] = args[1]
-			fmt.Printf("\n%+v\n", target)
 			deploymentName = fmt.Sprintf("%s-svc-%s-%s", target.Env, target.Namespace, args[1])
 		}
 
