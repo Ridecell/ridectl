@@ -4,7 +4,7 @@ go 1.16
 
 require (
 	github.com/Ridecell/ridecell-controllers v0.0.0-20210820121207-73cd3f5b12bc
-	github.com/Ridecell/summon-operator v0.0.0-20210825111357-e01b1db74502
+	github.com/Ridecell/summon-operator v0.0.0-20211012092031-2bcd344b01b2
 	github.com/apoorvam/goterminal v0.0.0-20180523175556-614d345c47e5
 	github.com/aws/aws-sdk-go v1.40.29
 	github.com/heroku/docker-registry-client v0.0.0-20190909225348-afc9e1acc3d5
