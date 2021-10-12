@@ -16,8 +16,7 @@ package utils
 import (
 	"flag"
 	"log"
-	"net"
-	"os"
+	"net/http"
 	"os/exec"
 	"path/filepath"
 
@@ -40,14 +39,9 @@ func CheckBinary(binary string) bool {
 }
 
 func CheckVPN() bool {
-	rcVPNIP := os.Getenv("RC_VPN_IP")
-	conn, err := net.Dial("udp", "8.8.8.8:80")
+	resp, err := http.Get("https://ridectl.s3.us-west-2.amazonaws.com/machinload01.png")
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalln(err)
 	}
-	defer conn.Close()
-
-	localAddr := conn.LocalAddr().(*net.UDPAddr)
-	return localAddr.IP.String() == rcVPNIP
-
+	return resp.StatusCode == 200
 }
