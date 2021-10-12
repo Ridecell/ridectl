@@ -17,14 +17,19 @@ limitations under the License.
 package cmd
 
 import (
+	"archive/zip"
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
 	"path/filepath"
+	"runtime"
 
+	"github.com/inconshreveable/go-update"
 	"github.com/mitchellh/go-homedir"
 	"github.com/spf13/cobra"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -59,6 +64,11 @@ func init() {
 	// check version
 	if !isLatestVersion() {
 		fmt.Println("ridectl version is not latest")
+
+		selfUpdate()
+		// whichCmd := []string{"which", "ridectl"}
+		// exec.Exec(whichCmd)
+
 	}
 	// Register all types from summon-operator and ridecell-controllers secrets
 	_ = summonv1beta2.AddToScheme(scheme.Scheme)
@@ -74,6 +84,7 @@ func Execute() {
 }
 
 func isLatestVersion() bool {
+	version = "0.2.4"
 	resp, err := http.Get("https://api.github.com/repos/Ridecell/ridectl/releases/latest")
 	if err != nil {
 		log.Fatalln(err)
@@ -88,4 +99,65 @@ func isLatestVersion() bool {
 	}
 
 	return version == data1.(map[string]interface{})["tag_name"].(string)
+}
+
+// func getCommand(pkg string) string {
+// 	_, cmd := filepath.Split(pkg)
+// 	if cmd == "" {
+// 		// When pkg path is ending with path separator, we need to split it out.
+// 		// i.e. github.com/rhysd/foo/cmd/bar/
+// 		_, cmd = filepath.Split(cmd)
+// 	}
+// 	return cmd
+// }
+
+func selfUpdate() {
+	var url string
+	switch runtime.GOOS {
+
+	case "darwin":
+		url = "https://github.com/Ridecell/ridectl/releases/latest/download/ridectl_macos.zip"
+	case "linux":
+		url = "https://github.com/Ridecell/ridectl/releases/latest/download/ridectl_linux.zip"
+	}
+
+	res, err := http.Get(url)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	defer res.Body.Close()
+
+	buf, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		fmt.Printf("Failed to create buffer for zip file: %s", err)
+	}
+
+	r, err := getBinary(buf)
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	// cmd := getCommand(flag.Arg(0))
+	// fmt.Println(cmd)
+	// TODO: here we are assuming that the binary is named ridectlv2 (because we are still using old and new ridectl).
+	// Once we deprecate old ridectl, remove this and do it dynamically using getCommand()
+	cmdPath := filepath.Join("/usr/local", "bin", "ridectlv2")
+
+	err = update.Apply(r, update.Options{TargetPath: cmdPath})
+	if err != nil {
+		fmt.Printf("Failed to update binary: %s", err)
+	}
+
+}
+
+func getBinary(src []byte) (io.Reader, error) {
+	r := bytes.NewReader(src)
+	z, err := zip.NewReader(r, r.Size())
+	if err != nil {
+		return nil, fmt.Errorf("failed to uncompress zip file: %s", err)
+	}
+	for _, file := range z.File {
+		return file.Open()
+	}
+	return nil, fmt.Errorf("failed to find binary in zip file")
 }
