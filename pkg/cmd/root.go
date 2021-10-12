@@ -84,7 +84,6 @@ func Execute() {
 }
 
 func isLatestVersion() bool {
-	version = "0.2.4"
 	resp, err := http.Get("https://api.github.com/repos/Ridecell/ridectl/releases/latest")
 	if err != nil {
 		log.Fatalln(err)
@@ -92,13 +91,13 @@ func isLatestVersion() bool {
 	body, _ := io.ReadAll(resp.Body)
 	resp.Body.Close()
 
-	var data1 interface{}
-	err = json.Unmarshal(body, &data1)
+	var data interface{}
+	err = json.Unmarshal(body, &data)
 	if err != nil {
 		panic(err.Error())
 	}
 
-	return version == data1.(map[string]interface{})["tag_name"].(string)
+	return version == data.(map[string]interface{})["tag_name"].(string)
 }
 
 // func getCommand(pkg string) string {
