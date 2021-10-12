@@ -100,16 +100,6 @@ func isLatestVersion() bool {
 	return version == data.(map[string]interface{})["tag_name"].(string)
 }
 
-// func getCommand(pkg string) string {
-// 	_, cmd := filepath.Split(pkg)
-// 	if cmd == "" {
-// 		// When pkg path is ending with path separator, we need to split it out.
-// 		// i.e. github.com/rhysd/foo/cmd/bar/
-// 		_, cmd = filepath.Split(cmd)
-// 	}
-// 	return cmd
-// }
-
 func selfUpdate() {
 	var url string
 	switch runtime.GOOS {
@@ -136,12 +126,12 @@ func selfUpdate() {
 		log.Fatalln(err)
 	}
 
-	// cmd := getCommand(flag.Arg(0))
-	// fmt.Println(cmd)
-	// TODO: here we are assuming that the binary is named ridectlv2 (because we are still using old and new ridectl).
-	// Once we deprecate old ridectl, remove this and do it dynamically using getCommand()
-	cmdPath := filepath.Join("/usr/local", "bin", "ridectlv2")
+	executable, err := os.Executable()
+	if err != nil {
+		panic(err)
+	}
 
+	cmdPath := filepath.Join(executable)
 	err = update.Apply(r, update.Options{TargetPath: cmdPath})
 	if err != nil {
 		fmt.Printf("Failed to update binary: %s", err)
