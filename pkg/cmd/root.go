@@ -17,7 +17,11 @@ limitations under the License.
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
+	"io"
+	"log"
+	"net/http"
 	"os"
 	"path/filepath"
 
@@ -52,6 +56,10 @@ func init() {
 	}
 	rootCmd.PersistentFlags().StringVar(&kubeconfigFlag, "kubeconfig", filepath.Join(home, ".kube", "config"), "(optional) absolute path to the kubeconfig file")
 	rootCmd.Flags().BoolVar(&versionFlag, "version", true, "--version")
+	// check version
+	if !isLatestVersion() {
+		fmt.Println("ridectl version is not latest")
+	}
 	// Register all types from summon-operator and ridecell-controllers secrets
 	_ = summonv1beta2.AddToScheme(scheme.Scheme)
 	_ = secretsv1beta2.AddToScheme(scheme.Scheme)
@@ -63,4 +71,21 @@ func Execute() {
 		fmt.Println(err)
 		os.Exit(1)
 	}
+}
+
+func isLatestVersion() bool {
+	resp, err := http.Get("https://api.github.com/repos/Ridecell/ridectl/releases/latest")
+	if err != nil {
+		log.Fatalln(err)
+	}
+	body, _ := io.ReadAll(resp.Body)
+	resp.Body.Close()
+
+	var data1 interface{}
+	err = json.Unmarshal(body, &data1)
+	if err != nil {
+		panic(err.Error())
+	}
+
+	return version == data1.(map[string]interface{})["tag_name"].(string)
 }
