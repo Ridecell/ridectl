@@ -66,6 +66,8 @@ var rollingRestartCmd = &cobra.Command{
 		return nil
 	},
 	PreRunE: func(cmd *cobra.Command, args []string) error {
+		utils.CheckVPN()
+
 		binaryExists := utils.CheckBinary("kubectl")
 		if !binaryExists {
 			return fmt.Errorf("kubectl is not installed. Follow the instructions here: https://kubernetes.io/docs/tasks/tools/#kubectl to install it")

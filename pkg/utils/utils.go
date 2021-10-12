@@ -15,6 +15,9 @@ package utils
 
 import (
 	"flag"
+	"fmt"
+	"net/http"
+	"os"
 	"os/exec"
 	"path/filepath"
 
@@ -34,4 +37,15 @@ func GetKubeconfig() *string {
 func CheckBinary(binary string) bool {
 	_, err := exec.LookPath(binary)
 	return err == nil
+}
+
+func CheckVPN() {
+	resp, err := http.Get("https://ridectl.s3.us-west-2.amazonaws.com/machinload01.png")
+	if err != nil {
+		fmt.Println("\n", err)
+	}
+	if resp.StatusCode != 200 {
+		fmt.Println("VPN is not connected")
+		os.Exit(1)
+	}
 }
