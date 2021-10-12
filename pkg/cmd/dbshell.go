@@ -49,6 +49,10 @@ var dbShellCmd = &cobra.Command{
 		return nil
 	},
 	PreRunE: func(cmd *cobra.Command, args []string) error {
+		if !utils.CheckVPN() {
+			return errors.New("VPN is not connected")
+		}
+
 		binaryExists := utils.CheckBinary("psql")
 		if !binaryExists {
 			return errors.New("psql is not installed. Follow the instructions here: https://www.compose.com/articles/postgresql-tips-installing-the-postgresql-client/ to install it")

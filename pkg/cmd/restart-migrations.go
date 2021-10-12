@@ -38,10 +38,16 @@ var restartMigrationsCmd = &cobra.Command{
 		"restart-migrations <instance> e.g ridectl restart-migrations summontest-dev",
 	Args: func(_ *cobra.Command, args []string) error {
 		if len(args) == 0 {
-			return fmt.Errorf("Cluster name argument is required")
+			return fmt.Errorf("cluster name argument is required")
 		}
 		if len(args) > 1 {
-			return fmt.Errorf("Too many arguments")
+			return fmt.Errorf("too many arguments")
+		}
+		return nil
+	},
+	PreRunE: func(cmd *cobra.Command, args []string) error {
+		if !utils.CheckVPN() {
+			return errors.New("VPN is not connected")
 		}
 		return nil
 	},
