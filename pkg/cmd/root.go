@@ -61,14 +61,9 @@ func init() {
 	}
 	rootCmd.PersistentFlags().StringVar(&kubeconfigFlag, "kubeconfig", filepath.Join(home, ".kube", "config"), "(optional) absolute path to the kubeconfig file")
 	rootCmd.Flags().BoolVar(&versionFlag, "version", true, "--version")
-	// check version
+	// check version and update if not latest
 	if !isLatestVersion() {
-		fmt.Println("ridectl version is not latest")
-
 		selfUpdate()
-		// whichCmd := []string{"which", "ridectl"}
-		// exec.Exec(whichCmd)
-
 	}
 	// Register all types from summon-operator and ridecell-controllers secrets
 	_ = summonv1beta2.AddToScheme(scheme.Scheme)
