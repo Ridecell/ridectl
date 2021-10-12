@@ -15,8 +15,9 @@ package utils
 
 import (
 	"flag"
-	"log"
+	"fmt"
 	"net/http"
+	"os"
 	"os/exec"
 	"path/filepath"
 
@@ -38,10 +39,13 @@ func CheckBinary(binary string) bool {
 	return err == nil
 }
 
-func CheckVPN() bool {
+func CheckVPN() {
 	resp, err := http.Get("https://ridectl.s3.us-west-2.amazonaws.com/machinload01.png")
 	if err != nil {
-		log.Fatalln(err)
+		fmt.Println("\n", err)
 	}
-	return resp.StatusCode == 200
+	if resp.StatusCode != 200 {
+		fmt.Println("VPN is not connected")
+		os.Exit(1)
+	}
 }

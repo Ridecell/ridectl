@@ -52,9 +52,7 @@ var pyShellCmd = &cobra.Command{
 		return nil
 	},
 	PreRunE: func(cmd *cobra.Command, args []string) error {
-		if !utils.CheckVPN() {
-			return errors.New("VPN is not connected")
-		}
+		utils.CheckVPN()
 
 		binaryExists := utils.CheckBinary("kubectl")
 		if !binaryExists {

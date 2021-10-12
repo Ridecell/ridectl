@@ -48,9 +48,7 @@ var passwordCmd = &cobra.Command{
 		return nil
 	},
 	PreRunE: func(cmd *cobra.Command, args []string) error {
-		if !utils.CheckVPN() {
-			return errors.New("VPN is not connected")
-		}
+		utils.CheckVPN()
 		return nil
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
