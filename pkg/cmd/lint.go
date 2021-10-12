@@ -17,6 +17,7 @@ limitations under the License.
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
@@ -227,34 +228,37 @@ func lintFile(filename string, imageTags []string) error {
 	}
 	foundNames[summonObj.Name] = filename
 
-	// Make sure that either autodeploy or version is set
-	if summonObj.Spec.AutoDeploy == "" && summonObj.Spec.Version == "" {
-		return fmt.Errorf("%s: Neither Autodeploy or Version are set.", filename)
+	// Make sure that version is set
+	if summonObj.Spec.Version == "" {
+		return fmt.Errorf("%s: Version is not set.", filename)
 	}
 
-	// Make sure that autodeploy and version are not both set
-	if summonObj.Spec.AutoDeploy != "" && summonObj.Spec.Version != "" {
-		return fmt.Errorf("%s: Autodeploy and Version both set, only one should be set at a time.", filename)
-	}
 	// Make sure that AWS_REGION is set
-	if len(summonObj.Spec.Config) == 0 || summonObj.Spec.Config["AWS_REGION"] == "" {
+	if len(summonObj.Spec.Config.Raw) != 0 {
+		config := map[string]interface{}{}
+		err := json.Unmarshal(summonObj.Spec.Config.Raw, &config)
+		if err != nil {
+			return fmt.Errorf("%s: unable to deserialize Spec.Config", filename)
+		}
+		if _, ok := config["AWS_REGION"]; !ok {
+			return fmt.Errorf("%s: AWS_REGION is required", filename)
+		}
+	} else {
 		return fmt.Errorf("%s: AWS_REGION is required", filename)
 	}
 
 	// Check that the docker image exists
-	if summonObj.Spec.AutoDeploy == "" {
-		if imageTags != nil {
-			var foundImage bool
-			for _, imageTag := range imageTags {
-				if summonObj.Spec.Version == imageTag {
-					foundImage = true
-					break
-				}
+	if imageTags != nil {
+		var foundImage bool
+		for _, imageTag := range imageTags {
+			if summonObj.Spec.Version == imageTag {
+				foundImage = true
+				break
 			}
+		}
 
-			if !foundImage {
-				return fmt.Errorf(`%s: version "%s" does not exist`, filename, summonObj.Spec.Version)
-			}
+		if !foundImage {
+			return fmt.Errorf(`%s: version "%s" does not exist`, filename, summonObj.Spec.Version)
 		}
 	}
 
