@@ -65,8 +65,7 @@ var rollingRestartCmd = &cobra.Command{
 			os.Exit(1)
 		}
 		if len(args) > 2 {
-			pterm.Error.Println("too many arguments")
-			os.Exit(1)
+			return fmt.Errorf("too many arguments")
 		}
 		return nil
 	},
