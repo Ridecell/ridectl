@@ -91,20 +91,30 @@ func isLatestVersion() bool {
 	if err != nil {
 		panic(err.Error())
 	}
+	if version != data.(map[string]interface{})["tag_name"].(string) {
+		fmt.Printf("You are running older version of ridectl %s. Your ridectl will be automatically upgraded to newer version %s\n",
+			version, data.(map[string]interface{})["tag_name"].(string))
+		return false
+	}
 
-	return version == data.(map[string]interface{})["tag_name"].(string)
+	return true
 }
 
 func selfUpdate() {
 	var url string
-	switch runtime.GOOS {
 
+	switch runtime.GOOS {
 	case "darwin":
 		url = "https://github.com/Ridecell/ridectl/releases/latest/download/ridectl_macos.zip"
+		fmt.Printf("You are running ridectl on %s\n", runtime.GOOS)
+
 	case "linux":
 		url = "https://github.com/Ridecell/ridectl/releases/latest/download/ridectl_linux.zip"
+		fmt.Printf("You are running ridectl on %s\n", runtime.GOOS)
+
 	}
 
+	fmt.Printf("Downloading latest ridectl \n")
 	res, err := http.Get(url)
 	if err != nil {
 		log.Fatalln(err)
@@ -113,7 +123,7 @@ func selfUpdate() {
 
 	buf, err := ioutil.ReadAll(res.Body)
 	if err != nil {
-		fmt.Printf("Failed to create buffer for zip file: %s", err)
+		fmt.Printf("Failed to create buffer for zip file: %s\n", err)
 	}
 
 	r, err := getBinary(buf)
@@ -127,9 +137,11 @@ func selfUpdate() {
 	}
 
 	cmdPath := filepath.Join(executable)
+
+	fmt.Printf("Updating to latest version\n")
 	err = update.Apply(r, update.Options{TargetPath: cmdPath})
 	if err != nil {
-		fmt.Printf("Failed to update binary: %s", err)
+		fmt.Printf("Failed to update binary: %s\n", err)
 	}
 
 }
