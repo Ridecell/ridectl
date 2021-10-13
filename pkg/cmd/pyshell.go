@@ -19,6 +19,7 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"os"
 	"reflect"
 
 	"github.com/Ridecell/ridectl/pkg/exec"
@@ -57,7 +58,8 @@ var pyShellCmd = &cobra.Command{
 
 		binaryExists := utils.CheckBinary("kubectl")
 		if !binaryExists {
-			return fmt.Errorf("kubectl is not installed. Follow the instructions here: https://kubernetes.io/docs/tasks/tools/#kubectl to install it")
+			pterm.Error.Printf("kubectl is not installed. Follow the instructions here: https://kubernetes.io/docs/tasks/tools/#kubectl to install it\n")
+			os.Exit(1)
 		}
 		return nil
 	},

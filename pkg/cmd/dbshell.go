@@ -21,6 +21,7 @@ import (
 
 	"github.com/Ridecell/ridectl/pkg/exec"
 	"github.com/pkg/errors"
+	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 
 	kubernetes "github.com/Ridecell/ridectl/pkg/kubernetes"
@@ -49,11 +50,12 @@ var dbShellCmd = &cobra.Command{
 		return nil
 	},
 	PreRunE: func(cmd *cobra.Command, args []string) error {
-		utils.CheckVPN()
 
+		utils.CheckVPN()
 		binaryExists := utils.CheckBinary("psql")
 		if !binaryExists {
-			return errors.New("psql is not installed. Follow the instructions here: https://www.compose.com/articles/postgresql-tips-installing-the-postgresql-client/ to install it")
+			pterm.Error.Printf("psql is not installed. Follow the instructions here: https://www.compose.com/articles/postgresql-tips-installing-the-postgresql-client/ to install it\n")
+			os.Exit(1)
 		}
 		return nil
 	},

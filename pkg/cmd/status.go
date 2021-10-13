@@ -90,7 +90,8 @@ var statusCmd = &cobra.Command{
 
 		binaryExists := utils.CheckBinary("kubectl")
 		if !binaryExists {
-			return fmt.Errorf("kubectl is not installed. Follow the instructions here: https://kubernetes.io/docs/tasks/tools/#kubectl to install it")
+			pterm.Error.Printf("kubectl is not installed. Follow the instructions here: https://kubernetes.io/docs/tasks/tools/#kubectl to install it\n")
+			os.Exit(1)
 		}
 		return nil
 	},
