@@ -15,11 +15,12 @@ package utils
 
 import (
 	"flag"
-	"fmt"
 	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
+
+	"github.com/pterm/pterm"
 
 	"k8s.io/client-go/util/homedir"
 )
@@ -42,10 +43,10 @@ func CheckBinary(binary string) bool {
 func CheckVPN() {
 	resp, err := http.Get("https://ridectl.s3.us-west-2.amazonaws.com/machinload01.png")
 	if err != nil {
-		fmt.Println("\n", err)
+		pterm.Error.Println("\n", err)
 	}
 	if resp.StatusCode != 200 {
-		fmt.Println("VPN is not connected")
+		pterm.Error.Println("VPN is not connected")
 		os.Exit(1)
 	}
 }
