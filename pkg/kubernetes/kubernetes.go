@@ -116,7 +116,8 @@ func fetchContextForObject(channel chan Kubeobject, cluster *api.Context, crclie
 		pterm.Info.Printf(" Checking instance in %s\n", cluster.Cluster)
 		err := crclient.Get(context.Background(), types.NamespacedName{Name: objectName, Namespace: subject.Namespace}, deploymentObj)
 		if err != nil {
-			pterm.Warning.Printf("\nError getting deployment object in %s : %s\n", cluster.Cluster, err.Error())
+			pterm.Warning.Printf("\nError getting deployment object in %s\n", cluster.Cluster)
+			pterm.Warning.Printf("%s\n", err.Error())
 			return
 		}
 
