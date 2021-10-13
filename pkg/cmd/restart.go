@@ -57,10 +57,12 @@ var rollingRestartCmd = &cobra.Command{
 		"For microservices: restart svc-<region>-<env>-<microservice> <type>  -- e.g. ridectl svc-us-master-webhook-sms web",
 	Args: func(_ *cobra.Command, args []string) error {
 		if len(args) == 0 {
-			return fmt.Errorf("Cluster name argument is required.")
+			pterm.Error.Printf("Cluster name argument is required.")
+			os.Exit(1)
 		}
 		if len(args) == 1 {
-			return fmt.Errorf("Deployment type argument is required.")
+			pterm.Error.Printf("Deployment type argument is required.")
+			os.Exit(1)
 		}
 		if len(args) > 2 {
 			pterm.Error.Println("too many arguments")

@@ -15,7 +15,6 @@ package cmd
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"reflect"
 
@@ -76,7 +75,8 @@ var dbShellCmd = &cobra.Command{
 		secretObj := &corev1.Secret{}
 		err = kubeObj.Client.Get(context.Background(), types.NamespacedName{Name: target.Name + ".postgres-user-password", Namespace: target.Namespace}, secretObj)
 		if err != nil {
-			return fmt.Errorf("instance not found in %s", kubeObj.Context.Cluster)
+			pterm.Error.Printf("instance not found in %s", kubeObj.Context.Cluster)
+			os.Exit(1)
 		}
 
 		psqlCmd := []string{"psql", "-h", string(secretObj.Data["host"]), "-U", string(secretObj.Data["username"]), string(secretObj.Data["dbname"])}

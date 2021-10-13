@@ -42,6 +42,7 @@ var rootCmd = &cobra.Command{
 		if versionFlag {
 			fmt.Printf("ridectl version %s\n", version)
 		} else if len(args) == 0 {
+
 			return fmt.Errorf("unknown command")
 		}
 		return nil

@@ -20,8 +20,8 @@ import (
 	"bytes"
 	"encoding/base64"
 	"encoding/gob"
-	"fmt"
 	"io/ioutil"
+	"os"
 	"strings"
 
 	"github.com/Ridecell/ridectl/pkg/cmd/edit"
@@ -60,7 +60,8 @@ var decryptCmd = &cobra.Command{
 	Long:  `decrypt files that has secret values`,
 	Args: func(_ *cobra.Command, args []string) error {
 		if len(args) == 0 {
-			return fmt.Errorf("Filename(s) are required")
+			pterm.Error.Printf("Filename(s) are required")
+			os.Exit(1)
 		}
 		return nil
 	},

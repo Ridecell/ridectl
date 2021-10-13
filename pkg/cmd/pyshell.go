@@ -101,10 +101,12 @@ var pyShellCmd = &cobra.Command{
 		podList := &corev1.PodList{}
 		err = kubeObj.Client.List(context.Background(), podList, listOptions)
 		if err != nil {
-			return fmt.Errorf("instance not found in %s", kubeObj.Context.Cluster)
+			pterm.Error.Printf("instance not found in %s", kubeObj.Context.Cluster)
+			os.Exit(1)
 		}
 		if len(podList.Items) < 1 {
-			return fmt.Errorf("instance not found in %s", kubeObj.Context.Cluster)
+			pterm.Error.Printf("instance not found in %s", kubeObj.Context.Cluster)
+			os.Exit(1)
 		}
 
 		pod := podList.Items[0]

@@ -21,8 +21,8 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"encoding/gob"
-	"fmt"
 	"io/ioutil"
+	"os"
 
 	"github.com/Ridecell/ridectl/pkg/cmd/edit"
 	"github.com/aws/aws-sdk-go/aws"
@@ -60,7 +60,8 @@ var encryptCmd = &cobra.Command{
 	Long:  `encrypt files that has secret values`,
 	Args: func(_ *cobra.Command, args []string) error {
 		if len(args) == 0 {
-			return fmt.Errorf("Filename(s) are required")
+			pterm.Error.Printf("Filename(s) are required")
+			os.Exit(1)
 		}
 		return nil
 	},
