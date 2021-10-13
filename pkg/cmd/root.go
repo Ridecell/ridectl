@@ -41,8 +41,7 @@ var rootCmd = &cobra.Command{
 	RunE: func(_ *cobra.Command, args []string) error {
 		if versionFlag {
 			fmt.Printf("ridectl version %s\n", version)
-		}
-		if len(args) == 0 {
+		} else if len(args) == 0 {
 			return fmt.Errorf("unknown command")
 		}
 		return nil
