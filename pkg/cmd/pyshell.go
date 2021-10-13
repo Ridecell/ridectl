@@ -45,10 +45,12 @@ var pyShellCmd = &cobra.Command{
 		"For microservices: pyshell svc-<region>-<env>-<microservice>   -- e.g. ridectl pyshell svc-us-master-dispatch",
 	Args: func(_ *cobra.Command, args []string) error {
 		if len(args) == 0 {
-			return fmt.Errorf("cluster name argument is required")
+			pterm.Error.Println("cluster name argument is required")
+			os.Exit(1)
 		}
 		if len(args) > 1 {
-			return fmt.Errorf("too many arguments")
+			pterm.Error.Println("too many arguments")
+			os.Exit(1)
 		}
 		return nil
 	},

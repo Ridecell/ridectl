@@ -63,7 +63,8 @@ var rollingRestartCmd = &cobra.Command{
 			return fmt.Errorf("Deployment type argument is required.")
 		}
 		if len(args) > 2 {
-			return fmt.Errorf("Too many arguments")
+			pterm.Error.Println("too many arguments")
+			os.Exit(1)
 		}
 		return nil
 	},
