@@ -36,8 +36,9 @@ var versionFlag bool
 var version string
 
 var rootCmd = &cobra.Command{
-	Use:   "ridectl",
-	Short: "Ridectl controls Summon instances in Kubernetes",
+	Use:           "ridectl",
+	Short:         "Ridectl controls Summon instances in Kubernetes",
+	SilenceErrors: true,
 	RunE: func(_ *cobra.Command, args []string) error {
 		if versionFlag {
 			fmt.Printf("ridectl version %s\n", version)
