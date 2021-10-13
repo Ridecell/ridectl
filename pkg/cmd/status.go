@@ -26,6 +26,7 @@ import (
 	"github.com/Ridecell/ridectl/pkg/utils"
 	"github.com/apoorvam/goterminal"
 	"github.com/pkg/errors"
+	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 
 	kubernetes "github.com/Ridecell/ridectl/pkg/kubernetes"
@@ -144,7 +145,7 @@ var statusCmd = &cobra.Command{
 				}
 			}
 		} else {
-			fmt.Printf(sData + "\n" + dData + "\n")
+			pterm.Success.Printf(sData + "\n" + dData + "\n")
 		}
 		return nil
 	},

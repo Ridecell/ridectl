@@ -29,6 +29,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/kms"
 	"github.com/pkg/errors"
+	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 	"golang.org/x/crypto/nacl/secretbox"
 )
@@ -68,9 +69,9 @@ var encryptCmd = &cobra.Command{
 		keyId := keyIdFlag
 		if len(keyId) == 0 {
 			keyId = "alias/microservices_dev"
-			fmt.Printf("---------------\nWARNING: Using %s KMS key by default, Please specify other key for Prod/UAT environment using -k option.\n         For example: ridectl encrypt -k alias/<key-alias> [file-names]\n---------------\n", keyId)
+			pterm.Info.Printf("---------------\nWARNING: Using %s KMS key by default, Please specify other key for Prod/UAT environment using -k option.\n         For example: ridectl encrypt -k alias/<key-alias> [file-names]\n---------------\n", keyId)
 		}
-		fmt.Println("Encrypting using key: " + keyId)
+		pterm.Info.Println("Encrypting using key: " + keyId)
 
 		// generate data key
 		sess := session.Must(session.NewSessionWithOptions(session.Options{
@@ -101,7 +102,7 @@ var encryptCmd = &cobra.Command{
 					if err == nil {
 						// If file content is not changed, then continue with next file
 						if string(fileContent) == string(decryptedFileContent) {
-							fmt.Println("No changes: " + filename + ".encrypted")
+							pterm.Info.Println("No changes: " + filename + ".encrypted")
 							continue
 						}
 					}
@@ -130,7 +131,7 @@ var encryptCmd = &cobra.Command{
 			if err != nil {
 				return errors.Wrapf(err, "error writing file: %s", filename)
 			}
-			fmt.Println("Encrypted : " + filename + ".encrypted")
+			pterm.Success.Println("Encrypted : " + filename + ".encrypted")
 		}
 
 		return nil

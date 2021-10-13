@@ -24,6 +24,7 @@ import (
 	"github.com/Ridecell/ridectl/pkg/kubernetes"
 	"github.com/Ridecell/ridectl/pkg/utils"
 	"github.com/pkg/errors"
+	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 	"k8s.io/apimachinery/pkg/types"
 
@@ -70,7 +71,7 @@ var passwordCmd = &cobra.Command{
 			return errors.Wrapf(err, "error getting secret  for instance %s", args[0])
 		}
 
-		fmt.Printf("Password for %s: %s\n", args[0], string(secret.Data["password"]))
+		pterm.Success.Printf("Password for %s: %s\n", args[0], string(secret.Data["password"]))
 		return nil
 	},
 }

@@ -21,6 +21,7 @@ import (
 	"github.com/Ridecell/ridectl/pkg/kubernetes"
 	"github.com/Ridecell/ridectl/pkg/utils"
 	"github.com/pkg/errors"
+	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 
 	batchv1 "k8s.io/api/batch/v1"
@@ -73,7 +74,7 @@ var restartMigrationsCmd = &cobra.Command{
 			return errors.Wrap(err, "failed to restart job")
 		}
 
-		fmt.Printf("Restarted migrations for %s\n", target.Name)
+		pterm.Success.Printf("Restarted migrations for %s\n", target.Name)
 		return nil
 	},
 }

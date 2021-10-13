@@ -23,6 +23,7 @@ import (
 
 	"github.com/Ridecell/ridectl/pkg/exec"
 	"github.com/pkg/errors"
+	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -102,10 +103,10 @@ var shellCmd = &cobra.Command{
 
 		pod := podList.Items[0]
 		// Spawn kubectl exec.
+		pterm.Info.Printf("Connecting to %s/%s\n", pod.Namespace, pod.Name)
 
-		fmt.Printf("Connecting to %s/%s\n", pod.Namespace, pod.Name)
 		// Warn people that this is a container.
-		fmt.Printf("Remember that this is a container and most changes will have no effect\n")
+		pterm.Warning.Printf("Remember that this is a container and most changes will have no effect\n")
 
 		kubectlArgs := []string{"kubectl", "exec", "-it", "-n", pod.Namespace, pod.Name, "--context", kubeObj.Context.Cluster, "--", "bash", "-l"}
 		return exec.Exec(kubectlArgs)

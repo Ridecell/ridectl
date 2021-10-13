@@ -24,6 +24,7 @@ import (
 
 	"github.com/Ridecell/ridectl/pkg/kubernetes"
 	"github.com/pkg/errors"
+	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
@@ -147,7 +148,7 @@ var rollingRestartCmd = &cobra.Command{
 			}
 			restartSuccess = true
 		}
-		fmt.Printf("\nSuccessfully restarted pods for %s : %s\n", args[0], args[1])
+		pterm.Success.Printf("Successfully restarted pods for %s : %s\n", args[0], args[1])
 		return nil
 	},
 }
