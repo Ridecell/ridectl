@@ -191,5 +191,5 @@ func ParseSubject(instanceName string) (Subject, error) {
 		return subject, nil
 	}
 	// Nothing matched, return empty with error
-	return subject, fmt.Errorf("could not parse out information from %s", instanceName)
+	return subject, fmt.Errorf("could not parse out information from %s.", instanceName)
 }
