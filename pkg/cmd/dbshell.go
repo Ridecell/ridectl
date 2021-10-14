@@ -63,7 +63,7 @@ var dbShellCmd = &cobra.Command{
 		kubeconfig := utils.GetKubeconfig()
 		target, err := kubernetes.ParseSubject(args[0])
 		if err != nil {
-			pterm.Error.Println(err, "Its not a valid target")
+			pterm.Error.Println(err, "Its not a valid Summonplatform or Microservice")
 			os.Exit(1)
 		}
 		kubeObj := kubernetes.GetAppropriateObjectWithContext(*kubeconfig, args[0], target)

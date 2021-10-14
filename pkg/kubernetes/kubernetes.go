@@ -99,8 +99,7 @@ func fetchContextForObject(channel chan Kubeobject, cluster *api.Context, crclie
 		pterm.Info.Printf("Checking instance in %s\n", cluster.Cluster)
 		err := crclient.Get(context.TODO(), types.NamespacedName{Name: subject.Name, Namespace: subject.Namespace}, summonObj)
 		if err != nil {
-			pterm.Warning.Printf("Error getting summon object in %s\n", cluster.Cluster)
-			pterm.Warning.Printf("%s\n", err.Error())
+			pterm.Warning.Printf("%s in %s\n", err.Error(), cluster.Cluster)
 			return
 		}
 
@@ -116,8 +115,7 @@ func fetchContextForObject(channel chan Kubeobject, cluster *api.Context, crclie
 		pterm.Info.Printf(" Checking instance in %s\n", cluster.Cluster)
 		err := crclient.Get(context.Background(), types.NamespacedName{Name: objectName, Namespace: subject.Namespace}, deploymentObj)
 		if err != nil {
-			pterm.Warning.Printf("\nError getting deployment object in %s\n", cluster.Cluster)
-			pterm.Warning.Printf("%s\n", err.Error())
+			pterm.Warning.Printf("%s in %s\n", err.Error(), cluster.Cluster)
 			return
 		}
 
