@@ -44,7 +44,7 @@ var rootCmd = &cobra.Command{
 			fmt.Printf("ridectl version %s\n", version)
 		} else if len(args) == 0 {
 
-			return fmt.Errorf("unknown command")
+			return fmt.Errorf("No command specified.")
 		}
 		return nil
 	},
