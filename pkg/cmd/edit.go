@@ -28,6 +28,8 @@ import (
 	"strings"
 
 	"github.com/Ridecell/ridectl/pkg/cmd/edit"
+	"github.com/pterm/pterm"
+
 	//"github.com/Ridecell/ridectl/pkg/kubernetes"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -198,6 +200,7 @@ var editCmd = &cobra.Command{
 		defer outFile.Close()
 		_ = afterManifest.Serialize(outFile)
 
+		pterm.Info.Printf("Encrypted using %s\n", keyId)
 		return nil
 	},
 }

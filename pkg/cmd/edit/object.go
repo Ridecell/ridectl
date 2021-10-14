@@ -30,6 +30,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/kms"
 	"github.com/aws/aws-sdk-go/service/kms/kmsiface"
 	"github.com/pkg/errors"
+	"github.com/pterm/pterm"
 	"golang.org/x/crypto/nacl/secretbox"
 	"k8s.io/client-go/kubernetes/scheme"
 
@@ -432,10 +433,30 @@ func DecryptCipherDataKey(kmsService kmsiface.KMSAPI, cipherDataKey []byte) (*[3
 			"RidecellOperator": aws.String("true"),
 		},
 	})
+
 	if err != nil {
 		return nil, err
 	}
 	plainDataKey := &[32]byte{}
 	copy(plainDataKey[:], decryptRsp.Plaintext)
+
+	// get aliasname from key id
+	var haveAlias bool
+	haveAlias = true
+	aliasRsp, err := kmsService.ListAliases(&kms.ListAliasesInput{
+		KeyId: aws.String(aws.StringValue(decryptRsp.KeyId)),
+	})
+	if err != nil {
+		pterm.Error.Println("Error getting alias for key")
+		haveAlias = false
+	}
+	if haveAlias {
+		aliasList := aliasRsp.Aliases
+		if len(aliasList) == 0 {
+			pterm.Error.Println("Error getting alias for key")
+		}
+		alias := aliasList[0].AliasName
+		pterm.Info.Printf("Decrypted using %s\n", aws.StringValue(alias))
+	}
 	return plainDataKey, nil
 }
