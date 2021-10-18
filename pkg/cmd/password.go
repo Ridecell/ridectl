@@ -99,10 +99,10 @@ var passwordCmd = &cobra.Command{
 			// get a list of secrets which have readonly in their name
 			readOnlysecrets := []string{}
 			secrets := &corev1.SecretList{}
-			listOptions := &client.ListOptions{
+
+			err = kubeObj.Client.List(ctx, secrets, &client.ListOptions{
 				Namespace: target.Namespace,
-			}
-			err = kubeObj.Client.List(ctx, secrets, listOptions)
+			})
 			if err != nil {
 				return errors.Wrapf(err, "error getting secrets for instance %s", args[0])
 			}
