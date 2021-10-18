@@ -32,6 +32,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
+var readOnlyUserFlag bool
+
 func init() {
 	rootCmd.AddCommand(passwordCmd)
 	passwordCmd.Flags().BoolVar(&readOnlyUserFlag, "readonly", false, "get connection details for readonly user")

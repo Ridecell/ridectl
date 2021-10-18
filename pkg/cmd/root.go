@@ -31,10 +31,9 @@ import (
 )
 
 var (
-	kubeconfigFlag   string
-	versionFlag      bool
-	readOnlyUserFlag bool
-	version          string
+	kubeconfigFlag string
+	versionFlag    bool
+	version        string
 )
 var rootCmd = &cobra.Command{
 	Use:   "ridectl",
@@ -54,7 +53,6 @@ func init() {
 	}
 	rootCmd.PersistentFlags().StringVar(&kubeconfigFlag, "kubeconfig", filepath.Join(home, ".kube", "config"), "(optional) absolute path to the kubeconfig file")
 	rootCmd.Flags().BoolVar(&versionFlag, "version", true, "--version")
-
 	// Register all types from summon-operator and ridecell-controllers secrets
 	_ = summonv1beta2.AddToScheme(scheme.Scheme)
 	_ = secretsv1beta2.AddToScheme(scheme.Scheme)
