@@ -27,6 +27,7 @@ import (
 
 	"github.com/Ridecell/ridectl/pkg/cmd/edit"
 	"github.com/heroku/docker-registry-client/registry"
+	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 
 	summonv1beta2 "github.com/Ridecell/summon-operator/apis/app/v1beta2"
@@ -74,7 +75,7 @@ var lintCmd = &cobra.Command{
 		// Fetch docker image names
 		googleKey := os.Getenv("GOOGLE_SERVICE_ACCOUNT_KEY")
 		if len(googleKey) == 0 {
-			fmt.Printf("environment variable GOOGLE_SERVICE_ACCOUNT_KEY not defined, skipping image check\n")
+			pterm.Warning.Printf("environment variable GOOGLE_SERVICE_ACCOUNT_KEY not defined, skipping image check\n")
 		}
 
 		var imageTags []string
@@ -118,7 +119,7 @@ var lintCmd = &cobra.Command{
 		for _, filename := range fileNames {
 			err = lintFile(filename, imageTags)
 			if err != nil {
-				fmt.Printf("%s\n", err.Error())
+				pterm.Error.Printf("%s\n", err.Error())
 				failedTests = true
 			}
 		}
@@ -128,7 +129,7 @@ var lintCmd = &cobra.Command{
 			if len(locationList) > 1 {
 				if skipSecretKeysPrefixFlag != "" {
 					if keyPrefixRegex.FindString(locationList[0].KeyName) != "" {
-						fmt.Printf("Skipped key '%s' because it starts with a skipped secret key prefix \n", locationList[0].KeyName)
+						pterm.Info.Printf("Skipped key '%s' because it starts with a skipped secret key prefix \n", locationList[0].KeyName)
 						continue
 					}
 				}
@@ -145,14 +146,14 @@ var lintCmd = &cobra.Command{
 				}
 
 				if keysMatch {
-					fmt.Printf("Duplicate secret value %s found in %s\n", locationList[0].KeyName, strings.Join(locationList.objNames(), ", "))
+					pterm.Info.Printf("Duplicate secret value %s found in %s\n", locationList[0].KeyName, strings.Join(locationList.objNames(), ", "))
 				} else {
-					fmt.Printf("Duplicate secret value found in %s\n", strings.Join(locationList.formatStrings(), ", "))
+					pterm.Info.Printf("Duplicate secret value found in %s\n", strings.Join(locationList.formatStrings(), ", "))
 				}
 			}
 		}
 		if failedTests {
-			fmt.Printf("Tests failed.\n")
+			pterm.Error.Printf("Tests failed.\n")
 			// Exit here and don't return error so Cobra doesn't display extra text
 			os.Exit(1)
 		}
@@ -271,7 +272,7 @@ func lintFile(filename string, imageTags []string) error {
 	for secretKey, secretValue := range manifest[2].Data {
 		if !strings.HasPrefix(secretValue, "AQICAH") && !strings.HasPrefix(secretValue, "crypto ") {
 			unencryptedValueFound = true
-			fmt.Printf("%s: EncryptedSecret %s missing preamble, may not be encrypted.", filename, secretKey)
+			pterm.Warning.Printf("%s: EncryptedSecret %s missing preamble, may not be encrypted.", filename, secretKey)
 		}
 
 		// Check if FERNET_KEYS key is present or not, as its required in all summon yaml.

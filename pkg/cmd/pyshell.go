@@ -19,10 +19,11 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"os"
 	"reflect"
 
 	"github.com/Ridecell/ridectl/pkg/exec"
-	"github.com/pkg/errors"
+	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -56,7 +57,8 @@ var pyShellCmd = &cobra.Command{
 
 		binaryExists := utils.CheckBinary("kubectl")
 		if !binaryExists {
-			return fmt.Errorf("kubectl is not installed. Follow the instructions here: https://kubernetes.io/docs/tasks/tools/#kubectl to install it")
+			pterm.Error.Printf("kubectl is not installed. Follow the instructions here: https://kubernetes.io/docs/tasks/tools/#kubectl to install it\n")
+			os.Exit(1)
 		}
 		return nil
 	},
@@ -64,7 +66,8 @@ var pyShellCmd = &cobra.Command{
 		kubeconfig := utils.GetKubeconfig()
 		target, err := kubernetes.ParseSubject(args[0])
 		if err != nil {
-			return errors.Wrapf(err, "not a valid target %s", args[0])
+			pterm.Error.Println(err, "Its not a valid Summonplatform or Microservice")
+			os.Exit(1)
 		}
 
 		podLabels := make(map[string]string)
@@ -79,7 +82,8 @@ var pyShellCmd = &cobra.Command{
 
 		kubeObj := kubernetes.GetAppropriateObjectWithContext(*kubeconfig, args[0], target)
 		if reflect.DeepEqual(kubeObj, kubernetes.Kubeobject{}) {
-			return errors.Wrapf(err, "no instance found %s", args[0])
+			pterm.Error.Printf("No instance found %s\n", args[0])
+			os.Exit(1)
 		}
 
 		labelSet := labels.Set{}
@@ -95,14 +99,21 @@ var pyShellCmd = &cobra.Command{
 		podList := &corev1.PodList{}
 		err = kubeObj.Client.List(context.Background(), podList, listOptions)
 		if err != nil {
-			return fmt.Errorf("instance not found in %s", kubeObj.Context.Cluster)
+			pterm.Error.Printf("instance not found in %s", kubeObj.Context.Cluster)
+			os.Exit(1)
 		}
 		if len(podList.Items) < 1 {
-			return fmt.Errorf("instance not found in %s", kubeObj.Context.Cluster)
+			pterm.Error.Printf("instance not found in %s", kubeObj.Context.Cluster)
+			os.Exit(1)
 		}
 
 		pod := podList.Items[0]
 		// Spawn kubectl exec.
+		pterm.Info.Printf("Connecting to %s/%s\n", pod.Namespace, pod.Name)
+
+		// Warn people that this is a container.
+		pterm.Warning.Printf("Remember that this is a container and most changes will have no effect\n")
+
 		kubectlArgs := []string{"kubectl", "exec", "-it", "-n", pod.Namespace, pod.Name, "--context", kubeObj.Context.Cluster, "--", "bash", "-l", "-c", "python manage.py shell"}
 		return exec.Exec(kubectlArgs)
 
