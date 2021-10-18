@@ -31,7 +31,7 @@ Some key features are:
     ```
     ridectl dbshell svc-us-master-webhook-sms
     ```
-4. Obtaining dispatcher account password (`password`)\
+4. Obtaining supported password/connection details (`password`)\
     a. Summon-platform
     ```
     ridectl password summontest-dev

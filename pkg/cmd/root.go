@@ -31,10 +31,11 @@ import (
 	summonv1beta2 "github.com/Ridecell/summon-operator/apis/app/v1beta2"
 )
 
-var kubeconfigFlag string
-var versionFlag bool
-var version string
-
+var (
+	kubeconfigFlag string
+	versionFlag    bool
+	version        string
+)
 var rootCmd = &cobra.Command{
 	Use:           "ridectl",
 	Short:         "Ridectl controls Summon instances in Kubernetes",
