@@ -41,7 +41,7 @@ func CheckBinary(binary string) bool {
 }
 
 func CheckVPN() {
-	resp, err := http.Get("https://ridectl.s3.us-west-2.amazonaws.com/machinload01.png")
+	resp, err := http.Head("https://ridectl.s3.us-west-2.amazonaws.com/machinload01.png")
 	if err != nil {
 		pterm.Error.Println("\n", err)
 	}
