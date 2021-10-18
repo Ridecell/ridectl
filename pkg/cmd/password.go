@@ -19,11 +19,13 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"os"
 	"reflect"
 
 	"github.com/Ridecell/ridectl/pkg/kubernetes"
 	"github.com/Ridecell/ridectl/pkg/utils"
 	"github.com/pkg/errors"
+	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 	"k8s.io/apimachinery/pkg/types"
 
@@ -56,12 +58,14 @@ var passwordCmd = &cobra.Command{
 		kubeconfig := utils.GetKubeconfig()
 		target, err := kubernetes.ParseSubject(args[0])
 		if err != nil {
-			return errors.Wrapf(err, "not a valid target %s", args[0])
+			pterm.Error.Println(err, "Its not a valid Summonplatform or Microservice")
+			os.Exit(1)
 		}
 
 		kubeObj := kubernetes.GetAppropriateObjectWithContext(*kubeconfig, args[0], target)
 		if reflect.DeepEqual(kubeObj, kubernetes.Kubeobject{}) {
-			return errors.Wrapf(err, "no instance found %s", args[0])
+			pterm.Error.Printf("No instance found %s\n", args[0])
+			os.Exit(1)
 		}
 
 		secret := &corev1.Secret{}
@@ -70,7 +74,7 @@ var passwordCmd = &cobra.Command{
 			return errors.Wrapf(err, "error getting secret  for instance %s", args[0])
 		}
 
-		fmt.Printf("Password for %s: %s\n", args[0], string(secret.Data["password"]))
+		pterm.Success.Printf("Password for %s: %s\n", args[0], string(secret.Data["password"]))
 		return nil
 	},
 }

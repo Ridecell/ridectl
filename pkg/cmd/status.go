@@ -26,6 +26,7 @@ import (
 	"github.com/Ridecell/ridectl/pkg/utils"
 	"github.com/apoorvam/goterminal"
 	"github.com/pkg/errors"
+	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 
 	kubernetes "github.com/Ridecell/ridectl/pkg/kubernetes"
@@ -77,10 +78,10 @@ var statusCmd = &cobra.Command{
 	Long:  "Shows status details for all components of a Summon Instance",
 	Args: func(_ *cobra.Command, args []string) error {
 		if len(args) == 0 {
-			return fmt.Errorf("Cluster name argument is required")
+			return fmt.Errorf("cluster name argument is required")
 		}
 		if len(args) > 1 {
-			return fmt.Errorf("Too many arguments")
+			return fmt.Errorf("too many arguments")
 		}
 		return nil
 	},
@@ -89,7 +90,8 @@ var statusCmd = &cobra.Command{
 
 		binaryExists := utils.CheckBinary("kubectl")
 		if !binaryExists {
-			return fmt.Errorf("kubectl is not installed. Follow the instructions here: https://kubernetes.io/docs/tasks/tools/#kubectl to install it")
+			pterm.Error.Printf("kubectl is not installed. Follow the instructions here: https://kubernetes.io/docs/tasks/tools/#kubectl to install it\n")
+			os.Exit(1)
 		}
 		return nil
 	},
@@ -97,12 +99,14 @@ var statusCmd = &cobra.Command{
 		kubeconfig := utils.GetKubeconfig()
 		target, err := kubernetes.ParseSubject(args[0])
 		if err != nil {
-			return errors.Wrapf(err, "not a valid target %s", args[0])
+			pterm.Error.Println(err, "Its not a valid Summonplatform or Microservice")
+			os.Exit(1)
 		}
 
 		kubeObj := kubernetes.GetAppropriateObjectWithContext(*kubeconfig, args[0], target)
 		if reflect.DeepEqual(kubeObj, kubernetes.Kubeobject{}) {
-			return errors.Wrapf(err, "no instance found %s", args[0])
+			pterm.Error.Printf("No instance found %s\n", args[0])
+			os.Exit(1)
 		}
 
 		sData, err := getData("summon", kubeObj.Context.Cluster, target.Namespace, args[0])
@@ -144,7 +148,7 @@ var statusCmd = &cobra.Command{
 				}
 			}
 		} else {
-			fmt.Printf(sData + "\n" + dData + "\n")
+			pterm.Success.Printf(sData + "\n" + dData + "\n")
 		}
 		return nil
 	},

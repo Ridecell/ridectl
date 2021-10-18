@@ -22,6 +22,7 @@ import (
 	"path/filepath"
 
 	"github.com/mitchellh/go-homedir"
+	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 	"k8s.io/client-go/kubernetes/scheme"
 
@@ -35,11 +36,15 @@ var versionFlag bool
 var version string
 
 var rootCmd = &cobra.Command{
-	Use:   "ridectl",
-	Short: "Ridectl controls Summon instances in Kubernetes",
+	Use:           "ridectl",
+	Short:         "Ridectl controls Summon instances in Kubernetes",
+	SilenceErrors: true,
 	RunE: func(_ *cobra.Command, args []string) error {
 		if versionFlag {
 			fmt.Printf("ridectl version %s\n", version)
+		} else if len(args) == 0 {
+
+			return fmt.Errorf("No command specified.")
 		}
 		return nil
 	},
@@ -51,7 +56,7 @@ func init() {
 		panic(err)
 	}
 	rootCmd.PersistentFlags().StringVar(&kubeconfigFlag, "kubeconfig", filepath.Join(home, ".kube", "config"), "(optional) absolute path to the kubeconfig file")
-	rootCmd.Flags().BoolVar(&versionFlag, "version", true, "--version")
+	rootCmd.Flags().BoolVar(&versionFlag, "version", false, "--version")
 	// Register all types from summon-operator and ridecell-controllers secrets
 	_ = summonv1beta2.AddToScheme(scheme.Scheme)
 	_ = secretsv1beta2.AddToScheme(scheme.Scheme)
@@ -60,7 +65,7 @@ func init() {
 
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
-		fmt.Println(err)
+		pterm.Error.Println(err)
 		os.Exit(1)
 	}
 }
