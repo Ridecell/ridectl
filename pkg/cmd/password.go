@@ -34,17 +34,14 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-var readOnlyUserFlag bool
-
 func init() {
 	rootCmd.AddCommand(passwordCmd)
-	passwordCmd.Flags().BoolVar(&readOnlyUserFlag, "postgres-readonly-user", false, "get connection details for readonly user")
 }
 
 var passwordCmd = &cobra.Command{
 	Use:   "password [flags] <cluster_name>",
-	Short: "Gets dispatcher password from a Summon Instance",
-	Long:  `Returns dispatcher django password from a Summon Instance Secret`,
+	Short: "Gets dispatcher/postgres readonly user password/connection details for a Summon Instance",
+	Long:  `Returns dispatcher django password from a Summon Instance Secret or postgres connection details for readonly user`,
 	Args: func(_ *cobra.Command, args []string) error {
 		if len(args) == 0 {
 			return fmt.Errorf("cluster name argument is required")
@@ -73,9 +70,23 @@ var passwordCmd = &cobra.Command{
 			pterm.Error.Printf("No instance found %s\n", args[0])
 			os.Exit(1)
 		}
+		secretTypes := []string{"django", "postgresql"}
+
+		secretPrompt := promptui.Select{
+			Label: "Select secret",
+			Items: secretTypes,
+		}
+
+		_, secretType, err := secretPrompt.Run()
+		if err != nil {
+			return errors.Wrapf(err, "Prompt failed")
+		}
 
 		secret := &corev1.Secret{}
-		if !readOnlyUserFlag {
+
+		switch secretType {
+
+		case "django":
 			err = kubeObj.Client.Get(ctx, types.NamespacedName{Name: fmt.Sprintf("%s.django-password", args[0]), Namespace: target.Namespace}, secret)
 			if err != nil {
 				return errors.Wrapf(err, "error getting secret  for instance %s", args[0])
@@ -83,7 +94,7 @@ var passwordCmd = &cobra.Command{
 
 			pterm.Success.Printf("Password for %s: %s\n", args[0], string(secret.Data["password"]))
 
-		} else {
+		case "postgresql":
 			// get a list of secrets which have readonly in their name
 			readOnlysecrets := []string{}
 			secrets := &corev1.SecretList{}
