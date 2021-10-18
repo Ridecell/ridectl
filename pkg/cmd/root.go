@@ -54,7 +54,6 @@ func init() {
 	}
 	rootCmd.PersistentFlags().StringVar(&kubeconfigFlag, "kubeconfig", filepath.Join(home, ".kube", "config"), "(optional) absolute path to the kubeconfig file")
 	rootCmd.Flags().BoolVar(&versionFlag, "version", true, "--version")
-	passwordCmd.Flags().BoolVar(&readOnlyUserFlag, "readonly", false, "get connection details for readonly user")
 
 	// Register all types from summon-operator and ridecell-controllers secrets
 	_ = summonv1beta2.AddToScheme(scheme.Scheme)

@@ -34,6 +34,7 @@ import (
 
 func init() {
 	rootCmd.AddCommand(passwordCmd)
+	passwordCmd.Flags().BoolVar(&readOnlyUserFlag, "readonly", false, "get connection details for readonly user")
 }
 
 var passwordCmd = &cobra.Command{
@@ -49,6 +50,7 @@ var passwordCmd = &cobra.Command{
 		}
 		return nil
 	},
+
 	PreRunE: func(cmd *cobra.Command, args []string) error {
 		utils.CheckVPN()
 		return nil
