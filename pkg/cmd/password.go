@@ -20,9 +20,11 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"strings"
 
 	"github.com/Ridecell/ridectl/pkg/kubernetes"
 	"github.com/Ridecell/ridectl/pkg/utils"
+	"github.com/manifoldco/promptui"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"k8s.io/apimachinery/pkg/types"
@@ -65,12 +67,53 @@ var passwordCmd = &cobra.Command{
 		}
 
 		secret := &corev1.Secret{}
-		err = kubeObj.Client.Get(ctx, types.NamespacedName{Name: fmt.Sprintf("%s.django-password", args[0]), Namespace: target.Namespace}, secret)
-		if err != nil {
-			return errors.Wrapf(err, "error getting secret  for instance %s", args[0])
-		}
+		if !readOnlyUserFlag {
+			err = kubeObj.Client.Get(ctx, types.NamespacedName{Name: fmt.Sprintf("%s.django-password", args[0]), Namespace: target.Namespace}, secret)
+			if err != nil {
+				return errors.Wrapf(err, "error getting secret  for instance %s", args[0])
+			}
 
-		fmt.Printf("Password for %s: %s\n", args[0], string(secret.Data["password"]))
+			fmt.Printf("Password for %s: %s\n", args[0], string(secret.Data["password"]))
+		} else {
+			// get a list of secrets which have readonly in their name
+			readOnlysecrets := []string{}
+			secrets := &corev1.SecretList{}
+			err = kubeObj.Client.List(ctx, secrets)
+			if err != nil {
+				return errors.Wrapf(err, "error getting secrets for instance %s", args[0])
+			}
+			for _, secret := range secrets.Items {
+				//add the readonly secrets to the list if name contains readonly
+				if strings.Contains(secret.Name, "-readonly.postgres-user-password") {
+					readOnlysecrets = append(readOnlysecrets, secret.Name)
+				}
+			}
+			if len(readOnlysecrets) == 0 {
+				return errors.Wrapf(err, "no readonly secrets found for instance %s", args[0])
+			}
+			// prompt user to select a readonly secret
+			prompt := promptui.Select{
+				Label: "Select secret",
+				Items: readOnlysecrets,
+			}
+			_, result, err := prompt.Run()
+			if err != nil {
+				return errors.Wrapf(err, "Prompt failed")
+			}
+			// get the password from the selected secret
+			err = kubeObj.Client.Get(ctx, types.NamespacedName{Name: result, Namespace: target.Namespace}, secret)
+			if err != nil {
+				return errors.Wrapf(err, "error getting secret  for instance %s", args[0])
+			}
+			fmt.Printf("Readonly User Connection Details\n================\n")
+			fmt.Printf("Database Type: Postgres\n") // Hard code-y
+			fmt.Printf("Database Host: %s\n", string(secret.Data["host"]))
+			fmt.Printf("Database Port: %s\n", string(secret.Data["port"]))
+			fmt.Printf("Database Name: %s\n", string(secret.Data["dbname"]))
+			fmt.Printf("Database Username: %s\n", string(secret.Data["username"]))
+			fmt.Printf("Password for %s: %s\n", result, string(secret.Data["password"]))
+
+		}
 		return nil
 	},
 }
