@@ -38,7 +38,7 @@ var readOnlyUserFlag bool
 
 func init() {
 	rootCmd.AddCommand(passwordCmd)
-	passwordCmd.Flags().BoolVar(&readOnlyUserFlag, "readonly", false, "get connection details for readonly user")
+	passwordCmd.Flags().BoolVar(&readOnlyUserFlag, "postgres-readonly-user", false, "get connection details for readonly user")
 }
 
 var passwordCmd = &cobra.Command{
@@ -81,7 +81,8 @@ var passwordCmd = &cobra.Command{
 				return errors.Wrapf(err, "error getting secret  for instance %s", args[0])
 			}
 
-			fmt.Printf("Password for %s: %s\n", args[0], string(secret.Data["password"]))
+			pterm.Success.Printf("Password for %s: %s\n", args[0], string(secret.Data["password"]))
+
 		} else {
 			// get a list of secrets which have readonly in their name
 			readOnlysecrets := []string{}
@@ -113,13 +114,17 @@ var passwordCmd = &cobra.Command{
 			if err != nil {
 				return errors.Wrapf(err, "error getting secret  for instance %s", args[0])
 			}
-			fmt.Printf("Readonly User Connection Details\n================\n")
-			fmt.Printf("Database Type: Postgres\n") // Hard code-y
-			fmt.Printf("Database Host: %s\n", string(secret.Data["host"]))
-			fmt.Printf("Database Port: %s\n", string(secret.Data["port"]))
-			fmt.Printf("Database Name: %s\n", string(secret.Data["dbname"]))
-			fmt.Printf("Database Username: %s\n", string(secret.Data["username"]))
-			fmt.Printf("Password for %s: %s\n", result, string(secret.Data["password"]))
+
+			pterm.Success.Printf("Readonly User Connection Details\n")
+			pterm.Success.Prefix = pterm.Prefix{
+				Text: "",
+			}
+			pterm.Success.Printf("Database Type: Postgres\n") // Hard code-y
+			pterm.Success.Printf("Database Host: %s\n", string(secret.Data["host"]))
+			pterm.Success.Printf("Database Port: %s\n", string(secret.Data["port"]))
+			pterm.Success.Printf("Database Name: %s\n", string(secret.Data["dbname"]))
+			pterm.Success.Printf("Database Username: %s\n", string(secret.Data["username"]))
+			pterm.Success.Printf("Database Password: %s\n", string(secret.Data["password"]))
 
 		}
 
