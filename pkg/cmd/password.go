@@ -30,6 +30,7 @@ import (
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	corev1 "k8s.io/api/core/v1"
 )
@@ -98,7 +99,10 @@ var passwordCmd = &cobra.Command{
 			// get a list of secrets which have readonly in their name
 			readOnlysecrets := []string{}
 			secrets := &corev1.SecretList{}
-			err = kubeObj.Client.List(ctx, secrets)
+			listOptions := &client.ListOptions{
+				Namespace: target.Namespace,
+			}
+			err = kubeObj.Client.List(ctx, secrets, listOptions)
 			if err != nil {
 				return errors.Wrapf(err, "error getting secrets for instance %s", args[0])
 			}
