@@ -17,10 +17,20 @@ limitations under the License.
 package cmd
 
 import (
+	"archive/zip"
+	"bytes"
+	"encoding/json"
 	"fmt"
+	"io"
+	"io/ioutil"
+	"log"
+	"net/http"
 	"os"
 	"path/filepath"
+	"runtime"
 
+	"github.com/inconshreveable/go-update"
+	"github.com/manifoldco/promptui"
 	"github.com/mitchellh/go-homedir"
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
@@ -42,7 +52,7 @@ var rootCmd = &cobra.Command{
 	SilenceErrors: true,
 	RunE: func(_ *cobra.Command, args []string) error {
 		if versionFlag {
-			fmt.Printf("ridectl version %s\n", version)
+			pterm.Success.Printf("ridectl version %s\n", version)
 		} else if len(args) == 0 {
 
 			return fmt.Errorf("No command specified.")
@@ -58,6 +68,17 @@ func init() {
 	}
 	rootCmd.PersistentFlags().StringVar(&kubeconfigFlag, "kubeconfig", filepath.Join(home, ".kube", "config"), "(optional) absolute path to the kubeconfig file")
 	rootCmd.Flags().BoolVar(&versionFlag, "version", false, "--version")
+	// check version and update if not latest
+	if !isLatestVersion() {
+		updatePrompt := promptui.Prompt{
+			Label:     "Do you want to update to latest version",
+			IsConfirm: true,
+		}
+		shouldUpdate, _ := updatePrompt.Run()
+		if shouldUpdate == "y" {
+			selfUpdate()
+		}
+	}
 	// Register all types from summon-operator and ridecell-controllers secrets
 	_ = summonv1beta2.AddToScheme(scheme.Scheme)
 	_ = secretsv1beta2.AddToScheme(scheme.Scheme)
@@ -69,4 +90,94 @@ func Execute() {
 		pterm.Error.Println(err)
 		os.Exit(1)
 	}
+}
+
+func isLatestVersion() bool {
+
+	resp, err := http.Get("https://api.github.com/repos/Ridecell/ridectl/releases/latest")
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	body, _ := io.ReadAll(resp.Body)
+	resp.Body.Close()
+
+	var data interface{}
+	err = json.Unmarshal(body, &data)
+	if err != nil {
+		panic(err.Error())
+	}
+
+	if version != data.(map[string]interface{})["tag_name"].(string) {
+		pterm.Warning.Printf("You are running older version of ridectl %s\n", version)
+		return false
+	}
+
+	return true
+}
+
+func selfUpdate() {
+	var url string
+	p := pterm.DefaultProgressbar.WithTotal(3)
+	p.ShowElapsedTime = false
+
+	switch runtime.GOOS {
+
+	case "darwin":
+		url = "https://github.com/Ridecell/ridectl/releases/latest/download/ridectl_macos.zip"
+
+	case "linux":
+		url = "https://github.com/Ridecell/ridectl/releases/latest/download/ridectl_linux.zip"
+
+	}
+
+	_, _ = p.Start()
+	p.Title = "Downloading"
+	res, err := http.Get(url)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	defer res.Body.Close()
+	p.Increment()
+
+	p.Title = "Extracting"
+	buf, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		pterm.Error.Printf("Failed to create buffer for zip file: %s\n", err)
+	}
+
+	r, err := getBinary(buf)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	p.Increment()
+
+	executable, err := os.Executable()
+	if err != nil {
+		panic(err)
+	}
+
+	p.Title = "Installing"
+	cmdPath := filepath.Join(executable)
+	err = update.Apply(r, update.Options{TargetPath: cmdPath})
+	if err != nil {
+		pterm.Error.Printf("Failed to update binary: %s\n", err)
+		pterm.Info.Printf("If you are linux user, then please rerun ridectl with sudo privileges to update")
+		os.Exit(1)
+	}
+	p.Increment()
+	_, _ = p.Stop()
+
+}
+
+func getBinary(src []byte) (io.Reader, error) {
+	r := bytes.NewReader(src)
+	z, err := zip.NewReader(r, r.Size())
+	if err != nil {
+		return nil, fmt.Errorf("failed to uncompress zip file: %s", err)
+	}
+	for _, file := range z.File {
+		return file.Open()
+	}
+	return nil, fmt.Errorf("failed to find binary in zip file")
 }
