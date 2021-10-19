@@ -20,8 +20,8 @@ import (
 	"bytes"
 	"encoding/base64"
 	"encoding/gob"
-	"fmt"
 	"io/ioutil"
+	"os"
 	"strings"
 
 	"github.com/Ridecell/ridectl/pkg/cmd/edit"
@@ -30,6 +30,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/kms"
 	"github.com/aws/aws-sdk-go/service/kms/kmsiface"
 	"github.com/pkg/errors"
+	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 	"golang.org/x/crypto/nacl/secretbox"
 )
@@ -59,7 +60,8 @@ var decryptCmd = &cobra.Command{
 	Long:  `decrypt files that has secret values`,
 	Args: func(_ *cobra.Command, args []string) error {
 		if len(args) == 0 {
-			return fmt.Errorf("Filename(s) are required")
+			pterm.Error.Printf("Filename(s) are required")
+			os.Exit(1)
 		}
 		return nil
 	},
@@ -94,7 +96,7 @@ var decryptCmd = &cobra.Command{
 			decryptedFileContent, err := ioutil.ReadFile(out_filename)
 			if err == nil {
 				if string(decryptedFileContent) == string(plaintext) {
-					fmt.Println("No changes: " + out_filename)
+					pterm.Info.Println("No changes: " + out_filename)
 					continue
 				}
 			}
@@ -104,7 +106,7 @@ var decryptCmd = &cobra.Command{
 			if err != nil {
 				return errors.Wrapf(err, "error writing file: %s", filename)
 			}
-			fmt.Println("Decrypted : " + out_filename)
+			pterm.Success.Println("Decrypted : " + out_filename)
 		}
 
 		return nil

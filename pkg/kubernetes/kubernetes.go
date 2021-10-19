@@ -21,6 +21,7 @@ import (
 	"sync"
 
 	"github.com/pkg/errors"
+	"github.com/pterm/pterm"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/clientcmd"
@@ -95,9 +96,10 @@ func fetchContextForObject(channel chan Kubeobject, cluster *api.Context, crclie
 	var objectName string
 	if subject.Type == "summon" {
 		summonObj := &summonv1beta2.SummonPlatform{}
+		pterm.Info.Printf("Checking instance in %s\n", cluster.Cluster)
 		err := crclient.Get(context.TODO(), types.NamespacedName{Name: subject.Name, Namespace: subject.Namespace}, summonObj)
 		if err != nil {
-			fmt.Printf("\nError getting summon object in %s : %s\n", cluster.Cluster, err.Error())
+			pterm.Warning.Printf("%s in %s\n", err.Error(), cluster.Cluster)
 			return
 		}
 
@@ -110,9 +112,10 @@ func fetchContextForObject(channel chan Kubeobject, cluster *api.Context, crclie
 		objectName = fmt.Sprintf("%s-svc-%s-web", subject.Env, subject.Namespace)
 
 		deploymentObj := &appsv1.Deployment{}
+		pterm.Info.Printf(" Checking instance in %s\n", cluster.Cluster)
 		err := crclient.Get(context.Background(), types.NamespacedName{Name: objectName, Namespace: subject.Namespace}, deploymentObj)
 		if err != nil {
-			fmt.Printf("\nError getting deployment object in %s : %s\n", cluster.Cluster, err.Error())
+			pterm.Warning.Printf("%s in %s\n", err.Error(), cluster.Cluster)
 			return
 		}
 
@@ -127,7 +130,7 @@ func GetAppropriateObjectWithContext(kubeconfig string, instance string, subject
 
 	contexts, err := getKubeContexts()
 	if err != nil {
-		fmt.Println("Error getting kubecontexts", err)
+		pterm.Error.Println("Error getting kubecontexts", err)
 		return Kubeobject{}
 	}
 
@@ -186,5 +189,5 @@ func ParseSubject(instanceName string) (Subject, error) {
 		return subject, nil
 	}
 	// Nothing matched, return empty with error
-	return subject, fmt.Errorf("could not parse out information from %s", instanceName)
+	return subject, fmt.Errorf("could not parse out information from %s.", instanceName)
 }

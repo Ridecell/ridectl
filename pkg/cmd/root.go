@@ -41,16 +41,21 @@ import (
 	summonv1beta2 "github.com/Ridecell/summon-operator/apis/app/v1beta2"
 )
 
-var kubeconfigFlag string
-var versionFlag bool
-var version string
-
+var (
+	kubeconfigFlag string
+	versionFlag    bool
+	version        string
+)
 var rootCmd = &cobra.Command{
-	Use:   "ridectl",
-	Short: "Ridectl controls Summon instances in Kubernetes",
+	Use:           "ridectl",
+	Short:         "Ridectl controls Summon instances in Kubernetes",
+	SilenceErrors: true,
 	RunE: func(_ *cobra.Command, args []string) error {
 		if versionFlag {
 			fmt.Printf("ridectl version %s\n", version)
+		} else if len(args) == 0 {
+
+			return fmt.Errorf("No command specified.")
 		}
 		return nil
 	},
@@ -62,7 +67,7 @@ func init() {
 		panic(err)
 	}
 	rootCmd.PersistentFlags().StringVar(&kubeconfigFlag, "kubeconfig", filepath.Join(home, ".kube", "config"), "(optional) absolute path to the kubeconfig file")
-	rootCmd.Flags().BoolVar(&versionFlag, "version", true, "--version")
+	rootCmd.Flags().BoolVar(&versionFlag, "version", false, "--version")
 	// check version and update if not latest
 	if !isLatestVersion() {
 		updatePrompt := promptui.Prompt{
@@ -83,7 +88,7 @@ func init() {
 
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
-		fmt.Println(err)
+		pterm.Error.Println(err)
 		os.Exit(1)
 	}
 }
