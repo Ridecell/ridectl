@@ -52,7 +52,7 @@ var rootCmd = &cobra.Command{
 	SilenceErrors: true,
 	RunE: func(_ *cobra.Command, args []string) error {
 		if versionFlag {
-			fmt.Printf("ridectl version %s\n", version)
+			pterm.Success.Printf("ridectl version %s\n", version)
 		} else if len(args) == 0 {
 
 			return fmt.Errorf("No command specified.")
@@ -75,7 +75,6 @@ func init() {
 			IsConfirm: true,
 		}
 		shouldUpdate, _ := updatePrompt.Run()
-		fmt.Println(shouldUpdate)
 		if shouldUpdate == "y" {
 			selfUpdate()
 		}
@@ -110,7 +109,7 @@ func isLatestVersion() bool {
 	}
 
 	if version != data.(map[string]interface{})["tag_name"].(string) {
-		fmt.Printf("You are running older version of ridectl %s\n", version)
+		pterm.Warning.Printf("You are running older version of ridectl %s\n", version)
 		return false
 	}
 
@@ -120,6 +119,7 @@ func isLatestVersion() bool {
 func selfUpdate() {
 	var url string
 	p := pterm.DefaultProgressbar.WithTotal(3)
+	p.ShowElapsedTime = false
 
 	switch runtime.GOOS {
 
@@ -143,7 +143,7 @@ func selfUpdate() {
 	p.Title = "Extracting"
 	buf, err := ioutil.ReadAll(res.Body)
 	if err != nil {
-		fmt.Printf("Failed to create buffer for zip file: %s\n", err)
+		pterm.Error.Printf("Failed to create buffer for zip file: %s\n", err)
 	}
 
 	r, err := getBinary(buf)
@@ -161,8 +161,8 @@ func selfUpdate() {
 	cmdPath := filepath.Join(executable)
 	err = update.Apply(r, update.Options{TargetPath: cmdPath})
 	if err != nil {
-		fmt.Printf("Failed to update binary: %s\n", err)
-		fmt.Printf("If you are linux user, then please rerun ridectl with sudo privileges to update")
+		pterm.Error.Printf("Failed to update binary: %s\n", err)
+		pterm.Info.Printf("If you are linux user, then please rerun ridectl with sudo privileges to update")
 		os.Exit(1)
 	}
 	p.Increment()
