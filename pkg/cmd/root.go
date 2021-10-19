@@ -30,7 +30,9 @@ import (
 	"runtime"
 
 	"github.com/inconshreveable/go-update"
+	"github.com/manifoldco/promptui"
 	"github.com/mitchellh/go-homedir"
+	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 	"k8s.io/client-go/kubernetes/scheme"
 
@@ -63,7 +65,15 @@ func init() {
 	rootCmd.Flags().BoolVar(&versionFlag, "version", true, "--version")
 	// check version and update if not latest
 	if !isLatestVersion() {
-		selfUpdate()
+		updatePrompt := promptui.Prompt{
+			Label:     "Do you want to update to latest version",
+			IsConfirm: true,
+		}
+		shouldUpdate, _ := updatePrompt.Run()
+		fmt.Println(shouldUpdate)
+		if shouldUpdate == "y" {
+			selfUpdate()
+		}
 	}
 	// Register all types from summon-operator and ridecell-controllers secrets
 	_ = summonv1beta2.AddToScheme(scheme.Scheme)
@@ -79,10 +89,12 @@ func Execute() {
 }
 
 func isLatestVersion() bool {
+
 	resp, err := http.Get("https://api.github.com/repos/Ridecell/ridectl/releases/latest")
 	if err != nil {
 		log.Fatalln(err)
 	}
+
 	body, _ := io.ReadAll(resp.Body)
 	resp.Body.Close()
 
@@ -91,9 +103,9 @@ func isLatestVersion() bool {
 	if err != nil {
 		panic(err.Error())
 	}
+
 	if version != data.(map[string]interface{})["tag_name"].(string) {
-		fmt.Printf("You are running older version of ridectl %s. Your ridectl will be automatically upgraded to newer version %s\n",
-			version, data.(map[string]interface{})["tag_name"].(string))
+		fmt.Printf("You are running older version of ridectl %s\n", version)
 		return false
 	}
 
@@ -102,25 +114,28 @@ func isLatestVersion() bool {
 
 func selfUpdate() {
 	var url string
+	p := pterm.DefaultProgressbar.WithTotal(3)
 
 	switch runtime.GOOS {
+
 	case "darwin":
 		url = "https://github.com/Ridecell/ridectl/releases/latest/download/ridectl_macos.zip"
-		fmt.Printf("You are running ridectl on %s\n", runtime.GOOS)
 
 	case "linux":
 		url = "https://github.com/Ridecell/ridectl/releases/latest/download/ridectl_linux.zip"
-		fmt.Printf("You are running ridectl on %s\n", runtime.GOOS)
 
 	}
 
-	fmt.Printf("Downloading latest ridectl \n")
+	p.Start()
+	p.Title = "Downloading"
 	res, err := http.Get(url)
 	if err != nil {
 		log.Fatalln(err)
 	}
 	defer res.Body.Close()
+	p.Increment()
 
+	p.Title = "Extracting"
 	buf, err := ioutil.ReadAll(res.Body)
 	if err != nil {
 		fmt.Printf("Failed to create buffer for zip file: %s\n", err)
@@ -130,19 +145,21 @@ func selfUpdate() {
 	if err != nil {
 		log.Fatalln(err)
 	}
+	p.Increment()
 
 	executable, err := os.Executable()
 	if err != nil {
 		panic(err)
 	}
 
+	p.Title = "Installing"
 	cmdPath := filepath.Join(executable)
-
-	fmt.Printf("Updating to latest version\n")
 	err = update.Apply(r, update.Options{TargetPath: cmdPath})
 	if err != nil {
 		fmt.Printf("Failed to update binary: %s\n", err)
 	}
+	p.Increment()
+	p.Stop()
 
 }
 
