@@ -162,6 +162,8 @@ func selfUpdate() {
 	err = update.Apply(r, update.Options{TargetPath: cmdPath})
 	if err != nil {
 		fmt.Printf("Failed to update binary: %s\n", err)
+		fmt.Printf("If you are linux user, then please rerun ridectl with sudo privileges to update")
+		os.Exit(1)
 	}
 	p.Increment()
 	_, _ = p.Stop()
