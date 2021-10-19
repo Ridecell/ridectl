@@ -131,7 +131,7 @@ func selfUpdate() {
 
 	}
 
-	p.Start()
+	_, _ = p.Start()
 	p.Title = "Downloading"
 	res, err := http.Get(url)
 	if err != nil {
@@ -164,7 +164,7 @@ func selfUpdate() {
 		fmt.Printf("Failed to update binary: %s\n", err)
 	}
 	p.Increment()
-	p.Stop()
+	_, _ = p.Stop()
 
 }
 
