@@ -24,12 +24,12 @@ import (
 	"time"
 
 	"github.com/Ridecell/ridectl/pkg/utils"
-	"github.com/apoorvam/goterminal"
 	"github.com/pkg/errors"
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 
 	kubernetes "github.com/Ridecell/ridectl/pkg/kubernetes"
+	tm "github.com/buger/goterm"
 )
 
 func init() {
@@ -118,24 +118,16 @@ var statusCmd = &cobra.Command{
 			return err
 		}
 		if follow {
-			writer := goterminal.New(os.Stdout)
-			indicator := goterminal.New(os.Stdout)
-			spinner := []string{"|", "/", "-", "\\", "/"}
-			steps := 0
+			tm.Clear()
 			for {
-				writer.Clear()
-				fmt.Fprintf(writer, "%s\n%s\n", sData, dData)
-				writer.Print()
-				// Wait 3 seconds before next command run and display. Also show progression
-				// with spinner steps. Note that goterminal seems to rely on new lines in order
-				// to appear as desired
-				for i := 0; i < 3; i++ {
-					fmt.Fprintf(indicator, "%s\n", spinner[steps%len(spinner)])
-					indicator.Print()
-					time.Sleep(time.Second)
-					indicator.Clear()
-					steps++
-				}
+
+				tm.MoveCursor(1, 1)
+				pterm.Success.Printf("%s\n%s\n", sData, dData)
+				spinnerSuccess, _ := pterm.DefaultSpinner.Start("Fetching data")
+				time.Sleep(time.Second * 3)
+				spinnerSuccess.Success()
+				tm.Flush()
+
 				// Calling it at end of for loop since we made these calls right before.
 				sData, err = getData("summon", kubeObj.Context.Cluster, target.Namespace, args[0])
 				if err != nil {
