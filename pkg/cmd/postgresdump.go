@@ -77,6 +77,16 @@ var postgresdumpCMD = &cobra.Command{
 		}
 		return nil
 	},
+	PreRunE: func(cmd *cobra.Command, args []string) error {
+		utils.CheckVPN()
+		
+		binaryExists := utils.CheckBinary("kubectl")
+		if !binaryExists {
+			pterm.Error.Printf("kubectl is not installed. Follow the instructions here: https://kubernetes.io/docs/tasks/tools/#kubectl to install it\n")
+			os.Exit(1)
+		}
+		return nil
+	},
 	RunE: func(cmd *cobra.Command, args []string) error {
 		ctx := context.Background()
 		kubeconfig := utils.GetKubeconfig()
@@ -152,7 +162,10 @@ var postgresdumpCMD = &cobra.Command{
 					return err
 				}
 			}
-			area.Stop()
+			err = area.Stop()
+			if err != nil {
+				return err
+			}
 		} else {
 			pterm.Success.Printf(data)
 		}
