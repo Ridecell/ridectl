@@ -21,7 +21,6 @@ import (
 	"os"
 	osExec "os/exec"
 	"reflect"
-	"time"
 
 	"github.com/Ridecell/ridectl/pkg/utils"
 	"github.com/pkg/errors"
@@ -29,7 +28,6 @@ import (
 	"github.com/spf13/cobra"
 
 	kubernetes "github.com/Ridecell/ridectl/pkg/kubernetes"
-	tm "github.com/buger/goterm"
 )
 
 func init() {
@@ -118,26 +116,31 @@ var statusCmd = &cobra.Command{
 			return err
 		}
 		if follow {
-			tm.Clear()
-			for {
+			area, _ := pterm.DefaultArea.WithRemoveWhenDone().Start()
 
-				tm.MoveCursor(1, 1)
-				pterm.Success.Printf("%s\n%s\n", sData, dData)
-				spinnerSuccess, _ := pterm.DefaultSpinner.Start("Fetching data")
-				time.Sleep(time.Second * 3)
-				spinnerSuccess.Success()
-				tm.Flush()
+			for {
+				area.Update(sData, "\n", dData)
+				p := pterm.DefaultProgressbar.WithTotal(2)
+				p.ShowElapsedTime = false
+				p.RemoveWhenDone = true
+				_, _ = p.Start()
+				p.Title = "Fetching data"
 
 				// Calling it at end of for loop since we made these calls right before.
 				sData, err = getData("summon", kubeObj.Context.Cluster, target.Namespace, args[0])
 				if err != nil {
 					return err
 				}
+				p.Increment()
 
 				dData, err = getData("deployment", kubeObj.Context.Cluster, target.Namespace, args[0])
 				if err != nil {
 					return err
 				}
+				p.Increment()
+				_, _ = p.Stop()
+				area.Stop()
+
 			}
 		} else {
 			pterm.Success.Printf(sData + "\n" + dData + "\n")
