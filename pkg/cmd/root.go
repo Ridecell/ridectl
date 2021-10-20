@@ -25,7 +25,8 @@ import (
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 	"k8s.io/client-go/kubernetes/scheme"
-
+    
+	dbv1beta2 "github.com/Ridecell/ridecell-controllers/apis/db/v1beta2"
 	secretsv1beta2 "github.com/Ridecell/ridecell-controllers/apis/secrets/v1beta2"
 	hackapis "github.com/Ridecell/ridectl/pkg/apis"
 	summonv1beta2 "github.com/Ridecell/summon-operator/apis/app/v1beta2"
@@ -61,6 +62,7 @@ func init() {
 	_ = summonv1beta2.AddToScheme(scheme.Scheme)
 	_ = secretsv1beta2.AddToScheme(scheme.Scheme)
 	_ = hackapis.AddToScheme(scheme.Scheme)
+	_ = dbv1beta2.AddToScheme(scheme.Scheme)
 }
 
 func Execute() {
