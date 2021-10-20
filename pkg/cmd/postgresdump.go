@@ -29,7 +29,6 @@ import (
 	"github.com/Ridecell/ridecell-controllers/apis/db/v1beta2"
 	"github.com/Ridecell/ridectl/pkg/kubernetes"
 	"github.com/Ridecell/ridectl/pkg/utils"
-	"github.com/apoorvam/goterminal"
 	"github.com/pkg/errors"
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
@@ -134,21 +133,11 @@ var postgresdumpCMD = &cobra.Command{
 			return err
 		}
 		if check {
-			writer := goterminal.New(os.Stdout)
-			indicator := goterminal.New(os.Stdout)
-			spinner := []string{"|", "/", "-", "\\", "/"}
-			steps := 0
+			pterm.Info.Printf("Updating status")
+			pterm.Printf("\n")
+			area, _ := pterm.DefaultArea.Start()
 			for {
-				writer.Clear()
-				fmt.Fprintf(writer, "%s\n", data)
-				writer.Print()
-				for i := 0; i < 3; i++ {
-					fmt.Fprintf(indicator, "%s\n", spinner[steps%len(spinner)])
-					indicator.Print()
-					time.Sleep(time.Second)
-					indicator.Clear()
-					steps++
-				}
+				area.Update(data)
 				if strings.Contains(data, "STATUS: Succeeded") {
 					pterm.Success.Printf("Done!!")
 					break
@@ -157,11 +146,13 @@ var postgresdumpCMD = &cobra.Command{
 					pterm.Error.Printf("Error!!")
 					break
 				}
+				time.Sleep(time.Second * 2)
 				data, err = getInstanceData(args[1], kubeObj.Context.Cluster, target.Namespace)
 				if err != nil {
 					return err
 				}
 			}
+			area.Stop()
 		} else {
 			pterm.Success.Printf(data)
 		}
