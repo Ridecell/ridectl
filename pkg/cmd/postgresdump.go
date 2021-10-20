@@ -22,6 +22,7 @@ import (
 	"os"
 	osExec "os/exec"
 	"reflect"
+	"strconv"
 	"strings"
 	"time"
 
@@ -34,6 +35,7 @@ import (
 	"github.com/spf13/cobra"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	k8serror "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -123,6 +125,13 @@ var postgresdumpCMD = &cobra.Command{
 		}
 		err = kubeObj.Client.Create(ctx, postgresdumpObj)
 		if err != nil {
+			if k8serror.IsAlreadyExists(err) {
+				postgresdumpObj.Name = args[0] + "-" + strconv.FormatInt(time.Now().Unix(), 10)
+				err = kubeObj.Client.Create(ctx, postgresdumpObj)
+				if err != nil {
+					return errors.Wrap(err, "failed to create postgresdump instance")
+				}
+			}
 			return errors.Wrap(err, "failed to create postgresdump instance")
 		}
 		pterm.Success.Printf("Taking  postgres dump")
