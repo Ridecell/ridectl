@@ -41,6 +41,12 @@ func init() {
 	rootCmd.AddCommand(postgresdumpCMD)
 }
 
+var check bool
+
+func init() {
+	statusCmd.Flags().BoolVarP(&check, "check", "-f", false, "(optional) follows the status of postgresdump instance until terminated")
+}
+
 func getInstanceData(objName string, context string, namespace string) (string, error) {
 	var data []byte
 	var err error
@@ -93,7 +99,6 @@ var postgresdumpCMD = &cobra.Command{
 		postgresUserList := &v1beta2.PostgresUserList{}
 		_ = kubeObj.Client.List(ctx, postgresUserList, client.InNamespace(target.Namespace))
 		if len(postgresUserList.Items) == 0 {
-			pterm.Error.Printf("Failed to get postgres users list \n")
 			return errors.Wrap(err, "failed to get postgres users list")
 		}
 		postgresUser := &v1beta2.PostgresUser{}
@@ -104,10 +109,9 @@ var postgresdumpCMD = &cobra.Command{
 			}
 		}
 		if postgresUser.Name == "" {
-			pterm.Error.Printf("Failed to get postgres user \n")
 			return errors.Wrap(err, "failed to get postgres user")
 		}
-		
+
 		postgresdumpObj := &v1beta2.PostgresDump{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      args[1],
@@ -119,7 +123,6 @@ var postgresdumpCMD = &cobra.Command{
 		}
 		err = kubeObj.Client.Create(ctx, postgresdumpObj)
 		if err != nil {
-			pterm.Error.Printf("Failed to create postgresdump instance \n")
 			return errors.Wrap(err, "failed to create postgresdump instance")
 		}
 		pterm.Success.Printf("Taking  postgres dump")
@@ -128,34 +131,37 @@ var postgresdumpCMD = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		writer := goterminal.New(os.Stdout)
-		indicator := goterminal.New(os.Stdout)
-		spinner := []string{"|", "/", "-", "\\", "/"}
-		steps := 0
-		for {
-			//goterm
-			writer.Clear()
-			fmt.Fprintf(writer, "%s\n", data)
-			writer.Print()
-			for i := 0; i < 3; i++ {
-				fmt.Fprintf(indicator, "%s\n", spinner[steps%len(spinner)])
-				indicator.Print()
-				time.Sleep(time.Second)
-				indicator.Clear()
-				steps++
+		if check {
+			writer := goterminal.New(os.Stdout)
+			indicator := goterminal.New(os.Stdout)
+			spinner := []string{"|", "/", "-", "\\", "/"}
+			steps := 0
+			for {
+				writer.Clear()
+				fmt.Fprintf(writer, "%s\n", data)
+				writer.Print()
+				for i := 0; i < 3; i++ {
+					fmt.Fprintf(indicator, "%s\n", spinner[steps%len(spinner)])
+					indicator.Print()
+					time.Sleep(time.Second)
+					indicator.Clear()
+					steps++
+				}
+				if strings.Contains(data, "STATUS: Succeeded") {
+					pterm.Success.Printf("Done!!")
+					break
+				}
+				if strings.Contains(data, "STATUS: Error") {
+					pterm.Error.Printf("Error!!")
+					break
+				}
+				data, err = getInstanceData(args[1], kubeObj.Context.Cluster, target.Namespace)
+				if err != nil {
+					return err
+				}
 			}
-			if strings.Contains(data, "STATUS: Succeeded") {
-				pterm.Success.Printf("Done!!")
-				break
-			}
-			if strings.Contains(data, "STATUS: Error") {
-				pterm.Error.Printf("Error!!")
-				break
-			}
-			data, err = getInstanceData(args[1], kubeObj.Context.Cluster, target.Namespace)
-			if err != nil {
-				return err
-			}
+		} else {
+			pterm.Success.Printf(data)
 		}
 		return nil
 	},
