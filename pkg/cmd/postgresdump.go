@@ -74,10 +74,6 @@ var postgresdumpCMD = &cobra.Command{
 			pterm.Error.Printf("Microservice name argument is required.")
 			os.Exit(1)
 		}
-		if len(args) == 1 {
-			pterm.Error.Printf("Backup name argument is required.")
-			os.Exit(1)
-		}
 		if len(args) > 2 {
 			return fmt.Errorf("too many arguments")
 		}
@@ -113,10 +109,15 @@ var postgresdumpCMD = &cobra.Command{
 		if postgresUser.Name == "" {
 			return errors.Wrap(err, "failed to get postgres user")
 		}
-
+		var instanceName string
+		if len(args) < 2 {
+			instanceName = args[0] + "-" + strconv.FormatInt(time.Now().Unix(), 10)
+		} else {
+            instanceName= args[1]
+		}
 		postgresdumpObj := &v1beta2.PostgresDump{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      args[1],
+				Name:      instanceName,
 				Namespace: target.Namespace,
 			},
 			Spec: v1beta2.PostgresDumpSpec{
@@ -134,7 +135,7 @@ var postgresdumpCMD = &cobra.Command{
 			}
 			return errors.Wrap(err, "failed to create postgresdump instance")
 		}
-		pterm.Success.Printf("Taking  postgres dump")
+		pterm.Success.Printf("Taking postgres dump")
 
 		data, err := getInstanceData(args[1], kubeObj.Context.Cluster, target.Namespace)
 		if err != nil {
