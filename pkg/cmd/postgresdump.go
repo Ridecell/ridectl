@@ -44,13 +44,13 @@ func init() {
 var check bool
 
 func init() {
-	statusCmd.Flags().BoolVarP(&check, "check", "-f", false, "(optional) follows the status of postgresdump instance until terminated")
+	postgresdumpCMD.Flags().BoolVarP(&check, "check", "f", false, "(optional) follows the status of postgresdump instance until terminated")
 }
 
 func getInstanceData(objName string, context string, namespace string) (string, error) {
 	var data []byte
 	var err error
-	instanceData, err := TempFS.ReadFile("template/show_postgresdump.tpl")
+	instanceData, err := TempFS.ReadFile("templates/show_postgresdump.tpl")
 	if err != nil {
 		return "", errors.Wrap(err, "error reading show_postgresdump.tpl")
 	}
@@ -79,7 +79,7 @@ var postgresdumpCMD = &cobra.Command{
 	},
 	PreRunE: func(cmd *cobra.Command, args []string) error {
 		utils.CheckVPN()
-  
+
 		binaryExists := utils.CheckBinary("kubectl")
 		if !binaryExists {
 			pterm.Error.Printf("kubectl is not installed. Follow the instructions here: https://kubernetes.io/docs/tasks/tools/#kubectl to install it\n")
@@ -136,8 +136,7 @@ var postgresdumpCMD = &cobra.Command{
 		if err != nil {
 			return errors.Wrap(err, "failed to create postgresdump instance")
 		}
-		pterm.Success.Printf("Taking postgres dump")
-
+		pterm.Success.Printf("Taking postgres dump\n")
 		data, err := getInstanceData(instanceName, kubeObj.Context.Cluster, target.Namespace)
 		if err != nil {
 			return err
@@ -147,7 +146,8 @@ var postgresdumpCMD = &cobra.Command{
 			pterm.Printf("\n")
 			area, _ := pterm.DefaultArea.Start()
 			for {
-				area.Update(data)
+				status := pterm.FgLightMagenta.Sprint(data)
+				area.Update(status)
 				if strings.Contains(data, "STATUS: Succeeded") {
 					pterm.Success.Printf("Done!!")
 					break
