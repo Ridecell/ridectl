@@ -142,17 +142,23 @@ var postgresdumpCMD = &cobra.Command{
 			return err
 		}
 		if check {
+			count := 0
 			pterm.Info.Printf("Updating status")
 			pterm.Printf("\n")
 			area, _ := pterm.DefaultArea.Start()
 			for {
 				status := pterm.FgLightMagenta.Sprint(data)
 				area.Update(status)
-				if strings.Contains(data, "STATUS: Succeeded") {
+				if strings.Contains(data, "STATUS: Completed") {
 					pterm.Success.Printf("Done!!")
 					break
 				}
 				if strings.Contains(data, "STATUS: Error") {
+					pterm.Error.Printf("Error!!")
+					break
+				}
+				count++
+				if count > 300 {
 					pterm.Error.Printf("Error!!")
 					break
 				}
