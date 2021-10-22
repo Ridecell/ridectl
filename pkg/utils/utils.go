@@ -44,20 +44,18 @@ func checkBinary(binary string) bool {
 	return true
 }
 
-func CheckKubectl() bool {
+func CheckKubectl() {
 	if !checkBinary("kubectl") {
 		pterm.Error.Printf("kubectl is not installed. Follow the instructions here: https://kubernetes.io/docs/tasks/tools/#kubectl to install it\n")
-		return false
+		os.Exit(1)
 	}
-	return true
 }
 
-func CheckPsql() bool {
+func CheckPsql() {
 	if !checkBinary("psql") {
 		pterm.Error.Printf("psql is not installed. Follow the instructions here: https://www.compose.com/articles/postgresql-tips-installing-the-postgresql-client/ to install it\n")
-		return false
+		os.Exit(1)
 	}
-	return true
 }
 
 func CheckVPN() {
