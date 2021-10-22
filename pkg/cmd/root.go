@@ -61,6 +61,11 @@ var rootCmd = &cobra.Command{
 	},
 }
 
+type versionInfo struct {
+	Name    string `json:"name"`
+	TagName string `json:"tag_name"`
+}
+
 func init() {
 	home, err := homedir.Dir()
 	if err != nil {
@@ -102,13 +107,19 @@ func isLatestVersion() bool {
 	body, _ := io.ReadAll(resp.Body)
 	resp.Body.Close()
 
-	var data interface{}
+	var data versionInfo
+	var retry bool
 	err = json.Unmarshal(body, &data)
 	if err != nil {
-		panic(err.Error())
+		pterm.Error.Printf("Failed to parse version info: %s\n", err)
+		retry = true
+	}
+	// added retry to handle github api not returning proper json
+	if retry {
+		return isLatestVersion()
 	}
 
-	if version != data.(map[string]interface{})["tag_name"].(string) {
+	if version != data.TagName {
 		pterm.Warning.Printf("You are running older version of ridectl %s\n", version)
 		return false
 	}
