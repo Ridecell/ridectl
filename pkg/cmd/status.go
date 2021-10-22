@@ -135,7 +135,7 @@ var statusCmd = &cobra.Command{
 				}
 				p.Increment()
 				_, _ = p.Stop()
-				area.Stop()
+				_ = area.Stop()
 
 			}
 		} else {
