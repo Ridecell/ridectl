@@ -35,9 +35,27 @@ func GetKubeconfig() *string {
 	return kubeconfig
 }
 
-func CheckBinary(binary string) bool {
+func checkBinary(binary string) bool {
 	_, err := exec.LookPath(binary)
-	return err == nil
+	if err != nil {
+		pterm.Error.Println("\n", err)
+		return false
+	}
+	return true
+}
+
+func CheckKubectl() {
+	if !checkBinary("kubectl") {
+		pterm.Error.Printf("kubectl is not installed. Follow the instructions here: https://kubernetes.io/docs/tasks/tools/#kubectl to install it\n")
+		os.Exit(1)
+	}
+}
+
+func CheckPsql() {
+	if !checkBinary("psql") {
+		pterm.Error.Printf("psql is not installed. Follow the instructions here: https://www.compose.com/articles/postgresql-tips-installing-the-postgresql-client/ to install it\n")
+		os.Exit(1)
+	}
 }
 
 func CheckVPN() {
