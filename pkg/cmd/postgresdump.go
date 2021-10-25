@@ -69,8 +69,7 @@ var postgresdumpCMD = &cobra.Command{
 	Long:  `Take postgres DB dump`,
 	Args: func(_ *cobra.Command, args []string) error {
 		if len(args) == 0 {
-			pterm.Error.Printf("Microservice name argument is required.")
-			os.Exit(1)
+			return fmt.Errorf("microservice name argument is required")
 		}
 		if len(args) > 2 {
 			return fmt.Errorf("too many arguments")
