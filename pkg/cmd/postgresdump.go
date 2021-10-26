@@ -89,6 +89,10 @@ var postgresdumpCMD = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		ctx := context.Background()
 		kubeconfig := utils.GetKubeconfig()
+		args[0] = strings.ToLower(args[0])
+		if len(args) == 2 {
+			args[1] = strings.ToLower(args[1])
+		}
 		target, err := kubernetes.ParseSubject(args[0])
 		if err != nil {
 			pterm.Error.Println(err, "Its not a valid Microservice")
@@ -135,6 +139,7 @@ var postgresdumpCMD = &cobra.Command{
 		if err != nil {
 			return errors.Wrap(err, "failed to create postgresdump instance")
 		}
+		pterm.Printf("Name: " + instanceName + " Namespace: " + postgresdumpObj.Namespace + " . \n")
 		pterm.Success.Printf("Taking postgres dump\n")
 		data, err := getInstanceData(instanceName, kubeObj.Context.Cluster, target.Namespace)
 		if err != nil {
