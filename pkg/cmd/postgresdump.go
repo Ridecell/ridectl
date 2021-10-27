@@ -44,7 +44,7 @@ func init() {
 var check bool
 
 func init() {
-	postgresdumpCMD.Flags().BoolVarP(&check, "check", "f", false, "(optional) follows the status of postgresdump instance until terminated")
+	postgresdumpCMD.Flags().BoolVarP(&check, "check", "f", false, "(optional) follows the status of postgresdump instance until status completed")
 }
 
 func getInstanceData(objName string, context string, namespace string) (string, error) {
@@ -66,7 +66,7 @@ func getInstanceData(objName string, context string, namespace string) (string, 
 var postgresdumpCMD = &cobra.Command{
 	Use:   "postgresdump [flags] <microservice_name> <backup_name>",
 	Short: "Take postgres DB dump",
-	Long:  `Take postgres DB dump`,
+	Long:  `Take postgres DB dump, encrypt backup file and push it to s3 bucket`,
 	Args: func(_ *cobra.Command, args []string) error {
 		if len(args) == 0 {
 			return fmt.Errorf("microservice name argument is required")
@@ -95,7 +95,7 @@ var postgresdumpCMD = &cobra.Command{
 		}
 		target, err := kubernetes.ParseSubject(args[0])
 		if err != nil {
-			pterm.Error.Println(err, "Its not a valid Microservice")
+			pterm.Error.Println(err, "It is not a valid Microservice")
 			os.Exit(1)
 		}
 
@@ -139,8 +139,8 @@ var postgresdumpCMD = &cobra.Command{
 		if err != nil {
 			return errors.Wrap(err, "failed to create postgresdump instance")
 		}
-		pterm.Printf("Name: " + instanceName + " Namespace: " + postgresdumpObj.Namespace + " . \n")
-		pterm.Success.Printf("Taking postgres dump\n")
+		pterm.Info.Printf("Name: " + instanceName + " Namespace: " + postgresdumpObj.Namespace + " . \n")
+		pterm.Success.Printf("Taking postgres dump \n")
 		data, err := getInstanceData(instanceName, kubeObj.Context.Cluster, target.Namespace)
 		if err != nil {
 			return err
