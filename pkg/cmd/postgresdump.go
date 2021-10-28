@@ -108,12 +108,11 @@ var postgresdumpCMD = &cobra.Command{
 				PostgresDatabaseRef: postgresUser.Spec.PostgresDatabaseRef,
 			},
 		}
-		err = kubeObj.Client.Create(ctx, postgresdumpObj)
+		// err = kubeObj.Client.Create(ctx, postgresdumpObj)
 		if err != nil {
 			return errors.Wrap(err, "failed to create postgresdump instance")
 		}
-		pterm.Info.Printf("Name: " + instanceName + " Namespace: " + postgresdumpObj.Namespace + " . \n")
-		pterm.Success.Printf("Taking postgres dump \n")
+		pterm.Info.Printf("Created postgresdump kind with Name: " + instanceName + " Namespace: " + postgresdumpObj.Namespace + " . \n")
 		return nil
 	},
 }
