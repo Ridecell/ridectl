@@ -21,10 +21,8 @@ import (
 	"os"
 	osExec "os/exec"
 	"reflect"
-	"time"
 
 	"github.com/Ridecell/ridectl/pkg/utils"
-	"github.com/apoorvam/goterminal"
 	"github.com/pkg/errors"
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
@@ -86,13 +84,9 @@ var statusCmd = &cobra.Command{
 		return nil
 	},
 	PreRunE: func(cmd *cobra.Command, args []string) error {
-		utils.CheckVPN()
 
-		binaryExists := utils.CheckBinary("kubectl")
-		if !binaryExists {
-			pterm.Error.Printf("kubectl is not installed. Follow the instructions here: https://kubernetes.io/docs/tasks/tools/#kubectl to install it\n")
-			os.Exit(1)
-		}
+		utils.CheckVPN()
+		utils.CheckKubectl()
 		return nil
 	},
 	RunE: func(_ *cobra.Command, args []string) error {
@@ -118,34 +112,31 @@ var statusCmd = &cobra.Command{
 			return err
 		}
 		if follow {
-			writer := goterminal.New(os.Stdout)
-			indicator := goterminal.New(os.Stdout)
-			spinner := []string{"|", "/", "-", "\\", "/"}
-			steps := 0
+			area, _ := pterm.DefaultArea.WithRemoveWhenDone().Start()
+
 			for {
-				writer.Clear()
-				fmt.Fprintf(writer, "%s\n%s\n", sData, dData)
-				writer.Print()
-				// Wait 3 seconds before next command run and display. Also show progression
-				// with spinner steps. Note that goterminal seems to rely on new lines in order
-				// to appear as desired
-				for i := 0; i < 3; i++ {
-					fmt.Fprintf(indicator, "%s\n", spinner[steps%len(spinner)])
-					indicator.Print()
-					time.Sleep(time.Second)
-					indicator.Clear()
-					steps++
-				}
+				area.Update(sData, "\n", dData)
+				p := pterm.DefaultProgressbar.WithTotal(2)
+				p.ShowElapsedTime = false
+				p.RemoveWhenDone = true
+				_, _ = p.Start()
+				p.Title = "Fetching data"
+
 				// Calling it at end of for loop since we made these calls right before.
 				sData, err = getData("summon", kubeObj.Context.Cluster, target.Namespace, args[0])
 				if err != nil {
 					return err
 				}
+				p.Increment()
 
 				dData, err = getData("deployment", kubeObj.Context.Cluster, target.Namespace, args[0])
 				if err != nil {
 					return err
 				}
+				p.Increment()
+				_, _ = p.Stop()
+				_ = area.Stop()
+
 			}
 		} else {
 			pterm.Success.Printf(sData + "\n" + dData + "\n")
