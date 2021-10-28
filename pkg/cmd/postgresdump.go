@@ -78,12 +78,7 @@ var postgresdumpCMD = &cobra.Command{
 	},
 	PreRunE: func(cmd *cobra.Command, args []string) error {
 		utils.CheckVPN()
-
-		binaryExists := utils.CheckBinary("kubectl")
-		if !binaryExists {
-			pterm.Error.Printf("kubectl is not installed. Follow the instructions here: https://kubernetes.io/docs/tasks/tools/#kubectl to install it\n")
-			os.Exit(1)
-		}
+        utils.CheckKubectl()
 		return nil
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
