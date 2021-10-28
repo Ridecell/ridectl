@@ -20,7 +20,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	osExec "os/exec"
 	"reflect"
 	"strconv"
 	"strings"
@@ -39,28 +38,6 @@ import (
 
 func init() {
 	rootCmd.AddCommand(postgresdumpCMD)
-}
-
-var check bool
-
-func init() {
-	postgresdumpCMD.Flags().BoolVarP(&check, "check", "f", false, "(optional) follows the status of postgresdump instance until status completed")
-}
-
-func getInstanceData(objName string, context string, namespace string) (string, error) {
-	var data []byte
-	var err error
-	instanceData, err := TempFS.ReadFile("templates/show_postgresdump.tpl")
-	if err != nil {
-		return "", errors.Wrap(err, "error reading show_postgresdump.tpl")
-	}
-
-	data, err = osExec.Command("kubectl", "get", "postgresdumps.db.controllers.ridecell.io", objName, "-n", namespace, "--context", context, "-o", "go-template="+string(instanceData)).Output()
-	if err != nil {
-		return "", errors.Wrap(err, "error getting postgresdump instance info")
-	}
-
-	return string(data), err
 }
 
 var postgresdumpCMD = &cobra.Command{
@@ -115,6 +92,7 @@ var postgresdumpCMD = &cobra.Command{
 		if postgresUser.Name == "" {
 			return errors.Wrap(err, "failed to get postgres user")
 		}
+		
 		var instanceName string
 		if len(args) < 2 {
 			instanceName = args[0] + "-" + strconv.FormatInt(time.Now().Unix(), 10)
@@ -136,38 +114,6 @@ var postgresdumpCMD = &cobra.Command{
 		}
 		pterm.Info.Printf("Name: " + instanceName + " Namespace: " + postgresdumpObj.Namespace + " . \n")
 		pterm.Success.Printf("Taking postgres dump \n")
-		data, err := getInstanceData(instanceName, kubeObj.Context.Cluster, target.Namespace)
-		if err != nil {
-			return err
-		}
-		if check {
-			pterm.Info.Printf("Updating status")
-			pterm.Printf("\n")
-			area, _ := pterm.DefaultArea.Start()
-			for {
-				status := pterm.FgLightMagenta.Sprint(data)
-				area.Update(status)
-				if strings.Contains(data, "STATUS: Completed") {
-					pterm.Success.Printf("Done!!")
-					break
-				}
-				if strings.Contains(data, "STATUS: Error") {
-					pterm.Error.Printf("Error!!")
-					break
-				}
-				time.Sleep(time.Second * 2)
-				data, err = getInstanceData(instanceName, kubeObj.Context.Cluster, target.Namespace)
-				if err != nil {
-					return err
-				}
-			}
-			err = area.Stop()
-			if err != nil {
-				return err
-			}
-		} else {
-			pterm.Success.Printf(data)
-		}
 		return nil
 	},
 }
