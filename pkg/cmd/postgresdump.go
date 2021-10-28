@@ -108,7 +108,7 @@ var postgresdumpCMD = &cobra.Command{
 				PostgresDatabaseRef: postgresUser.Spec.PostgresDatabaseRef,
 			},
 		}
-		// err = kubeObj.Client.Create(ctx, postgresdumpObj)
+		err = kubeObj.Client.Create(ctx, postgresdumpObj)
 		if err != nil {
 			return errors.Wrap(err, "failed to create postgresdump instance")
 		}
