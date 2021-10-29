@@ -179,7 +179,7 @@ var statusCmd = &cobra.Command{
 
 			}
 		} else {
-			pterm.Success.Printf(sData + "\n" + dData + "\n")
+			pterm.Success.Printf(sData + "\n" + dData + "\n" + "\n" + pData)
 		}
 		return nil
 	},
