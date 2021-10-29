@@ -101,6 +101,13 @@ var statusCmd = &cobra.Command{
 		return nil
 	},
 	RunE: func(_ *cobra.Command, args []string) error {
+		statusTypes := []string{"summonplatform", "postgresdump"}
+		statusPrompt := promptui.Select{
+			Label: "Select ",
+			Items: statusTypes,
+		}
+		_, statusType, err := statusPrompt.Run()
+
 		kubeconfig := utils.GetKubeconfig()
 		target, err := kubernetes.ParseSubject(args[0])
 		if err != nil {
@@ -114,23 +121,15 @@ var statusCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		statusTypes := []string{"summon", "deployment", "postgresdump"}
-		statusPrompt := promptui.Select{
-			Label: "Select ",
-			Items: statusTypes,
-		}
-		_, statusType, err := statusPrompt.Run()
 		if err != nil {
 			return errors.Wrapf(err, "Prompt failed")
 		}
 		var sData, dData, pData string
-		if statusType == "summon" {
+		if statusType == "summonplatform" {
 			sData, err = getData("summon", kubeObj.Context.Cluster, target.Namespace, args[0])
 			if err != nil {
 				return err
 			}
-		}
-		if statusType == "deployment" {
 			dData, err = getData("deployment", kubeObj.Context.Cluster, target.Namespace, args[0])
 			if err != nil {
 				return err
@@ -147,18 +146,20 @@ var statusCmd = &cobra.Command{
 			area, _ := pterm.DefaultArea.WithRemoveWhenDone().Start()
 
 			for {
-				if statusType == "summon" {
-					area.Update(sData)
+				if statusType == "summonplatform" {
+
+					area.Update(sData, "\n", dData)
 					sData, err = getData("summon", kubeObj.Context.Cluster, target.Namespace, args[0])
 					if err != nil {
 						return err
 					}
-				} else if statusType == "deployment" {
-					area.Update(dData)
+					//area.Update(sData)
+
 					dData, err = getData("deployment", kubeObj.Context.Cluster, target.Namespace, args[0])
 					if err != nil {
 						return err
 					}
+
 				} else {
 					area.Update(pData)
 					pData, err = getData("posgtresdump", kubeObj.Context.Cluster, target.Namespace, args[0])
