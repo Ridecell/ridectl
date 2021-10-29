@@ -66,13 +66,18 @@ func getData(objType string, context string, namespace string, tenant string) (s
 		if err != nil {
 			return "", errors.Wrap(err, "error getting deployment info")
 		}
-	} else if objType == "postgresdump" {
+	} else {
 		objectData, err := TempFS.ReadFile("templates/show_postgresdump.tpl")
 		if err != nil {
 			return "", errors.Wrap(err, "error reading show_postgresdump.tpl")
 		}
-
-		data, err = osExec.Command("kubectl", "get", "postgresdumps.db.controllers.ridecell.io", "-n", namespace, "--context", context, "-o", "go-template="+string(objectData)).Output()
+		cmd := "kubectl get postgresdumps.db.controllers.ridecell.io -n " + namespace + " --sort-by='{.metadata.creationTimestamp}' | tail -1 |  cut -f1 -d' '"
+		objectName, err := osExec.Command("bash", "-c", cmd).Output()
+		if err != nil {
+			return "", errors.Wrap(err, "error executing kubectl")
+		}
+		pterm.Info.Printf(string(objectName))
+		data, err = osExec.Command("kubectl", "get", "postgresdumps.db.controllers.ridecell.io", string(objectName), "-n", namespace, "--context", context, "-o", "go-template="+string(objectData)).Output()
 		if err != nil {
 			return "", errors.Wrap(err, "error getting postgresdump instance info")
 		}
@@ -107,6 +112,9 @@ var statusCmd = &cobra.Command{
 			Items: statusTypes,
 		}
 		_, statusType, err := statusPrompt.Run()
+		if err != nil {
+			return errors.Wrapf(err, "Prompt failed")
+		}
 
 		kubeconfig := utils.GetKubeconfig()
 		target, err := kubernetes.ParseSubject(args[0])
@@ -121,9 +129,6 @@ var statusCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		if err != nil {
-			return errors.Wrapf(err, "Prompt failed")
-		}
 		var sData, dData, pData string
 		if statusType == "summonplatform" {
 			sData, err = getData("summon", kubeObj.Context.Cluster, target.Namespace, args[0])
@@ -134,8 +139,7 @@ var statusCmd = &cobra.Command{
 			if err != nil {
 				return err
 			}
-		}
-		if statusType == "posgtresdump" {
+		} else {
 			pData, err = getData("posgtresdump", kubeObj.Context.Cluster, target.Namespace, args[0])
 			if err != nil {
 				return err
@@ -153,8 +157,6 @@ var statusCmd = &cobra.Command{
 					if err != nil {
 						return err
 					}
-					//area.Update(sData)
-
 					dData, err = getData("deployment", kubeObj.Context.Cluster, target.Namespace, args[0])
 					if err != nil {
 						return err
