@@ -17,16 +17,20 @@ limitations under the License.
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"os"
 	osExec "os/exec"
 	"reflect"
+	"sort"
 
+	"github.com/Ridecell/ridecell-controllers/apis/db/v1beta2"
 	"github.com/Ridecell/ridectl/pkg/utils"
 	"github.com/manifoldco/promptui"
 	"github.com/pkg/errors"
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kubernetes "github.com/Ridecell/ridectl/pkg/kubernetes"
 )
@@ -71,13 +75,7 @@ func getData(objType string, context string, namespace string, tenant string) (s
 		if err != nil {
 			return "", errors.Wrap(err, "error reading show_postgresdump.tpl")
 		}
-		cmd := "kubectl get postgresdumps.db.controllers.ridecell.io -n " + namespace + " --sort-by='{.metadata.creationTimestamp}' | tail -1 |  cut -f1 -d' '"
-		objectName, err := osExec.Command("bash", "-c", cmd).Output()
-		if err != nil {
-			return "", errors.Wrap(err, "error executing kubectl")
-		}
-		pterm.Info.Printf(string(objectName))
-		data, err = osExec.Command("kubectl", "get", "postgresdumps.db.controllers.ridecell.io", string(objectName), "-n", namespace, "--context", context, "-o", "go-template="+string(objectData)).Output()
+		data, err = osExec.Command("kubectl", "get", "postgresdumps.db.controllers.ridecell.io", tenant, "-n", namespace, "--context", context, "-o", "go-template="+string(objectData)).Output()
 		if err != nil {
 			return "", errors.Wrap(err, "error getting postgresdump instance info")
 		}
@@ -106,6 +104,7 @@ var statusCmd = &cobra.Command{
 		return nil
 	},
 	RunE: func(_ *cobra.Command, args []string) error {
+
 		statusTypes := []string{"summonplatform", "postgresdump"}
 		statusPrompt := promptui.Select{
 			Label: "Select ",
@@ -130,6 +129,7 @@ var statusCmd = &cobra.Command{
 		}
 
 		var sData, dData, pData string
+		var postgresDumps []v1beta2.PostgresDump
 		if statusType == "summonplatform" {
 			sData, err = getData("summon", kubeObj.Context.Cluster, target.Namespace, args[0])
 			if err != nil {
@@ -140,7 +140,17 @@ var statusCmd = &cobra.Command{
 				return err
 			}
 		} else {
-			pData, err = getData("posgtresdump", kubeObj.Context.Cluster, target.Namespace, args[0])
+			postgresDumpsList := &v1beta2.PostgresDumpList{}
+			err := kubeObj.Client.List(context.TODO(), postgresDumpsList, client.InNamespace(target.Namespace))
+			if err != nil {
+				return errors.Wrap(err, "error getting postgresdumps")
+			}
+			// sort postgresdumps by creation timestamp
+			sort.Slice(postgresDumpsList.Items, func(i, j int) bool {
+				return postgresDumpsList.Items[i].CreationTimestamp.Before(&postgresDumpsList.Items[j].CreationTimestamp)
+			})
+			postgresDumps = postgresDumpsList.Items
+			pData, err = getData("postgresdump", kubeObj.Context.Cluster, target.Namespace, postgresDumps[len(postgresDumps)-1].Name)
 			if err != nil {
 				return err
 			}
@@ -164,7 +174,7 @@ var statusCmd = &cobra.Command{
 
 				} else {
 					area.Update(pData)
-					pData, err = getData("posgtresdump", kubeObj.Context.Cluster, target.Namespace, args[0])
+					pData, err = getData("posgtresdump", kubeObj.Context.Cluster, target.Namespace, postgresDumps[len(postgresDumps)-1].Name)
 					if err != nil {
 						return err
 					}
