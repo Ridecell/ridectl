@@ -23,6 +23,7 @@ import (
 	"reflect"
 
 	"github.com/Ridecell/ridectl/pkg/utils"
+	"github.com/manifoldco/promptui"
 	"github.com/pkg/errors"
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
@@ -65,6 +66,16 @@ func getData(objType string, context string, namespace string, tenant string) (s
 		if err != nil {
 			return "", errors.Wrap(err, "error getting deployment info")
 		}
+	} else if objType == "postgresdump" {
+		objectData, err := TempFS.ReadFile("templates/show_postgresdump.tpl")
+		if err != nil {
+			return "", errors.Wrap(err, "error reading show_postgresdump.tpl")
+		}
+
+		data, err = osExec.Command("kubectl", "get", "postgresdumps.db.controllers.ridecell.io", "-n", namespace, "--context", context, "-o", "go-template="+string(objectData)).Output()
+		if err != nil {
+			return "", errors.Wrap(err, "error getting postgresdump instance info")
+		}
 	}
 
 	return string(data), err
@@ -103,36 +114,64 @@ var statusCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		sData, err := getData("summon", kubeObj.Context.Cluster, target.Namespace, args[0])
-		if err != nil {
-			return err
+		statusTypes := []string{"summon", "deployment", "postgresdump"}
+		statusPrompt := promptui.Select{
+			Label: "Select ",
+			Items: statusTypes,
 		}
-		dData, err := getData("deployment", kubeObj.Context.Cluster, target.Namespace, args[0])
+		_, statusType, err := statusPrompt.Run()
 		if err != nil {
-			return err
+			return errors.Wrapf(err, "Prompt failed")
 		}
+		var sData, dData, pData string
+		if statusType == "summon" {
+			sData, err = getData("summon", kubeObj.Context.Cluster, target.Namespace, args[0])
+			if err != nil {
+				return err
+			}
+		}
+		if statusType == "deployment" {
+			dData, err = getData("deployment", kubeObj.Context.Cluster, target.Namespace, args[0])
+			if err != nil {
+				return err
+			}
+		}
+		if statusType == "posgtresdump" {
+			pData, err = getData("posgtresdump", kubeObj.Context.Cluster, target.Namespace, args[0])
+			if err != nil {
+				return err
+			}
+		}
+
 		if follow {
 			area, _ := pterm.DefaultArea.WithRemoveWhenDone().Start()
 
 			for {
-				area.Update(sData, "\n", dData)
+				if statusType == "summon" {
+					area.Update(sData)
+					sData, err = getData("summon", kubeObj.Context.Cluster, target.Namespace, args[0])
+					if err != nil {
+						return err
+					}
+				} else if statusType == "deployment" {
+					area.Update(dData)
+					dData, err = getData("deployment", kubeObj.Context.Cluster, target.Namespace, args[0])
+					if err != nil {
+						return err
+					}
+				} else {
+					area.Update(pData)
+					pData, err = getData("posgtresdump", kubeObj.Context.Cluster, target.Namespace, args[0])
+					if err != nil {
+						return err
+					}
+				}
+
 				p := pterm.DefaultProgressbar.WithTotal(2)
 				p.ShowElapsedTime = false
 				p.RemoveWhenDone = true
 				_, _ = p.Start()
 				p.Title = "Fetching data"
-
-				// Calling it at end of for loop since we made these calls right before.
-				sData, err = getData("summon", kubeObj.Context.Cluster, target.Namespace, args[0])
-				if err != nil {
-					return err
-				}
-				p.Increment()
-
-				dData, err = getData("deployment", kubeObj.Context.Cluster, target.Namespace, args[0])
-				if err != nil {
-					return err
-				}
 				p.Increment()
 				_, _ = p.Stop()
 				_ = area.Stop()
