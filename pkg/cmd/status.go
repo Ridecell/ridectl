@@ -23,6 +23,7 @@ import (
 	osExec "os/exec"
 	"reflect"
 	"sort"
+	"strings"
 
 	"github.com/Ridecell/ridecell-controllers/apis/db/v1beta2"
 	"github.com/Ridecell/ridectl/pkg/utils"
@@ -174,6 +175,14 @@ var statusCmd = &cobra.Command{
 
 				} else {
 					area.Update(pData)
+					if strings.Contains(pData, "STATUS: Completed") {
+						pterm.Success.Printf("Done!!")
+						break
+					}
+					if strings.Contains(pData, "STATUS: Error") {
+						pterm.Error.Printf("Error!!")
+						break
+					}
 					pData, err = getData("posgtresdump", kubeObj.Context.Cluster, target.Namespace, postgresDumps[len(postgresDumps)-1].Name)
 					if err != nil {
 						return err
@@ -191,7 +200,11 @@ var statusCmd = &cobra.Command{
 
 			}
 		} else {
-			pterm.Success.Printf(sData + "\n" + dData + "\n" + "\n" + pData)
+			if statusType == "summonplatform" {
+				pterm.Success.Printf(sData + "\n" + dData)
+			} else {
+				pterm.Success.Printf(pData)
+			}
 		}
 		return nil
 	},
