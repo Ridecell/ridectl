@@ -59,7 +59,7 @@ func CheckPsql() {
 }
 
 func CheckVPN() {
-	if os.Getenv("CHECK_VPN") == "yes" {
+	if os.Getenv("CI_ENV") != "yes" {
 		resp, err := http.Head("https://ridectl.s3.us-west-2.amazonaws.com/machinload01.png")
 		if err != nil {
 			pterm.Error.Println("\n", err)
