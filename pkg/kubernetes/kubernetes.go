@@ -16,6 +16,7 @@ package kubernetes
 import (
 	"context"
 	"fmt"
+	"os"
 	"regexp"
 	"strings"
 	"sync"
@@ -141,6 +142,17 @@ func fetchContextForObject(channel chan Kubeobject, cluster *api.Context, crclie
 
 func GetAppropriateObjectWithContext(kubeconfig string, instance string, subject Subject) Kubeobject {
 
+	if !fileExists(kubeconfig) {
+		var kubeObj Kubeobject
+		k8sclient, err := GetClientByContext("", nil)
+		if err != nil {
+			pterm.Error.Println(err, "Failed to get k8s client")
+		}
+		kubeObj = Kubeobject{
+			Client: k8sclient,
+		}
+		return kubeObj
+	}
 	contexts, err := getKubeContexts()
 	if err != nil {
 		pterm.Error.Println("Error getting kubecontexts", err)
@@ -204,4 +216,9 @@ func ParseSubject(instanceName string) (Subject, error) {
 	}
 	// Nothing matched, return empty with error
 	return subject, fmt.Errorf("could not parse out information from %s.", instanceName)
+}
+
+func fileExists(path string) bool {
+	_, err := os.Stat(path)
+	return !os.IsNotExist(err)
 }

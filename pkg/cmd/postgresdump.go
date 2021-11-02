@@ -55,7 +55,6 @@ var postgresdumpCMD = &cobra.Command{
 	},
 	PreRunE: func(cmd *cobra.Command, args []string) error {
 		utils.CheckVPN()
-		utils.CheckKubectl()
 		return nil
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -70,22 +69,11 @@ var postgresdumpCMD = &cobra.Command{
 			pterm.Error.Println(err, "It is not a valid Microservice")
 			os.Exit(1)
 		}
-		var kubeObj kubernetes.Kubeobject
-		if inCluster {
-			k8sclient, err := kubernetes.GetClientByContext("", nil)
-			if err != nil {
-				pterm.Error.Println(err, "Failed to get k8s client")
-			}
-			kubeObj = kubernetes.Kubeobject{
-				Client: k8sclient,
-			}
-		} else {
 
-			kubeObj = kubernetes.GetAppropriateObjectWithContext(*kubeconfig, args[0], target)
-			if reflect.DeepEqual(kubeObj, kubernetes.Kubeobject{}) {
-				pterm.Error.Printf("No instance found %s\n", args[0])
-				os.Exit(1)
-			}
+		kubeObj := kubernetes.GetAppropriateObjectWithContext(*kubeconfig, args[0], target)
+		if reflect.DeepEqual(kubeObj, kubernetes.Kubeobject{}) {
+			pterm.Error.Printf("No instance found %s\n", args[0])
+			os.Exit(1)
 		}
 
 		postgresUserList := &v1beta2.PostgresUserList{}
