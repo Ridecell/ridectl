@@ -55,7 +55,6 @@ var postgresdumpCMD = &cobra.Command{
 	},
 	PreRunE: func(cmd *cobra.Command, args []string) error {
 		utils.CheckVPN()
-		utils.CheckKubectl()
 		return nil
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -71,7 +70,7 @@ var postgresdumpCMD = &cobra.Command{
 			os.Exit(1)
 		}
 
-		kubeObj := kubernetes.GetAppropriateObjectWithContext(*kubeconfig, args[0], target)
+		kubeObj := kubernetes.GetAppropriateObjectWithContext(*kubeconfig, args[0], target, inCluster)
 		if reflect.DeepEqual(kubeObj, kubernetes.Kubeobject{}) {
 			pterm.Error.Printf("No instance found %s\n", args[0])
 			os.Exit(1)
@@ -92,7 +91,7 @@ var postgresdumpCMD = &cobra.Command{
 		if postgresUser.Name == "" {
 			return errors.Wrap(err, "failed to get postgres user")
 		}
-		
+
 		var instanceName string
 		if len(args) < 2 {
 			instanceName = args[0] + "-" + strconv.FormatInt(time.Now().Unix(), 10)
