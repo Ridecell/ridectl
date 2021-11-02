@@ -16,6 +16,7 @@ package kubernetes
 import (
 	"context"
 	"fmt"
+	"os"
 	"regexp"
 	"strings"
 	"sync"
@@ -24,6 +25,7 @@ import (
 	"github.com/pterm/pterm"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/clientcmd/api"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -49,20 +51,32 @@ type Subject struct {
 	Type      string
 }
 
-func getClientByContext(kubeconfig string, kubeContext *api.Context) (client.Client, error) {
-	loadingRules := clientcmd.NewDefaultClientConfigLoadingRules()
-	loadingRules.ExplicitPath = kubeconfig
-	config := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
-		loadingRules,
-		&clientcmd.ConfigOverrides{Context: *kubeContext})
-	cfg, err := config.ClientConfig()
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to get client with context")
-	}
+func GetClientByContext(kubeconfig string, kubeContext *api.Context) (client.Client, error) {
 
-	// Return error to skip searching non-ridecell hosts
-	if !strings.Contains(cfg.Host, ".kops.ridecell.io") {
-		return nil, errors.New("hostname did not match, ignoring context")
+	var cfg *rest.Config
+	var err error
+	if os.Getenv("CI") == "true" {
+		pterm.Info.Println("Running in CI mode, using local kubeconfig")
+		cfg, err = rest.InClusterConfig()
+		if err != nil {
+			panic(err.Error())
+		}
+	} else {
+
+		loadingRules := clientcmd.NewDefaultClientConfigLoadingRules()
+		loadingRules.ExplicitPath = kubeconfig
+
+		config := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
+			loadingRules,
+			&clientcmd.ConfigOverrides{Context: *kubeContext})
+		cfg, err = config.ClientConfig()
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to get client with context")
+		}
+		// Return error to skip searching non-ridecell hosts
+		if !strings.Contains(cfg.Host, ".kops.ridecell.io") {
+			return nil, errors.New("hostname did not match, ignoring context")
+		}
 	}
 
 	mapper, err := apiutil.NewDiscoveryRESTMapper(cfg)
@@ -136,12 +150,13 @@ func GetAppropriateObjectWithContext(kubeconfig string, instance string, subject
 
 	k8sClients := make(map[string]client.Client)
 	for _, context := range contexts {
-		k8sClient, err := getClientByContext(kubeconfig, context)
+		k8sClient, err := GetClientByContext(kubeconfig, context)
 		if err != nil {
 			continue
 		}
 		k8sClients[context.Cluster] = k8sClient
 	}
+
 	// Initialize a wait group
 	var wg sync.WaitGroup
 	wg.Add(len(k8sClients))

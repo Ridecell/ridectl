@@ -70,11 +70,23 @@ var postgresdumpCMD = &cobra.Command{
 			pterm.Error.Println(err, "It is not a valid Microservice")
 			os.Exit(1)
 		}
+		var kubeObj kubernetes.Kubeobject
+		if os.Getenv("CI") == "true" {
+			pterm.Info.Println("Running in CI mode, using local kubeconfig")
+			k8sclient, err := kubernetes.GetClientByContext("", nil)
+			if err != nil {
+				pterm.Error.Println(err, "Failed to get k8s client")
+			}
+			kubeObj = kubernetes.Kubeobject{
+				Client: k8sclient,
+			}
+		} else {
 
-		kubeObj := kubernetes.GetAppropriateObjectWithContext(*kubeconfig, args[0], target)
-		if reflect.DeepEqual(kubeObj, kubernetes.Kubeobject{}) {
-			pterm.Error.Printf("No instance found %s\n", args[0])
-			os.Exit(1)
+			kubeObj = kubernetes.GetAppropriateObjectWithContext(*kubeconfig, args[0], target)
+			if reflect.DeepEqual(kubeObj, kubernetes.Kubeobject{}) {
+				pterm.Error.Printf("No instance found %s\n", args[0])
+				os.Exit(1)
+			}
 		}
 
 		postgresUserList := &v1beta2.PostgresUserList{}
@@ -92,7 +104,7 @@ var postgresdumpCMD = &cobra.Command{
 		if postgresUser.Name == "" {
 			return errors.Wrap(err, "failed to get postgres user")
 		}
-		
+
 		var instanceName string
 		if len(args) < 2 {
 			instanceName = args[0] + "-" + strconv.FormatInt(time.Now().Unix(), 10)
