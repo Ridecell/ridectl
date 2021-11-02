@@ -70,7 +70,7 @@ var postgresdumpCMD = &cobra.Command{
 			os.Exit(1)
 		}
 
-		kubeObj := kubernetes.GetAppropriateObjectWithContext(*kubeconfig, args[0], target)
+		kubeObj := kubernetes.GetAppropriateObjectWithContext(*kubeconfig, args[0], target, inCluster)
 		if reflect.DeepEqual(kubeObj, kubernetes.Kubeobject{}) {
 			pterm.Error.Printf("No instance found %s\n", args[0])
 			os.Exit(1)

@@ -46,6 +46,7 @@ var (
 	kubeconfigFlag string
 	versionFlag    bool
 	version        string
+	inCluster      bool
 )
 var rootCmd = &cobra.Command{
 	Use:           "ridectl",
@@ -74,6 +75,7 @@ func init() {
 	}
 	rootCmd.PersistentFlags().StringVar(&kubeconfigFlag, "kubeconfig", filepath.Join(home, ".kube", "config"), "(optional) absolute path to the kubeconfig file")
 	rootCmd.Flags().BoolVar(&versionFlag, "version", false, "--version")
+	rootCmd.PersistentFlags().BoolVar(&inCluster, "incluster", false, "(optional) use in cluster kube config")
 	// check version and update if not latest
 	if !isLatestVersion() {
 		updatePrompt := promptui.Prompt{
