@@ -145,7 +145,8 @@ func GetAppropriateObjectWithContext(kubeconfig string, instance string, subject
 		var kubeObj Kubeobject
 		k8sclient, err := getClientByContext("", nil)
 		if err != nil {
-			pterm.Error.Println(err, "Failed to get k8s client")
+			pterm.Error.Println(err, "Error getting incluster client")
+			return kubeObj
 		}
 		kubeObj = Kubeobject{
 			Client: k8sclient,
