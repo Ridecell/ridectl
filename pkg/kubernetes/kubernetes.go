@@ -16,7 +16,6 @@ package kubernetes
 import (
 	"context"
 	"fmt"
-	"os"
 	"regexp"
 	"strings"
 	"sync"
@@ -55,8 +54,8 @@ func GetClientByContext(kubeconfig string, kubeContext *api.Context) (client.Cli
 
 	var cfg *rest.Config
 	var err error
-	if os.Getenv("CI") == "true" {
-		pterm.Info.Println("Running in CI mode, using local kubeconfig")
+	if kubeconfig == "" {
+		// empty kubeconfig, use in-cluster config
 		cfg, err = rest.InClusterConfig()
 		if err != nil {
 			panic(err.Error())

@@ -35,7 +35,7 @@ import (
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 	"k8s.io/client-go/kubernetes/scheme"
-    
+
 	dbv1beta2 "github.com/Ridecell/ridecell-controllers/apis/db/v1beta2"
 	secretsv1beta2 "github.com/Ridecell/ridecell-controllers/apis/secrets/v1beta2"
 	hackapis "github.com/Ridecell/ridectl/pkg/apis"
@@ -45,6 +45,7 @@ import (
 var (
 	kubeconfigFlag string
 	versionFlag    bool
+	inCluster      bool
 	version        string
 )
 var rootCmd = &cobra.Command{
@@ -74,6 +75,7 @@ func init() {
 	}
 	rootCmd.PersistentFlags().StringVar(&kubeconfigFlag, "kubeconfig", filepath.Join(home, ".kube", "config"), "(optional) absolute path to the kubeconfig file")
 	rootCmd.Flags().BoolVar(&versionFlag, "version", false, "--version")
+	rootCmd.Flags().BoolVar(&inCluster, "in-cluster", false, "--in-cluster")
 	// check version and update if not latest
 	if !isLatestVersion() {
 		updatePrompt := promptui.Prompt{

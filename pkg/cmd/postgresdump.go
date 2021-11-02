@@ -71,8 +71,7 @@ var postgresdumpCMD = &cobra.Command{
 			os.Exit(1)
 		}
 		var kubeObj kubernetes.Kubeobject
-		if os.Getenv("CI") == "true" {
-			pterm.Info.Println("Running in CI mode, using local kubeconfig")
+		if inCluster {
 			k8sclient, err := kubernetes.GetClientByContext("", nil)
 			if err != nil {
 				pterm.Error.Println(err, "Failed to get k8s client")
