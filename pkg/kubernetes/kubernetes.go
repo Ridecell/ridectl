@@ -51,7 +51,7 @@ type Subject struct {
 	Type      string
 }
 
-func GetClientByContext(kubeconfig string, kubeContext *api.Context) (client.Client, error) {
+func getClientByContext(kubeconfig string, kubeContext *api.Context) (client.Client, error) {
 
 	var cfg *rest.Config
 	var err error
@@ -144,7 +144,7 @@ func GetAppropriateObjectWithContext(kubeconfig string, instance string, subject
 
 	if !fileExists(kubeconfig) {
 		var kubeObj Kubeobject
-		k8sclient, err := GetClientByContext("", nil)
+		k8sclient, err := getClientByContext("", nil)
 		if err != nil {
 			pterm.Error.Println(err, "Failed to get k8s client")
 		}
@@ -161,7 +161,7 @@ func GetAppropriateObjectWithContext(kubeconfig string, instance string, subject
 
 	k8sClients := make(map[string]client.Client)
 	for _, context := range contexts {
-		k8sClient, err := GetClientByContext(kubeconfig, context)
+		k8sClient, err := getClientByContext(kubeconfig, context)
 		if err != nil {
 			continue
 		}
