@@ -75,7 +75,7 @@ func init() {
 	}
 	rootCmd.PersistentFlags().StringVar(&kubeconfigFlag, "kubeconfig", filepath.Join(home, ".kube", "config"), "(optional) absolute path to the kubeconfig file")
 	rootCmd.Flags().BoolVar(&versionFlag, "version", false, "--version")
-	rootCmd.Flags().BoolVar(&inCluster, "in-cluster", false, "--in-cluster")
+	rootCmd.PersistentFlags().BoolVar(&inCluster, "incluster", false, "(optional) use this if running in cluster")
 	// check version and update if not latest
 	if !isLatestVersion() {
 		updatePrompt := promptui.Prompt{
