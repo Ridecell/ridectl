@@ -59,12 +59,17 @@ func CheckPsql() {
 }
 
 func CheckVPN() {
-	resp, err := http.Head("https://ridectl.s3.us-west-2.amazonaws.com/machinload01.png")
-	if err != nil {
-		pterm.Error.Println("\n", err)
-	}
-	if resp.StatusCode != 200 {
-		pterm.Error.Println("VPN is not connected")
-		os.Exit(1)
+	checkVPN, ok := os.LookupEnv("RIDECTL_VPN_CHECK")
+	if ok && checkVPN == "false" {
+		return
+	} else {
+		resp, err := http.Head("https://ridectl.s3.us-west-2.amazonaws.com/machinload01.png")
+		if err != nil {
+			pterm.Error.Println("\n", err)
+		}
+		if resp.StatusCode != 200 {
+			pterm.Error.Println("VPN is not connected")
+			os.Exit(1)
+		}
 	}
 }
