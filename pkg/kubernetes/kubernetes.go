@@ -24,6 +24,7 @@ import (
 	"github.com/pterm/pterm"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/clientcmd/api"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -50,19 +51,31 @@ type Subject struct {
 }
 
 func getClientByContext(kubeconfig string, kubeContext *api.Context) (client.Client, error) {
-	loadingRules := clientcmd.NewDefaultClientConfigLoadingRules()
-	loadingRules.ExplicitPath = kubeconfig
-	config := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
-		loadingRules,
-		&clientcmd.ConfigOverrides{Context: *kubeContext})
-	cfg, err := config.ClientConfig()
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to get client with context")
-	}
 
-	// Return error to skip searching non-ridecell hosts
-	if !strings.Contains(cfg.Host, ".kops.ridecell.io") {
-		return nil, errors.New("hostname did not match, ignoring context")
+	var cfg *rest.Config
+	var err error
+	if kubeconfig == "" {
+		// empty kubeconfig, use in-cluster config
+		cfg, err = rest.InClusterConfig()
+		if err != nil {
+			panic(err.Error())
+		}
+	} else {
+
+		loadingRules := clientcmd.NewDefaultClientConfigLoadingRules()
+		loadingRules.ExplicitPath = kubeconfig
+
+		config := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
+			loadingRules,
+			&clientcmd.ConfigOverrides{Context: *kubeContext})
+		cfg, err = config.ClientConfig()
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to get client with context")
+		}
+		// Return error to skip searching non-ridecell hosts
+		if !strings.Contains(cfg.Host, ".kops.ridecell.io") {
+			return nil, errors.New("hostname did not match, ignoring context")
+		}
 	}
 
 	mapper, err := apiutil.NewDiscoveryRESTMapper(cfg)
@@ -126,8 +139,20 @@ func fetchContextForObject(channel chan Kubeobject, cluster *api.Context, crclie
 
 }
 
-func GetAppropriateObjectWithContext(kubeconfig string, instance string, subject Subject) Kubeobject {
+func GetAppropriateObjectWithContext(kubeconfig string, instance string, subject Subject, inCluster bool) Kubeobject {
 
+	if inCluster {
+		var kubeObj Kubeobject
+		k8sclient, err := getClientByContext("", nil)
+		if err != nil {
+			pterm.Error.Println(err, "Error getting incluster client")
+			return kubeObj
+		}
+		kubeObj = Kubeobject{
+			Client: k8sclient,
+		}
+		return kubeObj
+	}
 	contexts, err := getKubeContexts()
 	if err != nil {
 		pterm.Error.Println("Error getting kubecontexts", err)
@@ -142,6 +167,7 @@ func GetAppropriateObjectWithContext(kubeconfig string, instance string, subject
 		}
 		k8sClients[context.Cluster] = k8sClient
 	}
+
 	// Initialize a wait group
 	var wg sync.WaitGroup
 	wg.Add(len(k8sClients))
