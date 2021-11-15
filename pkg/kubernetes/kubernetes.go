@@ -131,10 +131,14 @@ func fetchContextForObject(channel chan Kubeobject, cluster *api.Context, crclie
 			pterm.Warning.Printf("%s in %s\n", err.Error(), cluster.Cluster)
 			return
 		}
-
-		if err == nil {
+		// This makes sure we are returning the correct context.
+		// In the case of microservices, the deployment is in the same namespace in all clusters
+		if err == nil && deploymentObj.Labels["region"] == subject.Region {
 			channel <- Kubeobject{Client: crclient, Context: cluster}
+		} else {
+			return
 		}
+
 	}
 
 }
