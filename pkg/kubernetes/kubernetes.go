@@ -132,7 +132,7 @@ func fetchContextForObject(channel chan Kubeobject, cluster *api.Context, crclie
 			return
 		}
 		// This makes sure we are returning the correct context.
-		// In the case of microservices, the deployment is in the same namespace in all clusters
+		// In the case of microservices, the deployment name is same for all clusters
 		if err == nil && deploymentObj.Labels["region"] == subject.Region {
 			channel <- Kubeobject{Client: crclient, Context: cluster}
 		} else {
