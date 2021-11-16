@@ -83,7 +83,7 @@ var postgresdumpCMD = &cobra.Command{
 		}
 		postgresUser := &v1beta2.PostgresUser{}
 		for _, postgresUsr := range postgresUserList.Items {
-			if postgresUsr.Spec.Mode == "owner" && postgresUsr.Name == args[0] && postgresUsr.Namespace == target.Namespace {
+			if postgresUsr.Spec.Mode == "owner" && postgresUsr.Name == args[0] {
 				postgresUser = &postgresUsr
 				break
 			}
