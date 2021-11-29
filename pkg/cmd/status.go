@@ -80,7 +80,7 @@ func getData(objType string, context string, namespace string, tenant string) (s
 }
 
 var statusCmd = &cobra.Command{
-	Use:   "status [follow] ",
+	Use:   "status",
 	Short: "Get status report of an Summon Instance",
 	Long:  "Shows status details for all components of a Summon Instance",
 	Args: func(_ *cobra.Command, args []string) error {
@@ -91,7 +91,7 @@ var statusCmd = &cobra.Command{
 		utils.CheckKubectl()
 		return nil
 	},
-	RunE: func(_ *cobra.Command, args []string) error {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		statusTypes := []string{"Summon Platform Status", "DB Backup Status"}
 		statusPrompt := promptui.Select{
 			Label: "Select ",
@@ -108,7 +108,7 @@ var statusCmd = &cobra.Command{
 			return nil
 		}
 		instanceNamePromt := promptui.Prompt{
-			Label:    "Enter tenant/microservice name",
+			Label:    "Enter summon tenant(sandbox-dev)/microservice(svc-us-master-microservice) name",
 			Validate: validator,
 		}
 		name, err := instanceNamePromt.Run()
@@ -145,23 +145,29 @@ var statusCmd = &cobra.Command{
 				return err
 			}
 		}
-
-		if follow {
+		followStatus, _ := cmd.Flags().GetBool("follow")
+		if followStatus {
 			area, _ := pterm.DefaultArea.WithRemoveWhenDone().Start()
 
 			for {
+				p := pterm.DefaultProgressbar.WithTotal(2)
+				p.ShowElapsedTime = false
+				p.RemoveWhenDone = true
+				_, _ = p.Start()
 				if statusType == "Summon Platform Status" {
-
 					area.Update(sData, "\n", dData)
+					p.Title = "Fetching data"
 					sData, err = getData("summon", kubeObj.Context.Cluster, target.Namespace, name)
 					if err != nil {
 						return err
 					}
+					p.Increment()
+
 					dData, err = getData("deployment", kubeObj.Context.Cluster, target.Namespace, name)
 					if err != nil {
 						return err
 					}
-
+					p.Increment()
 				} else {
 					area.Update(pData)
 					pData, err = getData("posgtresdump", kubeObj.Context.Cluster, target.Namespace, name)
@@ -169,16 +175,8 @@ var statusCmd = &cobra.Command{
 						return err
 					}
 				}
-
-				p := pterm.DefaultProgressbar.WithTotal(2)
-				p.ShowElapsedTime = false
-				p.RemoveWhenDone = true
-				_, _ = p.Start()
-				p.Title = "Fetching data"
-				p.Increment()
 				_, _ = p.Stop()
 				_ = area.Stop()
-
 			}
 		} else {
 			if statusType == "summonplatform" {
