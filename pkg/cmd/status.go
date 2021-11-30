@@ -93,7 +93,7 @@ var statusCmd = &cobra.Command{
 		return nil
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
-		statusTypes := []string{"Summon Platform Status", "DB Backup Status"}
+		statusTypes := []string{"Summon Platform", "DB Backup"}
 		statusPrompt := promptui.Select{
 			Label: "Select ",
 			Items: statusTypes,
@@ -131,7 +131,7 @@ var statusCmd = &cobra.Command{
 		}
 
 		var sData, dData, pData string
-		if statusType == "Summon Platform Status" {
+		if statusType == "Summon Platform" {
 			sData, err = getData("summon", kubeObj.Context.Cluster, target.Namespace, name)
 			if err != nil {
 				return err
@@ -153,7 +153,7 @@ var statusCmd = &cobra.Command{
 				p := pterm.DefaultProgressbar
 				p.ShowElapsedTime = false
 				p.RemoveWhenDone = true
-				if statusType == "Summon Platform Status" {
+				if statusType == "Summon Platform" {
 					p = *p.WithTotal(2)
 					area.Update(sData, "\n", dData)
 					_, _ = p.Start()
@@ -185,7 +185,7 @@ var statusCmd = &cobra.Command{
 				_ = area.Stop()
 			}
 		} else {
-			if statusType == "Summon Platform Status" {
+			if statusType == "Summon Platform" {
 				pterm.Success.Printf(sData + "\n" + dData)
 			} else {
 				pterm.Success.Printf(pData)
