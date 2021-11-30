@@ -112,7 +112,7 @@ var postgresdumpCMD = &cobra.Command{
 			return errors.Wrap(err, "failed to create postgresdump instance")
 		}
 		pterm.Info.Printf("Created postgresdump kind with Name: " + instanceName + " Namespace: " + postgresdumpObj.Namespace + " . \n")
-		pterm.Info.Printf("You can check status of DB backup using 'ridectl status' command")
+		pterm.Info.Printf("You can check status of DB backup using 'ridectl status' command \n")
 		return nil
 	},
 }

@@ -20,6 +20,7 @@ import (
 	"os"
 	osExec "os/exec"
 	"reflect"
+	"strings"
 	"time"
 
 	"github.com/Ridecell/ridectl/pkg/utils"
@@ -71,7 +72,11 @@ func getData(objType string, context string, namespace string, tenant string) (s
 		if err != nil {
 			return "", errors.Wrap(err, "error reading show_postgresdump.tpl")
 		}
-		data, err = osExec.Command("kubectl", "get", "postgresdumps.db.controllers.ridecell.io", "-n", namespace, "--context", context, "-o", "go-template="+string(objectData)).Output()
+		command := "kubectl get postgresdumps.db.controllers.ridecell.io -n " + namespace + " -o" + " go-template='" + string(objectData) + "'"
+		if strings.Contains(tenant, "svc-") {
+			command = "kubectl get postgresdumps.db.controllers.ridecell.io -n " + namespace + " -o" + " go-template='" + string(objectData) + "'" + " | grep " + tenant
+		}
+		data, err = osExec.Command("bash", "-c", command).Output()
 		if err != nil {
 			return "", errors.Wrap(err, "error getting postgresdump instance info")
 		}
