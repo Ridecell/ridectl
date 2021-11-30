@@ -20,6 +20,7 @@ import (
 	"os"
 	osExec "os/exec"
 	"reflect"
+	"time"
 
 	"github.com/Ridecell/ridectl/pkg/utils"
 	"github.com/manifoldco/promptui"
@@ -148,14 +149,14 @@ var statusCmd = &cobra.Command{
 		followStatus, _ := cmd.Flags().GetBool("follow")
 		if followStatus {
 			area, _ := pterm.DefaultArea.WithRemoveWhenDone().Start()
-
 			for {
-				p := pterm.DefaultProgressbar.WithTotal(2)
+				p := pterm.DefaultProgressbar
 				p.ShowElapsedTime = false
 				p.RemoveWhenDone = true
-				_, _ = p.Start()
 				if statusType == "Summon Platform Status" {
+					p = *p.WithTotal(2)
 					area.Update(sData, "\n", dData)
+					_, _ = p.Start()
 					p.Title = "Fetching data"
 					sData, err = getData("summon", kubeObj.Context.Cluster, target.Namespace, name)
 					if err != nil {
@@ -169,11 +170,16 @@ var statusCmd = &cobra.Command{
 					}
 					p.Increment()
 				} else {
+					p = *p.WithTotal(1)
 					area.Update(pData)
+					_, _ = p.Start()
+					p.Title = "Fetching data"
 					pData, err = getData("posgtresdump", kubeObj.Context.Cluster, target.Namespace, name)
 					if err != nil {
 						return err
 					}
+					p.Increment()
+					time.Sleep(time.Second * 10)
 				}
 				_, _ = p.Stop()
 				_ = area.Stop()
