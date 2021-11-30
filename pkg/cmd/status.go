@@ -98,6 +98,7 @@ var statusCmd = &cobra.Command{
 		return nil
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
+		followStatus, _ := cmd.Flags().GetBool("follow")
 		statusTypes := []string{"Summon Platform", "DB Backup"}
 		statusPrompt := promptui.Select{
 			Label: "Select ",
@@ -151,7 +152,6 @@ var statusCmd = &cobra.Command{
 				return err
 			}
 		}
-		followStatus, _ := cmd.Flags().GetBool("follow")
 		if followStatus {
 			area, _ := pterm.DefaultArea.WithRemoveWhenDone().Start()
 			for {
