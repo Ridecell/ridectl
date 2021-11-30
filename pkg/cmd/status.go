@@ -185,7 +185,7 @@ var statusCmd = &cobra.Command{
 				_ = area.Stop()
 			}
 		} else {
-			if statusType == "summonplatform" {
+			if statusType == "Summon Platform Status" {
 				pterm.Success.Printf(sData + "\n" + dData)
 			} else {
 				pterm.Success.Printf(pData)
