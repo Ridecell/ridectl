@@ -70,7 +70,7 @@ var dbShellCmd = &cobra.Command{
 		secretObj := &corev1.Secret{}
 		err = kubeObj.Client.Get(context.Background(), types.NamespacedName{Name: target.Name + ".postgres-user-password", Namespace: target.Namespace}, secretObj)
 		if err != nil {
-			pterm.Error.Printf("instance not found in %s", kubeObj.Context.Cluster)
+			pterm.Error.Printf("instance not found in %s", kubeObj.Context)
 			os.Exit(1)
 		}
 

@@ -95,11 +95,11 @@ var shellCmd = &cobra.Command{
 		podList := &corev1.PodList{}
 		err = kubeObj.Client.List(context.Background(), podList, listOptions)
 		if err != nil {
-			pterm.Error.Printf("instance not found in %s", kubeObj.Context.Cluster)
+			pterm.Error.Printf("instance not found in %s", kubeObj.Context)
 			os.Exit(1)
 		}
 		if len(podList.Items) < 1 {
-			pterm.Error.Printf("instance not found in %s", kubeObj.Context.Cluster)
+			pterm.Error.Printf("instance not found in %s", kubeObj.Context)
 			os.Exit(1)
 		}
 
@@ -110,7 +110,7 @@ var shellCmd = &cobra.Command{
 		// Warn people that this is a container.
 		pterm.Warning.Printf("Remember that this is a container and most changes will have no effect\n")
 
-		kubectlArgs := []string{"kubectl", "exec", "-it", "-n", pod.Namespace, pod.Name, "--context", kubeObj.Context.Cluster, "--", "bash", "-l"}
+		kubectlArgs := []string{"kubectl", "exec", "-it", "-n", pod.Namespace, pod.Name, "--context", kubeObj.Context, "--", "bash", "-l"}
 		return exec.Exec(kubectlArgs)
 
 	},
