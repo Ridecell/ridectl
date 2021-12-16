@@ -214,6 +214,11 @@ func lintFile(filename string, imageTags []string) error {
 		// return here because we are ignoring old ridecell-operator manifests
 		return nil
 	}
+
+	if len(manifest) == 1 && manifest[0].Object.DeepCopyObject().GetObjectKind().GroupVersionKind().Kind == "Namespace" {
+		// return here because we are ignoring namespace manifest
+		return nil
+	}
 	// we need to do this because we don't want more than two objects in manifest but we already checked for empty manifest above
 	if len(manifest) != 3 {
 		return fmt.Errorf("%s: expected three objects in file got %v", filename, len(manifest))
