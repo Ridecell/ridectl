@@ -93,7 +93,7 @@ var statusCmd = &cobra.Command{
 		return nil
 	},
 	PreRunE: func(cmd *cobra.Command, args []string) error {
-		utils.CheckVPN()
+
 		utils.CheckKubectl()
 		return nil
 	},
