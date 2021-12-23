@@ -215,6 +215,9 @@ func lintFile(filename string, imageTags []string) error {
 		return nil
 	}
 
+	// As per our instructions https://github.com/Ridecell/kubernetes-summon#delete-summon-instance, we first remove
+	// summon-platform and encryptedsecrets objects from instance.yaml and then delete the yaml later. Below check makes sure
+	// lint does not fail even if there in only one namespace object in instance.yaml
 	if len(manifest) == 1 && manifest[0].Object.DeepCopyObject().GetObjectKind().GroupVersionKind().Kind == "Namespace" {
 		// return here because we are ignoring namespace manifest
 		return nil
