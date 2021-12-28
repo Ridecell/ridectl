@@ -79,14 +79,17 @@ var editCmd = &cobra.Command{
 	Args: func(_ *cobra.Command, args []string) error {
 		if filenameFlag == "" {
 			if len(args) == 0 {
-				return fmt.Errorf("Cluster name argument is required")
+				pterm.Error.Println("cluster name argument is required")
+				os.Exit(1)
 			}
 			if len(args) > 1 {
-				return fmt.Errorf("Too many arguments")
+				pterm.Error.Println("too many arguments")
+				os.Exit(1)
 			}
 		} else {
 			if len(args) > 0 {
-				return fmt.Errorf("Too many arguments")
+				pterm.Error.Println("too many arguments")
+				os.Exit(1)
 			}
 		}
 		return nil

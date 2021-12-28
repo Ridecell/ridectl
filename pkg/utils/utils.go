@@ -15,11 +15,12 @@ package utils
 
 import (
 	"flag"
-	"fmt"
 	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
+
+	"github.com/pterm/pterm"
 
 	"k8s.io/client-go/util/homedir"
 )
@@ -34,18 +35,41 @@ func GetKubeconfig() *string {
 	return kubeconfig
 }
 
-func CheckBinary(binary string) bool {
+func checkBinary(binary string) bool {
 	_, err := exec.LookPath(binary)
-	return err == nil
+	if err != nil {
+		pterm.Error.Println("\n", err)
+		return false
+	}
+	return true
+}
+
+func CheckKubectl() {
+	if !checkBinary("kubectl") {
+		pterm.Error.Printf("kubectl is not installed. Follow the instructions here: https://kubernetes.io/docs/tasks/tools/#kubectl to install it\n")
+		os.Exit(1)
+	}
+}
+
+func CheckPsql() {
+	if !checkBinary("psql") {
+		pterm.Error.Printf("psql is not installed. Follow the instructions here: https://www.compose.com/articles/postgresql-tips-installing-the-postgresql-client/ to install it\n")
+		os.Exit(1)
+	}
 }
 
 func CheckVPN() {
-	resp, err := http.Get("https://ridectl.s3.us-west-2.amazonaws.com/machinload01.png")
-	if err != nil {
-		fmt.Println("\n", err)
-	}
-	if resp.StatusCode != 200 {
-		fmt.Println("VPN is not connected")
-		os.Exit(1)
+	checkVPN, ok := os.LookupEnv("RIDECTL_VPN_CHECK")
+	if ok && checkVPN == "false" {
+		return
+	} else {
+		resp, err := http.Head("https://ridectl.s3.us-west-2.amazonaws.com/machinload01.png")
+		if err != nil {
+			pterm.Error.Println("\n", err)
+		}
+		if resp.StatusCode != 200 {
+			pterm.Error.Println("VPN is not connected")
+			os.Exit(1)
+		}
 	}
 }

@@ -19,11 +19,13 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"os"
 	"reflect"
 	"time"
 
 	"github.com/Ridecell/ridectl/pkg/kubernetes"
 	"github.com/pkg/errors"
+	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
@@ -55,23 +57,21 @@ var rollingRestartCmd = &cobra.Command{
 		"For microservices: restart svc-<region>-<env>-<microservice> <type>  -- e.g. ridectl svc-us-master-webhook-sms web",
 	Args: func(_ *cobra.Command, args []string) error {
 		if len(args) == 0 {
-			return fmt.Errorf("Cluster name argument is required.")
+			pterm.Error.Printf("Cluster name argument is required.")
+			os.Exit(1)
 		}
 		if len(args) == 1 {
-			return fmt.Errorf("Deployment type argument is required.")
+			pterm.Error.Printf("Deployment type argument is required.")
+			os.Exit(1)
 		}
 		if len(args) > 2 {
-			return fmt.Errorf("Too many arguments")
+			return fmt.Errorf("too many arguments")
 		}
 		return nil
 	},
 	PreRunE: func(cmd *cobra.Command, args []string) error {
-		utils.CheckVPN()
 
-		binaryExists := utils.CheckBinary("kubectl")
-		if !binaryExists {
-			return fmt.Errorf("kubectl is not installed. Follow the instructions here: https://kubernetes.io/docs/tasks/tools/#kubectl to install it")
-		}
+		utils.CheckVPN()
 		fmt.Printf("\nWarning: This might cause downtime for your services\n")
 		return nil
 	},
@@ -79,7 +79,8 @@ var rollingRestartCmd = &cobra.Command{
 		kubeconfig := utils.GetKubeconfig()
 		target, err := kubernetes.ParseSubject(args[0])
 		if err != nil {
-			return errors.Wrapf(err, "not a valid target %s", args[0])
+			pterm.Error.Println(err, "Its not a valid Summonplatform or Microservice")
+			os.Exit(1)
 		}
 
 		var deploymentName string
@@ -96,9 +97,10 @@ var rollingRestartCmd = &cobra.Command{
 			deploymentName = fmt.Sprintf("%s-svc-%s-%s", target.Env, target.Namespace, args[1])
 		}
 
-		kubeObj := kubernetes.GetAppropriateObjectWithContext(*kubeconfig, args[0], target)
+		kubeObj := kubernetes.GetAppropriateObjectWithContext(*kubeconfig, args[0], target, inCluster)
 		if reflect.DeepEqual(kubeObj, kubernetes.Kubeobject{}) {
-			return errors.Wrapf(err, "no instance found %s", args[0])
+			pterm.Error.Printf("No instance found %s\n", args[0])
+			os.Exit(1)
 		}
 
 		labelSet := labels.Set{}
@@ -147,7 +149,7 @@ var rollingRestartCmd = &cobra.Command{
 			}
 			restartSuccess = true
 		}
-		fmt.Printf("\nSuccessfully restarted pods for %s : %s\n", args[0], args[1])
+		pterm.Success.Printf("Successfully restarted pods for %s : %s\n", args[0], args[1])
 		return nil
 	},
 }
