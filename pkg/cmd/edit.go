@@ -45,12 +45,10 @@ func init() {
 
 var filenameFlag string
 var keyIdFlag string
-var recrypt bool
 
 var whitespaceRegexp *regexp.Regexp
 
 func init() {
-	editCmd.Flags().BoolVarP(&recrypt, "recrypt", "r", false, "(optional) re-encrypts all secrets in file")
 	editCmd.Flags().StringVarP(&filenameFlag, "file", "f", "", "(optional) Path to the file to edit")
 	editCmd.Flags().StringVarP(&keyIdFlag, "key", "k", "", "(optional) KMS key ID to use for encrypting")
 
@@ -189,7 +187,7 @@ var editCmd = &cobra.Command{
 			}
 		}
 
-		err = afterManifest.Encrypt(kmsService, keyId, keyIdFlag != "" || recrypt, recrypt)
+		err = afterManifest.Encrypt(kmsService, keyId, keyIdFlag != "", true)
 		if err != nil {
 			return errors.Wrap(err, "error encrypting after manifest")
 		}
@@ -202,8 +200,6 @@ var editCmd = &cobra.Command{
 		}
 		defer outFile.Close()
 		_ = afterManifest.Serialize(outFile)
-
-		pterm.Info.Printf("Encrypted using %s\n", keyId)
 		return nil
 	},
 }
