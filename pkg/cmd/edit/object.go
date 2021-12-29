@@ -443,23 +443,25 @@ func DecryptCipherDataKey(kmsService kmsiface.KMSAPI, cipherDataKey []byte, key 
 	plainDataKey := &[32]byte{}
 	copy(plainDataKey[:], decryptRsp.Plaintext)
 
-	// get aliasname from key id
-	var haveAlias bool
-	haveAlias = true
-	aliasRsp, err := kmsService.ListAliases(&kms.ListAliasesInput{
-		KeyId: aws.String(aws.StringValue(decryptRsp.KeyId)),
-	})
-	if err != nil {
-		pterm.Error.Println("Error getting alias for key")
-		haveAlias = false
-	}
-	if haveAlias {
-		aliasList := aliasRsp.Aliases
-		if len(aliasList) == 0 {
+	if key != "" {
+		// get aliasname from key id
+		var haveAlias bool
+		haveAlias = true
+		aliasRsp, err := kmsService.ListAliases(&kms.ListAliasesInput{
+			KeyId: aws.String(aws.StringValue(decryptRsp.KeyId)),
+		})
+		if err != nil {
 			pterm.Error.Println("Error getting alias for key")
+			haveAlias = false
 		}
-		alias := aliasList[0].AliasName
-		pterm.Info.Printf("Decrypted %s using %s\n", key, aws.StringValue(alias))
+		if haveAlias {
+			aliasList := aliasRsp.Aliases
+			if len(aliasList) == 0 {
+				pterm.Error.Println("Error getting alias for key")
+			}
+			alias := aliasList[0].AliasName
+			pterm.Info.Printf("Decrypted %s using %s\n", key, aws.StringValue(alias))
+		}
 	}
 	return plainDataKey, nil
 }
