@@ -222,10 +222,6 @@ func lintFile(filename string, imageTags []string) error {
 		// return here because we are ignoring namespace manifest
 		return nil
 	}
-	// we need to do this because we don't want more than two objects in manifest but we already checked for empty manifest above
-	if len(manifest) != 3 {
-		return fmt.Errorf("%s: expected three objects in file got %v", filename, len(manifest))
-	}
 
 	summonObj, ok := manifest[1].Object.(*summonv1beta2.SummonPlatform)
 	if !ok {
@@ -301,7 +297,8 @@ func lintFile(filename string, imageTags []string) error {
 	}
 
 	// Start checking from the second object in the manifest, ignore the namespace object
-	for _, object := range manifest[1:] {
+	// check only summon-platform and encryptedsecrets objects, ignore other objects
+	for _, object := range manifest[1:2] {
 		if object.Meta.GetName() != expectedName {
 
 			return fmt.Errorf("%s: %s name %s did not match expected value %s", filename, object.Kind, object.Meta.GetName(), expectedName)
