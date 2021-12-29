@@ -30,6 +30,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/kms"
 	"github.com/aws/aws-sdk-go/service/kms/kmsiface"
 	"github.com/pkg/errors"
+	"github.com/pterm/pterm"
 	"golang.org/x/crypto/nacl/secretbox"
 	"k8s.io/client-go/kubernetes/scheme"
 
@@ -234,11 +235,13 @@ func (o *Object) Decrypt(kmsService kmsiface.KMSAPI) error {
 			return errors.Errorf("key mismatch between %s and %s for %s", o.KeyId, *decryptedValue.KeyId, key)
 		}
 		o.KeyId = *decryptedValue.KeyId
+
 		decryptedString := string(decryptedValue.Plaintext)
 		if decryptedString == secretsv1beta2.EncryptedSecretEmptyKey {
 			decryptedString = ""
 		}
 		dec.Data[key] = decryptedString
+
 	}
 	o.OrigDec = dec
 	o.Kind = "DecryptedSecret"
@@ -288,7 +291,6 @@ func (o *Object) Encrypt(kmsService kmsiface.KMSAPI, defaultKeyId string, forceK
 				return errors.Wrapf(err, "error decrypting value for cipherDatakey")
 			}
 			cipherDataKey = p.Key
-			plainDataKeyPresent = true
 			break
 		}
 	}
@@ -301,6 +303,7 @@ func (o *Object) Encrypt(kmsService kmsiface.KMSAPI, defaultKeyId string, forceK
 			if ok && value == origDecValue {
 				// Key was not changed, reuse the old encrypted value.
 				enc.Data[key] = o.OrigEnc.Data[key]
+
 				continue
 			}
 		}
@@ -335,6 +338,8 @@ func (o *Object) Encrypt(kmsService kmsiface.KMSAPI, defaultKeyId string, forceK
 
 		enc.Data[key] = fmt.Sprintf("crypto %s", string(base64.StdEncoding.EncodeToString(buf.Bytes())))
 	}
+
+	pterm.Info.Printf("Encrypted using %s\n", getAliasByKey(kmsService, keyId))
 	o.AfterEnc = enc
 	o.Kind = "EncryptedSecret"
 	o.Data = enc.Data
@@ -432,10 +437,43 @@ func DecryptCipherDataKey(kmsService kmsiface.KMSAPI, cipherDataKey []byte) (*[3
 			"RidecellOperator": aws.String("true"),
 		},
 	})
+
 	if err != nil {
 		return nil, err
 	}
 	plainDataKey := &[32]byte{}
 	copy(plainDataKey[:], decryptRsp.Plaintext)
+
+	pterm.Info.Printf("Decrypted using %s\n", getAliasByKey(kmsService, *decryptRsp.KeyId))
 	return plainDataKey, nil
+}
+
+func getAliasByKey(kmsService kmsiface.KMSAPI, keyId string) string {
+
+	// check if the key is an alias
+	if strings.HasPrefix(keyId, "alias") {
+		return keyId
+	}
+	// get aliasname from key id
+	var aliases []string
+	aliasRsp, err := kmsService.ListAliases(&kms.ListAliasesInput{
+		KeyId: aws.String(keyId),
+	})
+	if err != nil {
+		pterm.Error.Println("Error getting alias for key")
+		return keyId
+	}
+
+	aliasList := aliasRsp.Aliases
+	if len(aliasList) == 0 {
+		pterm.Warning.Println("Error getting alias for key")
+		return keyId
+	}
+
+	for alias := range aliasList {
+		aliases = append(aliases, *aliasList[alias].AliasName)
+	}
+
+	return strings.Join(aliases, ",")
+
 }

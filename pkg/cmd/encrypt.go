@@ -38,6 +38,8 @@ func init() {
 	rootCmd.AddCommand(encryptCmd)
 }
 
+var recrypt bool
+
 func init() {
 	encryptCmd.Flags().BoolVarP(&recrypt, "recrypt", "r", false, "(optional) re-encrypts the file")
 	encryptCmd.Flags().StringVarP(&keyIdFlag, "key", "k", "", "(optional) KMS key ID / key alias to use for encrypting")
