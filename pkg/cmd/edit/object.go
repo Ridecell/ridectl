@@ -455,24 +455,25 @@ func getAliasByKey(kmsService kmsiface.KMSAPI, keyId string) string {
 		return keyId
 	}
 	// get aliasname from key id
-	var haveAlias bool
-	var alias *string
-	haveAlias = true
+	var aliases []string
 	aliasRsp, err := kmsService.ListAliases(&kms.ListAliasesInput{
 		KeyId: aws.String(keyId),
 	})
 	if err != nil {
 		pterm.Error.Println("Error getting alias for key")
-		haveAlias = false
+		return keyId
 	}
-	if haveAlias {
-		aliasList := aliasRsp.Aliases
-		if len(aliasList) == 0 {
-			pterm.Error.Println("Error getting alias for key")
-		}
-		alias = aliasList[0].AliasName
 
+	aliasList := aliasRsp.Aliases
+	if len(aliasList) == 0 {
+		pterm.Warning.Println("Error getting alias for key")
+		return keyId
 	}
-	return aws.StringValue(alias)
+
+	for alias, _ := range aliasList {
+		aliases = append(aliases, *aliasList[alias].AliasName)
+	}
+
+	return strings.Join(aliases, ",")
 
 }
