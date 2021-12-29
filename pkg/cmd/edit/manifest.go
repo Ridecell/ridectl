@@ -18,7 +18,6 @@ import (
 	"fmt"
 	"io"
 	"regexp"
-	"strings"
 
 	"github.com/aws/aws-sdk-go/service/kms/kmsiface"
 	"github.com/pkg/errors"
@@ -33,6 +32,7 @@ func init() {
 }
 
 func NewManifest(in io.Reader) (Manifest, error) {
+	var re = regexp.MustCompile(`no kind | is registered for version | in scheme`)
 
 	// Read in the whole file.
 	buf := bytes.Buffer{}
@@ -48,7 +48,8 @@ func NewManifest(in io.Reader) (Manifest, error) {
 		}
 		obj, err := NewObject([]byte(chunk))
 		// we need to ignnore the error here because we don't want to lint the ridecell-operator objects here
-		if err != nil && (strings.Contains(err.Error(), "no kind \"SummonPlatform\" is registered for version \"summon.ridecell.io/v1beta1\"") || strings.Contains(err.Error(), "no kind \"EncryptedSecret\" is registered for version \"secrets.ridecell.io/v1beta1\"")) {
+		if err != nil && re.MatchString(err.Error()) {
+			//if err != nil && (strings.Contains(err.Error(), "no kind \"RabbitmqVhost\" is registered for version")) {
 			continue
 		}
 		// return the error if we have one which is not ignorable
