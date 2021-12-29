@@ -203,7 +203,7 @@ func (o *Object) Decrypt(kmsService kmsiface.KMSAPI) error {
 			plainDataKey, ok := keyMap[string(p.Key)]
 			if !ok {
 				// Decrypt cipherdatakey
-				plainDataKey, err = DecryptCipherDataKey(kmsService, p.Key, key)
+				plainDataKey, err = DecryptCipherDataKey(kmsService, p.Key)
 				if err != nil {
 					return errors.Wrapf(err, "error decrypting value for cipherDatakey")
 				}
@@ -286,7 +286,7 @@ func (o *Object) Encrypt(kmsService kmsiface.KMSAPI, defaultKeyId string, forceK
 			}
 			var p Payload
 			_ = gob.NewDecoder(bytes.NewReader(decodedValue)).Decode(&p)
-			plainDataKey, err = DecryptCipherDataKey(kmsService, p.Key, key)
+			plainDataKey, err = DecryptCipherDataKey(kmsService, p.Key)
 			if err != nil {
 				return errors.Wrapf(err, "error decrypting value for cipherDatakey")
 			}
@@ -317,7 +317,6 @@ func (o *Object) Encrypt(kmsService kmsiface.KMSAPI, defaultKeyId string, forceK
 			}
 			plainDataKeyPresent = true
 		}
-		pterm.Info.Printf("Encrypting %s with key %s\n", key, keyId)
 
 		// Initialize Payload
 		p := &Payload{
@@ -339,6 +338,8 @@ func (o *Object) Encrypt(kmsService kmsiface.KMSAPI, defaultKeyId string, forceK
 
 		enc.Data[key] = fmt.Sprintf("crypto %s", string(base64.StdEncoding.EncodeToString(buf.Bytes())))
 	}
+
+	pterm.Info.Printf("Encrypted using %s\n", getAliasByKey(kmsService, keyId))
 	o.AfterEnc = enc
 	o.Kind = "EncryptedSecret"
 	o.Data = enc.Data
@@ -429,7 +430,7 @@ func GenerateDataKey(kmsService kmsiface.KMSAPI, keyId string) (*[32]byte, []byt
 	return key, rsp.CiphertextBlob, nil
 }
 
-func DecryptCipherDataKey(kmsService kmsiface.KMSAPI, cipherDataKey []byte, key string) (*[32]byte, error) {
+func DecryptCipherDataKey(kmsService kmsiface.KMSAPI, cipherDataKey []byte) (*[32]byte, error) {
 	decryptRsp, err := kmsService.Decrypt(&kms.DecryptInput{
 		CiphertextBlob: cipherDataKey,
 		EncryptionContext: map[string]*string{
@@ -443,25 +444,35 @@ func DecryptCipherDataKey(kmsService kmsiface.KMSAPI, cipherDataKey []byte, key 
 	plainDataKey := &[32]byte{}
 	copy(plainDataKey[:], decryptRsp.Plaintext)
 
-	if key != "" {
-		// get aliasname from key id
-		var haveAlias bool
-		haveAlias = true
-		aliasRsp, err := kmsService.ListAliases(&kms.ListAliasesInput{
-			KeyId: aws.String(aws.StringValue(decryptRsp.KeyId)),
-		})
-		if err != nil {
-			pterm.Error.Println("Error getting alias for key")
-			haveAlias = false
-		}
-		if haveAlias {
-			aliasList := aliasRsp.Aliases
-			if len(aliasList) == 0 {
-				pterm.Error.Println("Error getting alias for key")
-			}
-			alias := aliasList[0].AliasName
-			pterm.Info.Printf("Decrypted %s using %s\n", key, aws.StringValue(alias))
-		}
-	}
+	pterm.Info.Printf("Decrypted using %s\n", getAliasByKey(kmsService, *decryptRsp.KeyId))
 	return plainDataKey, nil
+}
+
+func getAliasByKey(kmsService kmsiface.KMSAPI, keyId string) string {
+
+	// check if the key is an alias
+	if strings.HasPrefix(keyId, "alias") {
+		return keyId
+	}
+	// get aliasname from key id
+	var haveAlias bool
+	var alias *string
+	haveAlias = true
+	aliasRsp, err := kmsService.ListAliases(&kms.ListAliasesInput{
+		KeyId: aws.String(keyId),
+	})
+	if err != nil {
+		pterm.Error.Println("Error getting alias for key")
+		haveAlias = false
+	}
+	if haveAlias {
+		aliasList := aliasRsp.Aliases
+		if len(aliasList) == 0 {
+			pterm.Error.Println("Error getting alias for key")
+		}
+		alias = aliasList[0].AliasName
+
+	}
+	return aws.StringValue(alias)
+
 }
