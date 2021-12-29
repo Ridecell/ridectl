@@ -470,7 +470,7 @@ func getAliasByKey(kmsService kmsiface.KMSAPI, keyId string) string {
 		return keyId
 	}
 
-	for alias, _ := range aliasList {
+	for alias := range aliasList {
 		aliases = append(aliases, *aliasList[alias].AliasName)
 	}
 
