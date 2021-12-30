@@ -31,6 +31,8 @@ import (
 	"github.com/aws/aws-sdk-go/service/kms/kmsiface"
 	"github.com/pkg/errors"
 	"golang.org/x/crypto/nacl/secretbox"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/serializer/yaml"
 	"k8s.io/client-go/kubernetes/scheme"
 
 	secretsv1beta2 "github.com/Ridecell/ridecell-controllers/apis/secrets/v1beta2"
@@ -79,7 +81,25 @@ func init() {
 }
 
 func NewObject(raw []byte) (*Object, error) {
+
+	// Here, we need to be able to edit the objects which are not registered in ridectl
+	// So we need to use the unstructured object to serialize it.
+	unstructuredObj := &unstructured.Unstructured{}
+	// decode YAML into unstructured.Unstructured
+	unstructuredSerializer := yaml.NewDecodingSerializer(unstructured.UnstructuredJSONScheme)
+	// get object's GroupVersionKind (GVK) from the raw YAML. We don't need to worry about
+	// runtime.Object because we are not going to use it for anything here
+	_, gvk, err := unstructuredSerializer.Decode([]byte(raw), nil, unstructuredObj)
+	if err != nil {
+		return nil, errors.Wrap(err, "unable to decode object")
+	}
+
 	o := &Object{Raw: raw}
+	// return the object if it's not EncryptedSecret or DecryptedSecret as
+	// we don't really edit i.e. encrypt/decrypt other objects
+	if gvk.Kind != "EncryptedSecret" && gvk.Kind != "DecryptedSecret" {
+		return o, nil
+	}
 	// First do the normal parse to see if we have any errors.
 	// Ignored return value is a GVK.
 	obj, _, err := scheme.Codecs.UniversalDeserializer().Decode(raw, nil, nil)
