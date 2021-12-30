@@ -97,8 +97,8 @@ func NewObject(raw []byte) (*Object, error) {
 	}
 
 	o := &Object{Raw: raw}
-	// return the object if it's not EncryptedSecret or DecryptedSecret as
-	// we don't really edit i.e. encrypt/decrypt other objects
+	// return the object if it's not EncryptedSecret or DecryptedSecret
+	// because we don't need to deserialize other objects
 	if gvk.Kind != "EncryptedSecret" && gvk.Kind != "DecryptedSecret" {
 		return o, nil
 	}
