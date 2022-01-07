@@ -82,15 +82,14 @@ func init() {
 func NewObject(raw []byte) (*Object, error) {
 
 	// Here, we need to be able to edit the objects which are not registered in ridectl
-	// So we need to use the unstructured object to serialize it.
-	// decode YAML into unstructured.Unstructured
-	// get object's GroupVersionKind (GVK) from the raw YAML. We don't need to worry about
-	// runtime.Object because we are not going to use it for anything here
-	// Ignored return value is runtime.Object
+	// So we are deserializing the all the object, if object is not registered, UniversalDeserializer()
+	// will return error 'no kind "xyz" is registered for version "abc"', with return the object with Raw
+	// field set in it.
+	 
 	o := &Object{Raw: raw}
 	obj, _, err := scheme.Codecs.UniversalDeserializer().Decode(raw, nil, nil)
 	if err != nil {
-		if strings.Contains(err.Error(), "no kind") {
+		if ok, _ := regexp.MatchString("no kind(.*)is registered for version", err.Error()); ok {
 			return o, nil
 		}
 		return nil, err
