@@ -90,15 +90,10 @@ func NewObject(raw []byte) (*Object, error) {
 	o := &Object{Raw: raw}
 	obj, _, err := scheme.Codecs.UniversalDeserializer().Decode(raw, nil, nil)
 	if err != nil {
-		
-		return o, nil
-	}
-
-	o.Object = obj
-	o.Meta = obj.(metav1.Object)
-	obj, _, err = scheme.Codecs.UniversalDeserializer().Decode(raw, nil, nil)
-	if err != nil {
-		return nil, errors.Wrap(err, "error parsing YAML")
+		if strings.Contains(err.Error(), "no kind") {
+			return o, nil
+		}
+		return nil, err
 	}
 
 	o.Object = obj
