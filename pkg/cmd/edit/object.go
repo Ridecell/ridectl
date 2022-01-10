@@ -85,14 +85,11 @@ func NewObject(raw []byte) (*Object, error) {
 	// So we are deserializing the all the object, if object is not registered, UniversalDeserializer()
 	// will return error 'no kind "xyz" is registered for version "abc"', with return the object with Raw
 	// field set in it.
-	 
+
 	o := &Object{Raw: raw}
 	obj, _, err := scheme.Codecs.UniversalDeserializer().Decode(raw, nil, nil)
 	if err != nil {
-		if ok, _ := regexp.MatchString("no kind(.*)is registered for version", err.Error()); ok {
-			return o, nil
-		}
-		return nil, err
+		return o, err
 	}
 
 	o.Object = obj

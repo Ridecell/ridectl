@@ -17,6 +17,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"strings"
 	"regexp"
 
 	"github.com/aws/aws-sdk-go/service/kms/kmsiface"
@@ -48,7 +49,14 @@ func NewManifest(in io.Reader) (Manifest, error) {
 		obj, err := NewObject([]byte(chunk))
 		// return the error if we have one which is not ignorable
 		if err != nil {
-			return nil, errors.Wrap(err, "error decoding object")
+			// Dont append the object if its of old SummonPlatform or EncryptedSecret version
+			if strings.Contains(err.Error(), "no kind \"SummonPlatform\" is registered for version \"summon.ridecell.io/v1beta1\"") || strings.Contains(err.Error(), "no kind \"EncryptedSecret\" is registered for version \"secrets.ridecell.io/v1beta1\"") {
+				continue
+			}
+			// Ignore unregistered object errors, and only return other errors
+			if ok, _ := regexp.MatchString("no kind(.*)is registered for version", err.Error()); !ok {
+				return nil, errors.Wrap(err, "error decoding object")
+			}
 		}
 		objects = append(objects, obj)
 	}
