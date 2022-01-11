@@ -185,6 +185,7 @@ func (o *Object) Decrypt(kmsService kmsiface.KMSAPI) error {
 
 	dec := &hacksecretsv1beta2.DecryptedSecret{ObjectMeta: o.OrigEnc.ObjectMeta, Data: map[string]string{}}
 
+	var keyId string
 	for key, value := range o.OrigEnc.Data {
 		useDataKey := false
 
@@ -208,7 +209,7 @@ func (o *Object) Decrypt(kmsService kmsiface.KMSAPI) error {
 			plainDataKey, ok := keyMap[string(p.Key)]
 			if !ok {
 				// Decrypt cipherdatakey
-				plainDataKey, err = DecryptCipherDataKey(kmsService, p.Key)
+				plainDataKey, keyId, err = DecryptCipherDataKey(kmsService, p.Key)
 				if err != nil {
 					return errors.Wrapf(err, "error decrypting value for cipherDatakey")
 				}
@@ -222,6 +223,11 @@ func (o *Object) Decrypt(kmsService kmsiface.KMSAPI) error {
 				return errors.Wrapf(err, "error decrypting value with data key for %s", key)
 			}
 			dec.Data[key] = string(plaintext)
+			// Check if values in this secret were encrypted with more than one key.
+			if o.KeyId != "" && o.KeyId != keyId {
+				return errors.Errorf("key mismatch between %s and %s for %s", o.KeyId, keyId, key)
+			}
+			o.KeyId = keyId
 			continue
 		}
 
@@ -273,32 +279,6 @@ func (o *Object) Encrypt(kmsService kmsiface.KMSAPI, defaultKeyId string, forceK
 	plainDataKeyPresent := false
 	plainDataKey := &[32]byte{}
 	var cipherDataKey []byte
-
-	// check if any value is already encrypted using data key before
-	// If true, then use same data key to encrypt new values
-	if o.OrigEnc != nil {
-		for key, value := range o.OrigEnc.Data {
-			if !strings.HasPrefix(value, "crypto") {
-				continue
-			}
-			array := strings.Split(value, " ")
-			value = array[len(array)-1]
-
-			decodedValue := make([]byte, base64.StdEncoding.DecodedLen(len(value)))
-			_, err := base64.StdEncoding.Decode(decodedValue, []byte(value))
-			if err != nil {
-				return errors.Wrapf(err, "error base64 decoding value for %s", key)
-			}
-			var p Payload
-			_ = gob.NewDecoder(bytes.NewReader(decodedValue)).Decode(&p)
-			plainDataKey, err = DecryptCipherDataKey(kmsService, p.Key)
-			if err != nil {
-				return errors.Wrapf(err, "error decrypting value for cipherDatakey")
-			}
-			cipherDataKey = p.Key
-			break
-		}
-	}
 
 	for key, value := range o.AfterDec.Data {
 
@@ -435,7 +415,7 @@ func GenerateDataKey(kmsService kmsiface.KMSAPI, keyId string) (*[32]byte, []byt
 	return key, rsp.CiphertextBlob, nil
 }
 
-func DecryptCipherDataKey(kmsService kmsiface.KMSAPI, cipherDataKey []byte) (*[32]byte, error) {
+func DecryptCipherDataKey(kmsService kmsiface.KMSAPI, cipherDataKey []byte) (*[32]byte, string, error) {
 	decryptRsp, err := kmsService.Decrypt(&kms.DecryptInput{
 		CiphertextBlob: cipherDataKey,
 		EncryptionContext: map[string]*string{
@@ -444,13 +424,13 @@ func DecryptCipherDataKey(kmsService kmsiface.KMSAPI, cipherDataKey []byte) (*[3
 	})
 
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 	plainDataKey := &[32]byte{}
 	copy(plainDataKey[:], decryptRsp.Plaintext)
 
 	pterm.Info.Printf("Decrypted using %s\n", getAliasByKey(kmsService, *decryptRsp.KeyId))
-	return plainDataKey, nil
+	return plainDataKey, *decryptRsp.KeyId, nil
 }
 
 func getAliasByKey(kmsService kmsiface.KMSAPI, keyId string) string {
