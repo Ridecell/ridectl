@@ -328,7 +328,7 @@ func (o *Object) Encrypt(kmsService kmsiface.KMSAPI, defaultKeyId string, forceK
 		enc.Data[key] = fmt.Sprintf("crypto %s", string(base64.StdEncoding.EncodeToString(buf.Bytes())))
 	}
 
-	if keyId != "" {
+	if keyId != "" && len(o.AfterDec.Data) > 0 {
 		pterm.Info.Printf("Encrypted using %s\n", getAliasByKey(kmsService, keyId))
 	}
 	o.AfterEnc = enc
