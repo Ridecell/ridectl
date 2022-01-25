@@ -103,7 +103,19 @@ var shellCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		pod := podList.Items[0]
+		pod := corev1.Pod{}
+		for _, po := range podList.Items {
+			// choose only first running pod
+			if po.Status.Phase == "Running" {
+				pod = po
+				break
+			}
+		}
+		if pod.Name == "" {
+			pterm.Error.Printf("no running pod found in %s", kubeObj.Context.Cluster)
+			os.Exit(1)
+		}
+
 		// Spawn kubectl exec.
 		pterm.Info.Printf("Connecting to %s/%s\n", pod.Namespace, pod.Name)
 
