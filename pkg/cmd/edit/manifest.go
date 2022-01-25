@@ -48,7 +48,7 @@ func NewManifest(in io.Reader) (Manifest, error) {
 		}
 		obj, err := NewObject([]byte(chunk))
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "error decoding object")
 		}
 		objects = append(objects, obj)
 	}
