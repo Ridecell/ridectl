@@ -89,7 +89,11 @@ func NewObject(raw []byte) (*Object, error) {
 	o := &Object{Raw: raw}
 	obj, _, err := scheme.Codecs.UniversalDeserializer().Decode(raw, nil, nil)
 	if err != nil {
-		return o, err
+
+		if ok, _ := regexp.MatchString("no kind(.*)is registered for version", err.Error()); ok {
+			return o, nil
+		}
+		return nil, err
 	}
 
 	o.Object = obj
@@ -270,7 +274,7 @@ func (o *Object) Encrypt(kmsService kmsiface.KMSAPI, defaultKeyId string, forceK
 	if o.KeyId != "" && !forceKeyId {
 		keyId = o.KeyId
 	}
-	if keyId == "" {
+	if keyId == "" && len(o.AfterDec.Data) > 0 {
 		return errors.New("Key ID cannot be blank")
 	}
 
@@ -324,7 +328,9 @@ func (o *Object) Encrypt(kmsService kmsiface.KMSAPI, defaultKeyId string, forceK
 		enc.Data[key] = fmt.Sprintf("crypto %s", string(base64.StdEncoding.EncodeToString(buf.Bytes())))
 	}
 
-	pterm.Info.Printf("Encrypted using %s\n", getAliasByKey(kmsService, keyId))
+	if keyId != "" {
+		pterm.Info.Printf("Encrypted using %s\n", getAliasByKey(kmsService, keyId))
+	}
 	o.AfterEnc = enc
 	o.Kind = "EncryptedSecret"
 	o.Data = enc.Data
@@ -445,7 +451,6 @@ func getAliasByKey(kmsService kmsiface.KMSAPI, keyId string) string {
 		KeyId: aws.String(keyId),
 	})
 	if err != nil {
-		fmt.Println(err.Error())
 		pterm.Error.Println("Error getting alias for key")
 		return keyId
 	}

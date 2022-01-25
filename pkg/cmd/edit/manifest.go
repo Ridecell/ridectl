@@ -41,21 +41,14 @@ func NewManifest(in io.Reader) (Manifest, error) {
 	}
 
 	objects := []*Object{}
-	r, err := regexp.Compile("no kind(.*)is registered for version")
-	if err != nil {
-		return nil, errors.Wrap(err, "error compiling regex")
-	}
+
 	for _, chunk := range splitRegexp.Split(buf.String(), -1) {
 		if emptyRegexp.MatchString(chunk) {
 			continue
 		}
 		obj, err := NewObject([]byte(chunk))
-		// return the error if we have one which is not ignorable
 		if err != nil {
-			// Ignore unregistered object errors, and only return other errors
-			if ok := r.MatchString(err.Error()); !ok {
-				return nil, errors.Wrap(err, "error decoding object")
-			}
+			return nil, err
 		}
 		objects = append(objects, obj)
 	}
