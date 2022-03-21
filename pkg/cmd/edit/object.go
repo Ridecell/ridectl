@@ -32,12 +32,12 @@ import (
 	"github.com/pkg/errors"
 	"github.com/pterm/pterm"
 	"golang.org/x/crypto/nacl/secretbox"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime/serializer/yaml"
+	"gopkg.in/yaml.v2"
 	"k8s.io/client-go/kubernetes/scheme"
 
 	secretsv1beta2 "github.com/Ridecell/ridecell-controllers/apis/secrets/v1beta2"
 	hacksecretsv1beta2 "github.com/Ridecell/ridectl/pkg/apis/secrets/v1beta2"
+	summonv1beta2 "github.com/Ridecell/summon-operator/apis/app/v1beta2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -83,33 +83,23 @@ func init() {
 
 func NewObject(raw []byte) (*Object, error) {
 
-	// Here, we need to be able to edit the objects which are not registered in ridectl
-	// So we need to use the unstructured object to serialize it.
-	unstructuredObj := &unstructured.Unstructured{}
-	// decode YAML into unstructured.Unstructured
-	unstructuredSerializer := yaml.NewDecodingSerializer(unstructured.UnstructuredJSONScheme)
-	// get object's GroupVersionKind (GVK) from the raw YAML. We don't need to worry about
-	// runtime.Object because we are not going to use it for anything here
-	// Ignored return value is runtime.Object
-	_, gvk, err := unstructuredSerializer.Decode([]byte(raw), nil, unstructuredObj)
-	if err != nil {
-		return nil, errors.Wrap(err, "unable to decode object")
-	}
-
 	o := &Object{Raw: raw}
-	// return the object if it's not EncryptedSecret or DecryptedSecret
-	// because we don't need to deserialize other objects
-	if gvk.Kind != "EncryptedSecret" && gvk.Kind != "DecryptedSecret" {
-		return o, nil
-	}
-	// First do the normal parse to see if we have any errors.
-	// Ignored return value is a GVK.
 	obj, _, err := scheme.Codecs.UniversalDeserializer().Decode(raw, nil, nil)
 	if err != nil {
-		return nil, errors.Wrap(err, "error parsing YAML")
+		return nil, err
 	}
+
 	o.Object = obj
 	o.Meta = obj.(metav1.Object)
+
+	ss := &SummonPlatform{}
+	_, ok := obj.(*summonv1beta2.SummonPlatform)
+	if ok {
+		err := yaml.UnmarshalStrict(raw, &ss)
+		if err !=nil{
+			return nil,err
+		}
+	}
 
 	// Check if this an EncryptedSecret.
 	enc, ok := obj.(*secretsv1beta2.EncryptedSecret)
