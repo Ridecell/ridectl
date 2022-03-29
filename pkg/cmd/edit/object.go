@@ -21,6 +21,7 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"encoding/gob"
+	"encoding/json"
 	"fmt"
 	"io"
 	"regexp"
@@ -29,10 +30,10 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/kms"
 	"github.com/aws/aws-sdk-go/service/kms/kmsiface"
+	"github.com/ghodss/yaml"
 	"github.com/pkg/errors"
 	"github.com/pterm/pterm"
 	"golang.org/x/crypto/nacl/secretbox"
-	"gopkg.in/yaml.v2"
 	"k8s.io/client-go/kubernetes/scheme"
 
 	secretsv1beta2 "github.com/Ridecell/ridecell-controllers/apis/secrets/v1beta2"
@@ -92,12 +93,17 @@ func NewObject(raw []byte) (*Object, error) {
 	o.Object = obj
 	o.Meta = obj.(metav1.Object)
 
-	ss := &SummonPlatform{}
+	ss := &summonv1beta2.SummonPlatform{}
 	_, ok := obj.(*summonv1beta2.SummonPlatform)
 	if ok {
-		err := yaml.UnmarshalStrict(raw, &ss)
-		if err !=nil{
-			return nil,err
+		data, err := yaml.YAMLToJSON(raw)
+		if err != nil {
+			return nil, err
+		}
+
+		err = json.Unmarshal(data, ss)
+		if err != nil {
+			return nil, err
 		}
 	}
 
