@@ -55,9 +55,9 @@ func NewManifest(in io.Reader) (Manifest, error) {
 	return objects, nil
 }
 
-func (m Manifest) Decrypt(kmsService kmsiface.KMSAPI) error {
+func (m Manifest) Decrypt(kmsService kmsiface.KMSAPI, recrypt bool) error {
 	for _, obj := range m {
-		err := obj.Decrypt(kmsService)
+		err := obj.Decrypt(kmsService, recrypt)
 		if err != nil {
 			return errors.Wrapf(err, "error decrypting %s/%s", obj.Meta.GetNamespace(), obj.Meta.GetName())
 		}

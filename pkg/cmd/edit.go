@@ -167,7 +167,7 @@ var editCmd = &cobra.Command{
 		kmsService := kms.New(sess)
 
 		// Decrypt all the encrypted secrets.
-		err = inManifest.Decrypt(kmsService)
+		err = inManifest.Decrypt(kmsService, recrypt)
 		if err != nil {
 			return errors.Wrap(err, "error decrypting input manifest")
 		}

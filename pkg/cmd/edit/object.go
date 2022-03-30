@@ -179,7 +179,7 @@ func newKeysLocations(raw []byte, offset int) ([]KeysLocation, error) {
 	return locs, nil
 }
 
-func (o *Object) Decrypt(kmsService kmsiface.KMSAPI) error {
+func (o *Object) Decrypt(kmsService kmsiface.KMSAPI, recrypt bool) error {
 	if o.Kind == "" {
 		return nil
 	}
@@ -229,7 +229,12 @@ func (o *Object) Decrypt(kmsService kmsiface.KMSAPI) error {
 			dec.Data[key] = string(plaintext)
 			// Check if values in this secret were encrypted with more than one key.
 			if o.KeyId != "" && o.KeyId != keyId {
-				return errors.Errorf("key mismatch between %s and %s for %s", o.KeyId, keyId, key)
+				if !recrypt {
+					// Throw error if there is key mismatch and recrypt key is not provided.
+					return errors.Errorf("key mismatch between %s and %s for %s.\nUse -k flag to recrypt all values with given key.", getAliasByKey(kmsService, o.KeyId), getAliasByKey(kmsService, keyId), key)
+				}
+				// We are just printing the warning of key mismatch, anyway we will re-encrypt the data using provided keyId
+				pterm.Warning.Printf("key mismatch between %s and %s for %s\n", getAliasByKey(kmsService, o.KeyId), getAliasByKey(kmsService, keyId), key)
 			}
 			o.KeyId = keyId
 			continue
@@ -247,7 +252,12 @@ func (o *Object) Decrypt(kmsService kmsiface.KMSAPI) error {
 		}
 		// Check if values in this secret were encrypted with more than one key.
 		if o.KeyId != "" && o.KeyId != *decryptedValue.KeyId {
-			return errors.Errorf("key mismatch between %s and %s for %s", o.KeyId, *decryptedValue.KeyId, key)
+			if !recrypt {
+				// Throw error if there is key mismatch and recrypt key is not provided.
+				return errors.Errorf("key mismatch between %s and %s for %s.\nUse -k flag to recrypt all values with given key.", getAliasByKey(kmsService, o.KeyId), getAliasByKey(kmsService, *decryptedValue.KeyId), key)
+			}
+			// We are just printing the warning of key mismatch, anyway we will re-encrypt the data using provided keyId
+			pterm.Warning.Printf("key mismatch between %s and %s for %s\n", o.KeyId, *decryptedValue.KeyId, key)
 		}
 		o.KeyId = *decryptedValue.KeyId
 
