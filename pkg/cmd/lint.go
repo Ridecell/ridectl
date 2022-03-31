@@ -241,7 +241,7 @@ func lintFile(filename string, imageTags []string) error {
 	// Check if SummonPlatform object has wrong/duplicate spec fields
 	err = yaml.UnmarshalStrict(manifest[1].Raw, &summonv1beta2.SummonPlatform{})
 	if err != nil {
-			return fmt.Errorf("Invalid SummonPlatform Object: %s: ", filename, err.Error())
+			return fmt.Errorf("Invalid SummonPlatform Object: %s: %s", filename, err.Error())
 	}
 
 	// Make sure that version is set
