@@ -190,6 +190,19 @@ func (o *Object) Decrypt(kmsService kmsiface.KMSAPI, recrypt bool) error {
 	dec := &hacksecretsv1beta2.DecryptedSecret{ObjectMeta: o.OrigEnc.ObjectMeta, Data: map[string]string{}}
 
 	var keyId string
+	// If EncryptedSecret is encrypted using mulitple keyIds,
+	// determine most used keyId, and use it to encrypt all value
+	keyUsageCount := map[string]int{}
+	// Helper method to set and increment usage count for given keyId.
+	incrementKeyUsageCount := func(k string) {
+		c, ok := keyUsageCount[k]
+		if !ok {
+			keyUsageCount[k] = 1
+		} else {
+			keyUsageCount[k] = c+1
+		}
+	}
+
 	for key, value := range o.OrigEnc.Data {
 		useDataKey := false
 
@@ -227,16 +240,8 @@ func (o *Object) Decrypt(kmsService kmsiface.KMSAPI, recrypt bool) error {
 				return errors.Wrapf(err, "error decrypting value with data key for %s", key)
 			}
 			dec.Data[key] = string(plaintext)
-			// Check if values in this secret were encrypted with more than one key.
-			if o.KeyId != "" && o.KeyId != keyId {
-				if !recrypt {
-					// Throw error if there is key mismatch and recrypt key is not provided.
-					return errors.Errorf("key mismatch between %s and %s for %s.\nUse -k flag to recrypt all values with given key.", getAliasByKey(kmsService, o.KeyId), getAliasByKey(kmsService, keyId), key)
-				}
-				// We are just printing the warning of key mismatch, anyway we will re-encrypt the data using provided keyId
-				pterm.Warning.Printf("key mismatch between %s and %s for %s\n", getAliasByKey(kmsService, o.KeyId), getAliasByKey(kmsService, keyId), key)
-			}
-			o.KeyId = keyId
+			incrementKeyUsageCount(keyId)
+
 			continue
 		}
 
@@ -250,16 +255,7 @@ func (o *Object) Decrypt(kmsService kmsiface.KMSAPI, recrypt bool) error {
 		if err != nil {
 			return errors.Wrapf(err, "error decrypting value for %s", key)
 		}
-		// Check if values in this secret were encrypted with more than one key.
-		if o.KeyId != "" && o.KeyId != *decryptedValue.KeyId {
-			if !recrypt {
-				// Throw error if there is key mismatch and recrypt key is not provided.
-				return errors.Errorf("key mismatch between %s and %s for %s.\nUse -k flag to recrypt all values with given key.", getAliasByKey(kmsService, o.KeyId), getAliasByKey(kmsService, *decryptedValue.KeyId), key)
-			}
-			// We are just printing the warning of key mismatch, anyway we will re-encrypt the data using provided keyId
-			pterm.Warning.Printf("key mismatch between %s and %s for %s\n", o.KeyId, *decryptedValue.KeyId, key)
-		}
-		o.KeyId = *decryptedValue.KeyId
+		incrementKeyUsageCount(*decryptedValue.KeyId)
 
 		decryptedString := string(decryptedValue.Plaintext)
 		if decryptedString == secretsv1beta2.EncryptedSecretEmptyKey {
@@ -268,6 +264,19 @@ func (o *Object) Decrypt(kmsService kmsiface.KMSAPI, recrypt bool) error {
 		dec.Data[key] = decryptedString
 
 	}
+
+	// use key with maximum usage count
+	maxUsageCount := 0
+	for k, c := range keyUsageCount {
+		if maxUsageCount < c {
+			o.KeyId = k
+			maxUsageCount = c
+		}
+	}
+	if len(keyUsageCount) > 1 && !recrypt {
+		pterm.Warning.Printf("Multiple keyIds used to encrypt secret values, using most used keyId to encrypt all values: %s\nTo override keyId, you can use -k flag. For more details, use: ridectl edit -h\n", getAliasByKey(kmsService, o.KeyId))
+	}
+
 	o.OrigDec = dec
 	o.Kind = "DecryptedSecret"
 	o.Data = dec.Data
