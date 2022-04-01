@@ -29,7 +29,6 @@ import (
 	"github.com/heroku/docker-registry-client/registry"
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
-	"sigs.k8s.io/yaml"
 
 	summonv1beta2 "github.com/Ridecell/summon-operator/apis/app/v1beta2"
 )
@@ -237,12 +236,6 @@ func lintFile(filename string, imageTags []string) error {
 		return fmt.Errorf("Duplicate SummonPlatform names not supported: %s found in %s and %s", summonObj.Name, existingFilename, filename)
 	}
 	foundNames[summonObj.Name] = filename
-
-	// Check if SummonPlatform object has wrong/duplicate spec fields
-	err = yaml.UnmarshalStrict(manifest[1].Raw, &summonv1beta2.SummonPlatform{})
-	if err != nil {
-			return fmt.Errorf("Invalid SummonPlatform Object: %s: %s", filename, err.Error())
-	}
 
 	// Make sure that version is set
 	if summonObj.Spec.Version == "" {

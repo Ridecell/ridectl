@@ -33,6 +33,7 @@ import (
 	"github.com/pterm/pterm"
 	"golang.org/x/crypto/nacl/secretbox"
 	"k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/apimachinery/pkg/runtime/serializer"
 
 	secretsv1beta2 "github.com/Ridecell/ridecell-controllers/apis/secrets/v1beta2"
 	hacksecretsv1beta2 "github.com/Ridecell/ridectl/pkg/apis/secrets/v1beta2"
@@ -87,9 +88,10 @@ func NewObject(raw []byte) (*Object, error) {
 	// field set in it.
 
 	o := &Object{Raw: raw}
-	obj, _, err := scheme.Codecs.UniversalDeserializer().Decode(raw, nil, nil)
+	// Create new codec with strict mode on; this will strictly check objects spec
+	codecs := serializer.NewCodecFactory(scheme.Scheme, serializer.EnableStrict)
+	obj, _, err := codecs.UniversalDeserializer().Decode(raw, nil, nil)
 	if err != nil {
-
 		if ok, _ := regexp.MatchString("no kind(.*)is registered for version", err.Error()); ok {
 			return o, nil
 		}
