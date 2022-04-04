@@ -110,6 +110,8 @@ func (m Manifest) CorrelateWith(origManifest Manifest) error {
 			obj.OrigEnc = origObj.OrigEnc
 			obj.OrigDec = origObj.OrigDec
 			obj.KeyId = origObj.KeyId
+			obj.PlainDataKey = origObj.PlainDataKey
+			obj.CipherDataKey = origObj.CipherDataKey
 		}
 	}
 	return nil

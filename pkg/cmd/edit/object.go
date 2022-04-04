@@ -195,15 +195,10 @@ func (o *Object) Decrypt(kmsService kmsiface.KMSAPI, recrypt bool) error {
 	// If EncryptedSecret is encrypted using mulitple keyIds,
 	// determine most used keyId, and use it to encrypt all value
 	keyUsageCount := map[string]int{}
-	// Helper method to set and increment usage count for given keyId.
-	incrementKeyUsageCount := func(k string) {
-		c, ok := keyUsageCount[k]
-		if !ok {
-			keyUsageCount[k] = 1
-		} else {
-			keyUsageCount[k] = c+1
-		}
-	}
+	// Stores KeyId mapping with Data Key
+	keyIdDataKeyMap := map[string]*[32]byte{}
+	// Stores KeyId mapping with CipherDataKey
+	keyIdCipherDataKeyMap := map[string][]byte{}
 
 	for key, value := range o.OrigEnc.Data {
 		useDataKey := false
@@ -242,7 +237,9 @@ func (o *Object) Decrypt(kmsService kmsiface.KMSAPI, recrypt bool) error {
 				return errors.Wrapf(err, "error decrypting value with data key for %s", key)
 			}
 			dec.Data[key] = string(plaintext)
-			incrementKeyUsageCount(keyId)
+			keyUsageCount[keyId] = keyUsageCount[keyId] + 1
+			keyIdDataKeyMap[keyId] = plainDataKey
+			keyIdCipherDataKeyMap[keyId] = p.Key
 
 			continue
 		}
@@ -257,7 +254,7 @@ func (o *Object) Decrypt(kmsService kmsiface.KMSAPI, recrypt bool) error {
 		if err != nil {
 			return errors.Wrapf(err, "error decrypting value for %s", key)
 		}
-		incrementKeyUsageCount(*decryptedValue.KeyId)
+		keyUsageCount[*decryptedValue.KeyId] = keyUsageCount[*decryptedValue.KeyId] + 1
 
 		decryptedString := string(decryptedValue.Plaintext)
 		if decryptedString == secretsv1beta2.EncryptedSecretEmptyKey {
@@ -279,6 +276,8 @@ func (o *Object) Decrypt(kmsService kmsiface.KMSAPI, recrypt bool) error {
 		pterm.Warning.Printf("Multiple keyIds used to encrypt secret values, using most used keyId to encrypt all values: %s\nTo override keyId, you can use -k flag. For more details, use: ridectl edit -h\n", getAliasByKey(kmsService, o.KeyId))
 	}
 
+	o.PlainDataKey = keyIdDataKeyMap[o.KeyId]
+	o.CipherDataKey = keyIdCipherDataKeyMap[o.KeyId]
 	o.OrigDec = dec
 	o.Kind = "DecryptedSecret"
 	o.Data = dec.Data
@@ -295,15 +294,17 @@ func (o *Object) Encrypt(kmsService kmsiface.KMSAPI, defaultKeyId string, forceK
 	if o.KeyId != "" && !forceKeyId {
 		keyId = o.KeyId
 	}
+
+	if reEncrypt {
+		o.PlainDataKey = nil
+	}
+
+	// When there are values to encrypt, but keyId is not set, then throw error
 	if keyId == "" && len(o.AfterDec.Data) > 0 {
 		return errors.New("Key ID cannot be blank")
 	}
 
 	enc := &secretsv1beta2.EncryptedSecret{ObjectMeta: o.AfterDec.ObjectMeta, Data: map[string]string{}}
-
-	plainDataKeyPresent := false
-	plainDataKey := &[32]byte{}
-	var cipherDataKey []byte
 
 	for key, value := range o.AfterDec.Data {
 
@@ -318,19 +319,18 @@ func (o *Object) Encrypt(kmsService kmsiface.KMSAPI, defaultKeyId string, forceK
 			}
 		}
 
-		// check if plainDataKey is populated, if not create data key
-		if !plainDataKeyPresent {
+		// check if o.PlainDataKey is populated, if not create data key
+		if o.PlainDataKey == nil {
 			var err error
-			plainDataKey, cipherDataKey, err = GenerateDataKey(kmsService, keyId)
+			o.PlainDataKey, o.CipherDataKey, err = GenerateDataKey(kmsService, keyId)
 			if err != nil {
 				return errors.Wrapf(err, "error generating data key")
 			}
-			plainDataKeyPresent = true
 		}
 
 		// Initialize Payload
 		p := &Payload{
-			Key:   cipherDataKey,
+			Key:   o.CipherDataKey,
 			Nonce: &[nonceLength]byte{},
 		}
 
@@ -340,7 +340,7 @@ func (o *Object) Encrypt(kmsService kmsiface.KMSAPI, defaultKeyId string, forceK
 		}
 
 		// Encrypt message
-		p.Message = secretbox.Seal(p.Message, []byte(value), p.Nonce, plainDataKey)
+		p.Message = secretbox.Seal(p.Message, []byte(value), p.Nonce, o.PlainDataKey)
 		buf := &bytes.Buffer{}
 		if err := gob.NewEncoder(buf).Encode(p); err != nil {
 			return errors.Wrapf(err, "error encrypting value using data key for %s", key)
