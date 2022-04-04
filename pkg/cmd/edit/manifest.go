@@ -41,12 +41,12 @@ func NewManifest(in io.Reader) (Manifest, error) {
 	}
 
 	objects := []*Object{}
+
 	for _, chunk := range splitRegexp.Split(buf.String(), -1) {
 		if emptyRegexp.MatchString(chunk) {
 			continue
 		}
 		obj, err := NewObject([]byte(chunk))
-		// return the error if we have one which is not ignorable
 		if err != nil {
 			return nil, errors.Wrap(err, "error decoding object")
 		}
@@ -55,9 +55,9 @@ func NewManifest(in io.Reader) (Manifest, error) {
 	return objects, nil
 }
 
-func (m Manifest) Decrypt(kmsService kmsiface.KMSAPI) error {
+func (m Manifest) Decrypt(kmsService kmsiface.KMSAPI, recrypt bool) error {
 	for _, obj := range m {
-		err := obj.Decrypt(kmsService)
+		err := obj.Decrypt(kmsService, recrypt)
 		if err != nil {
 			return errors.Wrapf(err, "error decrypting %s/%s", obj.Meta.GetNamespace(), obj.Meta.GetName())
 		}
@@ -110,6 +110,8 @@ func (m Manifest) CorrelateWith(origManifest Manifest) error {
 			obj.OrigEnc = origObj.OrigEnc
 			obj.OrigDec = origObj.OrigDec
 			obj.KeyId = origObj.KeyId
+			obj.PlainDataKey = origObj.PlainDataKey
+			obj.CipherDataKey = origObj.CipherDataKey
 		}
 	}
 	return nil

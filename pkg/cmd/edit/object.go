@@ -32,9 +32,8 @@ import (
 	"github.com/pkg/errors"
 	"github.com/pterm/pterm"
 	"golang.org/x/crypto/nacl/secretbox"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime/serializer/yaml"
 	"k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/apimachinery/pkg/runtime/serializer"
 
 	secretsv1beta2 "github.com/Ridecell/ridecell-controllers/apis/secrets/v1beta2"
 	hacksecretsv1beta2 "github.com/Ridecell/ridectl/pkg/apis/secrets/v1beta2"
@@ -84,30 +83,21 @@ func init() {
 func NewObject(raw []byte) (*Object, error) {
 
 	// Here, we need to be able to edit the objects which are not registered in ridectl
-	// So we need to use the unstructured object to serialize it.
-	unstructuredObj := &unstructured.Unstructured{}
-	// decode YAML into unstructured.Unstructured
-	unstructuredSerializer := yaml.NewDecodingSerializer(unstructured.UnstructuredJSONScheme)
-	// get object's GroupVersionKind (GVK) from the raw YAML. We don't need to worry about
-	// runtime.Object because we are not going to use it for anything here
-	// Ignored return value is runtime.Object
-	_, gvk, err := unstructuredSerializer.Decode([]byte(raw), nil, unstructuredObj)
-	if err != nil {
-		return nil, errors.Wrap(err, "unable to decode object")
-	}
+	// So we are deserializing the all the object, if object is not registered, UniversalDeserializer()
+	// will return error 'no kind "xyz" is registered for version "abc"', with return the object with Raw
+	// field set in it.
 
 	o := &Object{Raw: raw}
-	// return the object if it's not EncryptedSecret or DecryptedSecret
-	// because we don't need to deserialize other objects
-	if gvk.Kind != "EncryptedSecret" && gvk.Kind != "DecryptedSecret" {
-		return o, nil
-	}
-	// First do the normal parse to see if we have any errors.
-	// Ignored return value is a GVK.
-	obj, _, err := scheme.Codecs.UniversalDeserializer().Decode(raw, nil, nil)
+	// Create new codec with strict mode on; this will strictly check objects spec
+	codecs := serializer.NewCodecFactory(scheme.Scheme, serializer.EnableStrict)
+	obj, _, err := codecs.UniversalDeserializer().Decode(raw, nil, nil)
 	if err != nil {
-		return nil, errors.Wrap(err, "error parsing YAML")
+		if ok, _ := regexp.MatchString("no kind(.*)is registered for version", err.Error()); ok {
+			return o, nil
+		}
+		return nil, err
 	}
+
 	o.Object = obj
 	o.Meta = obj.(metav1.Object)
 
@@ -191,7 +181,7 @@ func newKeysLocations(raw []byte, offset int) ([]KeysLocation, error) {
 	return locs, nil
 }
 
-func (o *Object) Decrypt(kmsService kmsiface.KMSAPI) error {
+func (o *Object) Decrypt(kmsService kmsiface.KMSAPI, recrypt bool) error {
 	if o.Kind == "" {
 		return nil
 	}
@@ -200,6 +190,15 @@ func (o *Object) Decrypt(kmsService kmsiface.KMSAPI) error {
 	keyMap := map[string]*[32]byte{}
 
 	dec := &hacksecretsv1beta2.DecryptedSecret{ObjectMeta: o.OrigEnc.ObjectMeta, Data: map[string]string{}}
+
+	var keyId string
+	// If EncryptedSecret is encrypted using mulitple keyIds,
+	// determine most used keyId, and use it to encrypt all value
+	keyUsageCount := map[string]int{}
+	// Stores KeyId mapping with Data Key
+	keyIdDataKeyMap := map[string]*[32]byte{}
+	// Stores KeyId mapping with CipherDataKey
+	keyIdCipherDataKeyMap := map[string][]byte{}
 
 	for key, value := range o.OrigEnc.Data {
 		useDataKey := false
@@ -224,7 +223,7 @@ func (o *Object) Decrypt(kmsService kmsiface.KMSAPI) error {
 			plainDataKey, ok := keyMap[string(p.Key)]
 			if !ok {
 				// Decrypt cipherdatakey
-				plainDataKey, err = DecryptCipherDataKey(kmsService, p.Key)
+				plainDataKey, keyId, err = DecryptCipherDataKey(kmsService, p.Key)
 				if err != nil {
 					return errors.Wrapf(err, "error decrypting value for cipherDatakey")
 				}
@@ -238,6 +237,10 @@ func (o *Object) Decrypt(kmsService kmsiface.KMSAPI) error {
 				return errors.Wrapf(err, "error decrypting value with data key for %s", key)
 			}
 			dec.Data[key] = string(plaintext)
+			keyUsageCount[keyId] = keyUsageCount[keyId] + 1
+			keyIdDataKeyMap[keyId] = plainDataKey
+			keyIdCipherDataKeyMap[keyId] = p.Key
+
 			continue
 		}
 
@@ -251,11 +254,7 @@ func (o *Object) Decrypt(kmsService kmsiface.KMSAPI) error {
 		if err != nil {
 			return errors.Wrapf(err, "error decrypting value for %s", key)
 		}
-		// Check if values in this secret were encrypted with more than one key.
-		if o.KeyId != "" && o.KeyId != *decryptedValue.KeyId {
-			return errors.Errorf("key mismatch between %s and %s for %s", o.KeyId, *decryptedValue.KeyId, key)
-		}
-		o.KeyId = *decryptedValue.KeyId
+		keyUsageCount[*decryptedValue.KeyId] = keyUsageCount[*decryptedValue.KeyId] + 1
 
 		decryptedString := string(decryptedValue.Plaintext)
 		if decryptedString == secretsv1beta2.EncryptedSecretEmptyKey {
@@ -264,6 +263,21 @@ func (o *Object) Decrypt(kmsService kmsiface.KMSAPI) error {
 		dec.Data[key] = decryptedString
 
 	}
+
+	// use key with maximum usage count
+	maxUsageCount := 0
+	for k, c := range keyUsageCount {
+		if maxUsageCount < c {
+			o.KeyId = k
+			maxUsageCount = c
+		}
+	}
+	if len(keyUsageCount) > 1 && !recrypt {
+		pterm.Warning.Printf("Multiple keyIds used to encrypt secret values, using most used keyId to encrypt all values: %s\nTo override keyId, you can use -k flag. For more details, use: ridectl edit -h\n", getAliasByKey(kmsService, o.KeyId))
+	}
+
+	o.PlainDataKey = keyIdDataKeyMap[o.KeyId]
+	o.CipherDataKey = keyIdCipherDataKeyMap[o.KeyId]
 	o.OrigDec = dec
 	o.Kind = "DecryptedSecret"
 	o.Data = dec.Data
@@ -280,41 +294,17 @@ func (o *Object) Encrypt(kmsService kmsiface.KMSAPI, defaultKeyId string, forceK
 	if o.KeyId != "" && !forceKeyId {
 		keyId = o.KeyId
 	}
-	if keyId == "" {
+
+	if reEncrypt {
+		o.PlainDataKey = nil
+	}
+
+	// When there are values to encrypt, but keyId is not set, then throw error
+	if keyId == "" && len(o.AfterDec.Data) > 0 {
 		return errors.New("Key ID cannot be blank")
 	}
 
 	enc := &secretsv1beta2.EncryptedSecret{ObjectMeta: o.AfterDec.ObjectMeta, Data: map[string]string{}}
-
-	plainDataKeyPresent := false
-	plainDataKey := &[32]byte{}
-	var cipherDataKey []byte
-
-	// check if any value is already encrypted using data key before
-	// If true, then use same data key to encrypt new values
-	if o.OrigEnc != nil {
-		for key, value := range o.OrigEnc.Data {
-			if !strings.HasPrefix(value, "crypto") {
-				continue
-			}
-			array := strings.Split(value, " ")
-			value = array[len(array)-1]
-
-			decodedValue := make([]byte, base64.StdEncoding.DecodedLen(len(value)))
-			_, err := base64.StdEncoding.Decode(decodedValue, []byte(value))
-			if err != nil {
-				return errors.Wrapf(err, "error base64 decoding value for %s", key)
-			}
-			var p Payload
-			_ = gob.NewDecoder(bytes.NewReader(decodedValue)).Decode(&p)
-			plainDataKey, err = DecryptCipherDataKey(kmsService, p.Key)
-			if err != nil {
-				return errors.Wrapf(err, "error decrypting value for cipherDatakey")
-			}
-			cipherDataKey = p.Key
-			break
-		}
-	}
 
 	for key, value := range o.AfterDec.Data {
 
@@ -329,19 +319,18 @@ func (o *Object) Encrypt(kmsService kmsiface.KMSAPI, defaultKeyId string, forceK
 			}
 		}
 
-		// check if plainDataKey is populated, if not create data key
-		if !plainDataKeyPresent {
+		// check if o.PlainDataKey is populated, if not create data key
+		if o.PlainDataKey == nil {
 			var err error
-			plainDataKey, cipherDataKey, err = GenerateDataKey(kmsService, keyId)
+			o.PlainDataKey, o.CipherDataKey, err = GenerateDataKey(kmsService, keyId)
 			if err != nil {
 				return errors.Wrapf(err, "error generating data key")
 			}
-			plainDataKeyPresent = true
 		}
 
 		// Initialize Payload
 		p := &Payload{
-			Key:   cipherDataKey,
+			Key:   o.CipherDataKey,
 			Nonce: &[nonceLength]byte{},
 		}
 
@@ -351,7 +340,7 @@ func (o *Object) Encrypt(kmsService kmsiface.KMSAPI, defaultKeyId string, forceK
 		}
 
 		// Encrypt message
-		p.Message = secretbox.Seal(p.Message, []byte(value), p.Nonce, plainDataKey)
+		p.Message = secretbox.Seal(p.Message, []byte(value), p.Nonce, o.PlainDataKey)
 		buf := &bytes.Buffer{}
 		if err := gob.NewEncoder(buf).Encode(p); err != nil {
 			return errors.Wrapf(err, "error encrypting value using data key for %s", key)
@@ -360,7 +349,9 @@ func (o *Object) Encrypt(kmsService kmsiface.KMSAPI, defaultKeyId string, forceK
 		enc.Data[key] = fmt.Sprintf("crypto %s", string(base64.StdEncoding.EncodeToString(buf.Bytes())))
 	}
 
-	pterm.Info.Printf("Encrypted using %s\n", getAliasByKey(kmsService, keyId))
+	if keyId != "" && len(o.AfterDec.Data) > 0 {
+		pterm.Info.Printf("Encrypted using %s\n", getAliasByKey(kmsService, keyId))
+	}
 	o.AfterEnc = enc
 	o.Kind = "EncryptedSecret"
 	o.Data = enc.Data
@@ -451,7 +442,7 @@ func GenerateDataKey(kmsService kmsiface.KMSAPI, keyId string) (*[32]byte, []byt
 	return key, rsp.CiphertextBlob, nil
 }
 
-func DecryptCipherDataKey(kmsService kmsiface.KMSAPI, cipherDataKey []byte) (*[32]byte, error) {
+func DecryptCipherDataKey(kmsService kmsiface.KMSAPI, cipherDataKey []byte) (*[32]byte, string, error) {
 	decryptRsp, err := kmsService.Decrypt(&kms.DecryptInput{
 		CiphertextBlob: cipherDataKey,
 		EncryptionContext: map[string]*string{
@@ -460,13 +451,13 @@ func DecryptCipherDataKey(kmsService kmsiface.KMSAPI, cipherDataKey []byte) (*[3
 	})
 
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 	plainDataKey := &[32]byte{}
 	copy(plainDataKey[:], decryptRsp.Plaintext)
 
 	pterm.Info.Printf("Decrypted using %s\n", getAliasByKey(kmsService, *decryptRsp.KeyId))
-	return plainDataKey, nil
+	return plainDataKey, *decryptRsp.KeyId, nil
 }
 
 func getAliasByKey(kmsService kmsiface.KMSAPI, keyId string) string {

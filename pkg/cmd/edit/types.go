@@ -44,6 +44,9 @@ type Object struct {
 	// The KMS KeyId used for this object, if known. If nil, it might be a new
 	// object.
 	KeyId string
+	// The Plaintext Data key and Cipher Key generated using KMS Key ID
+	PlainDataKey *[32]byte
+	CipherDataKey []byte
 
 	// Byte coordinates for areas of the raw text we need to edit when re-serializing.
 	KindLoc TextLocation
