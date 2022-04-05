@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"github.com/Ridecell/ridectl/pkg/kubernetes"
+	"github.com/manifoldco/promptui"
 	"github.com/pkg/errors"
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
@@ -34,6 +35,7 @@ import (
 
 	utils "github.com/Ridecell/ridectl/pkg/utils"
 	appsv1 "k8s.io/api/apps/v1"
+	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -50,106 +52,197 @@ This becomes very tricky to handle in operator-itself. Hence we have implemented
 Ref: https://ridecell.atlassian.net/browse/DEVOPS-2925
 */
 var rollingRestartCmd = &cobra.Command{
-	Use:   "restart [flags] <cluster_name> <pod_type>",
-	Short: "Performs a rolling restart of pods.",
-	Long: "Restarts all pods of a certain type (web|celeryd|etc).\n" +
-		"For summon instances: restart <tenant>-<env> <type>                 -- e.g. ridectl restart summontest-dev web\n" +
-		"For microservices: restart svc-<region>-<env>-<microservice> <type>  -- e.g. ridectl svc-us-master-webhook-sms web",
+	Use:   "restart",
+	Short: "Performs restart of Pods, migration job or Postgresdump job.",
+	Long: "Restarts pods or jobs depending on user's selection.\n\n" +
+		"Specify instance name / microservice name in following format:\n" +
+		"Summon instances :   <tenant>-<env>                      -- e.g. summontest-dev\n" +
+		"Microservices    :   svc-<region>-<env>-<microservice>   -- e.g. svc-us-master-webhook-sms\n\n" +
+		"For restarting pods, provide component name like: web, celeryd, static, celeryredbeat, etc",
 	Args: func(_ *cobra.Command, args []string) error {
-		if len(args) == 0 {
-			pterm.Error.Printf("Cluster name argument is required.")
-			os.Exit(1)
-		}
-		if len(args) == 1 {
-			pterm.Error.Printf("Deployment type argument is required.")
-			os.Exit(1)
-		}
-		if len(args) > 2 {
-			return fmt.Errorf("too many arguments")
-		}
 		return nil
 	},
 	PreRunE: func(cmd *cobra.Command, args []string) error {
-
 		utils.CheckVPN()
-		fmt.Printf("\nWarning: This might cause downtime for your services\n")
 		return nil
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
 		kubeconfig := utils.GetKubeconfig()
-		target, err := kubernetes.ParseSubject(args[0])
-		if err != nil {
-			pterm.Error.Println(err, "Its not a valid Summonplatform or Microservice")
-			os.Exit(1)
-		}
+		var target kubernetes.Subject
 
-		var deploymentName string
-		podLabels := make(map[string]string)
-
-		if target.Type == "summon" {
-			podLabels["app.kubernetes.io/instance"] = fmt.Sprintf("%s-web", args[0])
-			deploymentName = fmt.Sprintf("%s-%s", args[0], args[1])
-		} else if target.Type == "microservice" {
-			podLabels["app"] = fmt.Sprintf("%s-svc-%s", target.Env, target.Namespace)
-			podLabels["environment"] = target.Env
-			podLabels["region"] = target.Region
-			podLabels["role"] = args[1]
-			deploymentName = fmt.Sprintf("%s-svc-%s-%s", target.Env, target.Namespace, args[1])
-		}
-
-		kubeObj := kubernetes.GetAppropriateObjectWithContext(*kubeconfig, args[0], target, inCluster)
-		if reflect.DeepEqual(kubeObj, kubernetes.Kubeobject{}) {
-			pterm.Error.Printf("No instance found %s\n", args[0])
-			os.Exit(1)
-		}
-
-		labelSet := labels.Set{}
-		for k, v := range podLabels {
-			labelSet[k] = v
-		}
-
-		listOptions := &client.ListOptions{
-			Namespace:     target.Namespace,
-			LabelSelector: labels.SelectorFromSet(labelSet),
-		}
-
-		pods := &corev1.PodList{}
-		err = kubeObj.Client.List(context.TODO(), pods, listOptions)
-		if err != nil {
-			return errors.Wrap(err, "error listing pods")
-		}
-
-		deployment := &appsv1.Deployment{}
-
-		var restartSuccess bool
-		for !restartSuccess {
-			for _, pod := range pods.Items {
-				err = kubeObj.Client.Delete(context.TODO(), &corev1.Pod{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      pod.Name,
-						Namespace: target.Namespace,
-					},
-				})
-				if err != nil {
-					return errors.Wrap(err, "error deleting pod")
-				}
-
-				// waiting for the deployment to be ready
-				err = wait.Poll(time.Second*5, time.Minute*3, func() (bool, error) {
-					_ = kubeObj.Client.Get(context.TODO(), types.NamespacedName{Name: deploymentName, Namespace: target.Namespace}, deployment)
-
-					if deployment.Status.ReadyReplicas == deployment.Status.Replicas {
-						return true, nil
-					}
-					return false, nil
-				})
-				if err != nil {
-					return errors.Wrap(err, "error waiting for deployment to re ready")
-				}
+		validateInstance := func(input string) error {
+			var err error
+			target, err = kubernetes.ParseSubject(input)
+			if err != nil {
+				return errors.New("Its not a valid Summonplatform or Microservice")
 			}
-			restartSuccess = true
+			return nil
 		}
-		pterm.Success.Printf("Successfully restarted pods for %s : %s\n", args[0], args[1])
+
+		restartTypes := []string{"Migration", "Pods", "PostgresDump Job"}
+
+		restartPrompt := promptui.Select{
+			Label: "Select what to restart:",
+			Items: restartTypes,
+		}
+
+		_, restartType, err := restartPrompt.Run()
+		if err != nil {
+			return errors.Wrapf(err, "Prompt failed")
+		}
+
+		switch restartType {
+		case "Migration":
+			prompt := promptui.Prompt{
+				Label:    "Enter SummonPlatform instance name",
+				Validate: validateInstance,
+			}
+			instanceName, err := prompt.Run()
+			if err != nil {
+				return errors.Wrapf(err, "Prompt failed")
+			}
+
+			kubeObj := kubernetes.GetAppropriateObjectWithContext(*kubeconfig, instanceName, target, inCluster)
+			if reflect.DeepEqual(kubeObj, kubernetes.Kubeobject{}) {
+				pterm.Error.Printf("No instance found %s\n", instanceName)
+				os.Exit(1)
+			}
+
+			job := &batchv1.Job{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      fmt.Sprintf("%s-migrations", target.Name),
+					Namespace: target.Namespace},
+			}
+			// deleting the migrations job restarts the migrations
+			err = kubeObj.Client.Delete(context.TODO(), job)
+			if err != nil {
+				return errors.Wrap(err, "failed to restart job")
+			}
+			pterm.Success.Printf("Restarted migrations for %s\n", target.Name)
+
+		case "Pods":
+			pterm.Warning.Println("Warning: This might cause downtime for your services.")
+
+			prompt := promptui.Prompt{
+				Label:    "Enter SummonPlatform instance name",
+				Validate: validateInstance,
+			}
+			instanceName, err := prompt.Run()
+			if err != nil {
+				return errors.Wrapf(err, "Prompt failed")
+			}
+			prompt = promptui.Prompt{
+				Label: "Enter component type",
+				//Validate: validate,
+			}
+			component, err := prompt.Run()
+			if err != nil {
+				return errors.Wrapf(err, "Prompt failed")
+			}
+
+			kubeObj := kubernetes.GetAppropriateObjectWithContext(*kubeconfig, instanceName, target, inCluster)
+			if reflect.DeepEqual(kubeObj, kubernetes.Kubeobject{}) {
+				pterm.Error.Printf("No instance found %s\n", instanceName)
+				os.Exit(1)
+			}
+
+			var deploymentName string
+			podLabels := make(map[string]string)
+
+			if target.Type == "summon" {
+				podLabels["app.kubernetes.io/instance"] = fmt.Sprintf("%s-%s", target.Name, component)
+				deploymentName = fmt.Sprintf("%s-%s", target.Name, component)
+			} else if target.Type == "microservice" {
+				podLabels["app"] = fmt.Sprintf("%s-svc-%s", target.Env, target.Namespace)
+				podLabels["environment"] = target.Env
+				podLabels["region"] = target.Region
+				podLabels["role"] = component
+				deploymentName = fmt.Sprintf("%s-svc-%s-%s", target.Env, target.Namespace, component)
+			}
+
+			labelSet := labels.Set{}
+			for k, v := range podLabels {
+				labelSet[k] = v
+			}
+			listOptions := &client.ListOptions{
+				Namespace:     target.Namespace,
+				LabelSelector: labels.SelectorFromSet(labelSet),
+			}
+			pods := &corev1.PodList{}
+			err = kubeObj.Client.List(context.TODO(), pods, listOptions)
+			if err != nil {
+				return errors.Wrap(err, "error listing pods")
+			}
+
+			deployment := &appsv1.Deployment{}
+			var restartSuccess bool
+
+			for !restartSuccess {
+				for _, pod := range pods.Items {
+					err = kubeObj.Client.Delete(context.TODO(), &corev1.Pod{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      pod.Name,
+							Namespace: target.Namespace,
+						},
+					})
+					if err != nil {
+						return errors.Wrap(err, "error deleting pod")
+					}
+
+					// waiting for the deployment to be ready
+					err = wait.Poll(time.Second*5, time.Minute*3, func() (bool, error) {
+						_ = kubeObj.Client.Get(context.TODO(), types.NamespacedName{Name: deploymentName, Namespace: target.Namespace}, deployment)
+
+						if deployment.Status.ReadyReplicas == deployment.Status.Replicas {
+							return true, nil
+						}
+						return false, nil
+					})
+					if err != nil {
+						return errors.Wrap(err, "error waiting for deployment to re ready")
+					}
+				}
+				restartSuccess = true
+			}
+			pterm.Success.Printf("Successfully restarted pods for %s : %s\n", target.Name, component)
+
+		case "PostgresDump Job":
+			prompt := promptui.Prompt{
+				Label: "Enter Postgresdump object name",
+			}
+			pgdumpName, err := prompt.Run()
+			if err != nil {
+				return errors.Wrapf(err, "Prompt failed")
+			}
+			prompt = promptui.Prompt{
+				Label: "Enter Postgresdump object namespace",
+			}
+			pgdumpNamespace, err := prompt.Run()
+			if err != nil {
+				return errors.Wrapf(err, "Prompt failed")
+			}
+
+			// Create Subject object for PostgresDump Job object
+			target := kubernetes.Subject{
+				Name:      pgdumpName + "-pgdump",
+				Namespace: pgdumpNamespace,
+				Type:      "job",
+			}
+
+			kubeObj := kubernetes.GetAppropriateObjectWithContext(*kubeconfig, "", target, inCluster)
+			if reflect.DeepEqual(kubeObj, kubernetes.Kubeobject{}) {
+				pterm.Error.Printf("No PostgresDump job found %s\n", pgdumpName+"-pgdump")
+				os.Exit(1)
+			}
+
+			jobObj := kubeObj.Object.(*batchv1.Job)
+			// deleting the postgresdump job restarts the postgresdump backup process
+			err = kubeObj.Client.Delete(context.TODO(), jobObj)
+			if err != nil {
+				return errors.Wrap(err, "failed to restart job")
+			}
+			pterm.Success.Printf("Restarted PostgresDump job for %s\n", pgdumpName)
+		}
 		return nil
 	},
 }

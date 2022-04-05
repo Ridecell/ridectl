@@ -48,10 +48,13 @@ var restartMigrationsCmd = &cobra.Command{
 		return nil
 	},
 	PreRunE: func(cmd *cobra.Command, args []string) error {
+		pterm.Info.Println("Ridectl restart-migrations command is deprecated, and will be removed in later releases.\nPlease use 'ridectl restart' command instead.")
 		utils.CheckVPN()
 		return nil
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
+		return nil
+
 		ctx := context.Background()
 		kubeconfig := utils.GetKubeconfig()
 		target, err := kubernetes.ParseSubject(args[0])
