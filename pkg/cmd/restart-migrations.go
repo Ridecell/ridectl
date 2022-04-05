@@ -14,19 +14,8 @@ limitations under the License.
 package cmd
 
 import (
-	"context"
-	"fmt"
-	"os"
-	"reflect"
-
-	"github.com/Ridecell/ridectl/pkg/kubernetes"
-	"github.com/Ridecell/ridectl/pkg/utils"
-	"github.com/pkg/errors"
-	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
-
-	batchv1 "k8s.io/api/batch/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"github.com/pterm/pterm"
 )
 
 func init() {
@@ -39,48 +28,13 @@ var restartMigrationsCmd = &cobra.Command{
 	Long: "Restart migrations for target summon instance.\n" +
 		"restart-migrations <instance> e.g ridectl restart-migrations summontest-dev",
 	Args: func(_ *cobra.Command, args []string) error {
-		if len(args) == 0 {
-			return fmt.Errorf("cluster name argument is required")
-		}
-		if len(args) > 1 {
-			return fmt.Errorf("too many arguments")
-		}
 		return nil
 	},
 	PreRunE: func(cmd *cobra.Command, args []string) error {
 		pterm.Info.Println("Ridectl restart-migrations command is deprecated, and will be removed in later releases.\nPlease use 'ridectl restart' command instead.")
-		utils.CheckVPN()
 		return nil
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
-		return nil
-
-		ctx := context.Background()
-		kubeconfig := utils.GetKubeconfig()
-		target, err := kubernetes.ParseSubject(args[0])
-		if err != nil {
-			pterm.Error.Println(err, "Its not a valid Summonplatform or Microservice")
-			os.Exit(1)
-		}
-
-		kubeObj := kubernetes.GetAppropriateObjectWithContext(*kubeconfig, args[0], target, inCluster)
-		if reflect.DeepEqual(kubeObj, kubernetes.Kubeobject{}) {
-			pterm.Error.Printf("No instance found %s\n", args[0])
-			os.Exit(1)
-		}
-
-		job := &batchv1.Job{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      fmt.Sprintf("%s-migrations", target.Name),
-				Namespace: target.Namespace},
-		}
-		// deleting the migrations job restarts the migrations
-		err = kubeObj.Client.Delete(ctx, job)
-		if err != nil {
-			return errors.Wrap(err, "failed to restart job")
-		}
-
-		pterm.Success.Printf("Restarted migrations for %s\n", target.Name)
 		return nil
 	},
 }
