@@ -94,7 +94,7 @@ var rollingRestartCmd = &cobra.Command{
 		switch restartType {
 		case "Migration":
 			prompt := promptui.Prompt{
-				Label:    "Enter SummonPlatform instance name",
+				Label:    "Enter SummonPlatform instance name (e.g. darwin-qa)",
 				Validate: validateInstance,
 			}
 			instanceName, err := prompt.Run()
@@ -124,7 +124,7 @@ var rollingRestartCmd = &cobra.Command{
 			pterm.Warning.Println("Warning: This might cause downtime for your services.")
 
 			prompt := promptui.Prompt{
-				Label:    "Enter SummonPlatform instance name",
+				Label:    "Enter SummonPlatform/Microservice name (e.g. darwin-qa or svc-us-master-webhook-sms)",
 				Validate: validateInstance,
 			}
 			instanceName, err := prompt.Run()
@@ -132,7 +132,7 @@ var rollingRestartCmd = &cobra.Command{
 				return errors.Wrapf(err, "Prompt failed")
 			}
 			prompt = promptui.Prompt{
-				Label: "Enter component type",
+				Label: "Enter component type (e.g. web, celeryd, static, etc)",
 				//Validate: validate,
 			}
 			component, err := prompt.Run()
@@ -175,34 +175,30 @@ var rollingRestartCmd = &cobra.Command{
 			}
 
 			deployment := &appsv1.Deployment{}
-			var restartSuccess bool
 
-			for !restartSuccess {
-				for _, pod := range pods.Items {
-					err = kubeObj.Client.Delete(context.TODO(), &corev1.Pod{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      pod.Name,
-							Namespace: target.Namespace,
-						},
-					})
-					if err != nil {
-						return errors.Wrap(err, "error deleting pod")
-					}
-
-					// waiting for the deployment to be ready
-					err = wait.Poll(time.Second*5, time.Minute*3, func() (bool, error) {
-						_ = kubeObj.Client.Get(context.TODO(), types.NamespacedName{Name: deploymentName, Namespace: target.Namespace}, deployment)
-
-						if deployment.Status.ReadyReplicas == deployment.Status.Replicas {
-							return true, nil
-						}
-						return false, nil
-					})
-					if err != nil {
-						return errors.Wrap(err, "error waiting for deployment to re ready")
-					}
+			for _, pod := range pods.Items {
+				err = kubeObj.Client.Delete(context.TODO(), &corev1.Pod{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      pod.Name,
+						Namespace: target.Namespace,
+					},
+				})
+				if err != nil {
+					return errors.Wrap(err, "error deleting pod")
 				}
-				restartSuccess = true
+
+				// waiting for the deployment to be ready
+				err = wait.Poll(time.Second*5, time.Minute*3, func() (bool, error) {
+					_ = kubeObj.Client.Get(context.TODO(), types.NamespacedName{Name: deploymentName, Namespace: target.Namespace}, deployment)
+
+					if deployment.Status.ReadyReplicas == deployment.Status.Replicas {
+						return true, nil
+					}
+					return false, nil
+				})
+				if err != nil {
+					return errors.Wrap(err, "error waiting for deployment to re ready")
+				}
 			}
 			pterm.Success.Printf("Successfully restarted pods for %s : %s\n", target.Name, component)
 
