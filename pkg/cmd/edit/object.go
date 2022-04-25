@@ -32,8 +32,8 @@ import (
 	"github.com/pkg/errors"
 	"github.com/pterm/pterm"
 	"golang.org/x/crypto/nacl/secretbox"
-	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
+	"k8s.io/client-go/kubernetes/scheme"
 
 	secretsv1beta2 "github.com/Ridecell/ridecell-controllers/apis/secrets/v1beta2"
 	hacksecretsv1beta2 "github.com/Ridecell/ridectl/pkg/apis/secrets/v1beta2"

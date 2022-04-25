@@ -45,7 +45,7 @@ type Object struct {
 	// object.
 	KeyId string
 	// The Plaintext Data key and Cipher Key generated using KMS Key ID
-	PlainDataKey *[32]byte
+	PlainDataKey  *[32]byte
 	CipherDataKey []byte
 
 	// Byte coordinates for areas of the raw text we need to edit when re-serializing.
