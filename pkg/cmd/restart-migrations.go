@@ -14,8 +14,8 @@ limitations under the License.
 package cmd
 
 import (
-	"github.com/spf13/cobra"
 	"github.com/pterm/pterm"
+	"github.com/spf13/cobra"
 )
 
 func init() {

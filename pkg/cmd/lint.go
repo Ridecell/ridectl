@@ -252,6 +252,10 @@ func lintFile(filename string, imageTags []string) error {
 		if _, ok := config["AWS_REGION"]; !ok {
 			return fmt.Errorf("%s: AWS_REGION is required", filename)
 		}
+		// Check if DEBUG is set to True; if yes, throw error
+		if b := config["DEBUG"]; b != nil && b.(bool) {
+			return fmt.Errorf("%s: Please disable the DEBUG flag. More Info: https://www.acunetix.com/vulnerabilities/web/django-debug-mode-enabled/ ", filename)
+		}
 	} else {
 		return fmt.Errorf("%s: AWS_REGION is required", filename)
 	}
