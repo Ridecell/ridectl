@@ -234,7 +234,7 @@ func (o *Object) Decrypt(kmsService kmsiface.KMSAPI, recrypt bool) error {
 			var plaintext []byte
 			plaintext, ok = secretbox.Open(plaintext, p.Message, p.Nonce, plainDataKey)
 			if !ok {
-				return errors.Wrapf(err, "error decrypting value with data key for %s", key)
+				return errors.Errorf("error decrypting value with data key for %s", key)
 			}
 			dec.Data[key] = string(plaintext)
 			keyUsageCount[keyId] = keyUsageCount[keyId] + 1

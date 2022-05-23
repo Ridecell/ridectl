@@ -77,10 +77,11 @@ var postgresdumpCMD = &cobra.Command{
 		}
 
 		postgresUserList := &v1beta2.PostgresUserList{}
-		_ = kubeObj.Client.List(ctx, postgresUserList, client.InNamespace(target.Namespace))
-		if len(postgresUserList.Items) == 0 {
-			return errors.Wrap(err, "failed to get postgres users list")
+		err = kubeObj.Client.List(ctx, postgresUserList, client.InNamespace(target.Namespace))
+		if err != nil {
+			return errors.Wrap(err, "failed to get postgres user")
 		}
+
 		postgresUser := &v1beta2.PostgresUser{}
 		for _, postgresUsr := range postgresUserList.Items {
 			if postgresUsr.Spec.Mode == "owner" && postgresUsr.Name == args[0] {
@@ -89,7 +90,7 @@ var postgresdumpCMD = &cobra.Command{
 			}
 		}
 		if postgresUser.Name == "" {
-			return errors.Wrap(err, "failed to get postgres user")
+			return fmt.Errorf("No Postgres users of type owner found in namespace: %s", target.Namespace)
 		}
 
 		var instanceName string
