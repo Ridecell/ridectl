@@ -113,7 +113,7 @@ var passwordCmd = &cobra.Command{
 				}
 			}
 			if len(readOnlysecrets) == 0 {
-				return errors.Wrapf(err, "no readonly secrets found for instance %s", args[0])
+				return errors.Errorf("no readonly secrets found for instance %s", args[0])
 			}
 			// prompt user to select a readonly secret
 			prompt := promptui.Select{
