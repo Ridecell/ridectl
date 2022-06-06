@@ -9,10 +9,10 @@ jobs:
     env:
       TOKEN: ${{ secrets.USER_GITHUB_TOKEN }}
     steps:
-      - name: Setup go 1.16
+      - name: Setup go 1.17
         uses: actions/setup-go@v2
         with:
-          go-version: 1.16
+          go-version: 1.17
       - uses: actions/checkout@v2
       - uses: actions/cache@v2
         with:
@@ -37,10 +37,10 @@ jobs:
     env:
       TOKEN: ${{ secrets.USER_GITHUB_TOKEN }}
     steps:
-      - name: Setup go 1.16
+      - name: Setup go 1.17
         uses: actions/setup-go@v2
         with:
-          go-version: 1.16
+          go-version: 1.17
       - name: Set up github environment variables
         uses: FranzDiebold/github-env-vars-action@v2
       - uses: actions/checkout@v2
