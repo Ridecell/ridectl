@@ -97,6 +97,7 @@ func init() {
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
 		pterm.Error.Println(err)
+		pterm.Error.Println("For FAQs and Troubleshooting: https://github.com/Ridecell/ridectl/blob/master/RUNBOOK.md")
 		os.Exit(1)
 	}
 }
