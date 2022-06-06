@@ -24,7 +24,7 @@ jobs:
       - name: Install lint
         run: |
           # binary will be $(go env GOPATH)/bin/golangci-lint
-          curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.41.1
+          curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.45.2
       - name: Run lint
         run: |
           git config --global url."https://${TOKEN}:x-oauth-basic@github.com/Ridecell".insteadOf "https://github.com/Ridecell"
