@@ -18,7 +18,6 @@ import (
 	"fmt"
 	"io"
 	"regexp"
-	"strings"
 
 	"github.com/aws/aws-sdk-go/service/kms/kmsiface"
 	"github.com/pkg/errors"
@@ -42,16 +41,12 @@ func NewManifest(in io.Reader) (Manifest, error) {
 	}
 
 	objects := []*Object{}
+
 	for _, chunk := range splitRegexp.Split(buf.String(), -1) {
 		if emptyRegexp.MatchString(chunk) {
 			continue
 		}
 		obj, err := NewObject([]byte(chunk))
-		// we need to ignnore the error here because we don't want to lint the ridecell-operator objects here
-		if err != nil && (strings.Contains(err.Error(), "no kind \"SummonPlatform\" is registered for version \"summon.ridecell.io/v1beta1\"") || strings.Contains(err.Error(), "no kind \"EncryptedSecret\" is registered for version \"secrets.ridecell.io/v1beta1\"")) {
-			continue
-		}
-		// return the error if we have one which is not ignorable
 		if err != nil {
 			return nil, errors.Wrap(err, "error decoding object")
 		}
@@ -60,9 +55,9 @@ func NewManifest(in io.Reader) (Manifest, error) {
 	return objects, nil
 }
 
-func (m Manifest) Decrypt(kmsService kmsiface.KMSAPI) error {
+func (m Manifest) Decrypt(kmsService kmsiface.KMSAPI, recrypt bool) error {
 	for _, obj := range m {
-		err := obj.Decrypt(kmsService)
+		err := obj.Decrypt(kmsService, recrypt)
 		if err != nil {
 			return errors.Wrapf(err, "error decrypting %s/%s", obj.Meta.GetNamespace(), obj.Meta.GetName())
 		}
@@ -115,6 +110,8 @@ func (m Manifest) CorrelateWith(origManifest Manifest) error {
 			obj.OrigEnc = origObj.OrigEnc
 			obj.OrigDec = origObj.OrigDec
 			obj.KeyId = origObj.KeyId
+			obj.PlainDataKey = origObj.PlainDataKey
+			obj.CipherDataKey = origObj.CipherDataKey
 		}
 	}
 	return nil

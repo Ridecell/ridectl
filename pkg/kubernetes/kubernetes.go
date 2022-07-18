@@ -32,6 +32,7 @@ import (
 
 	summonv1beta2 "github.com/Ridecell/summon-operator/apis/app/v1beta2"
 	appsv1 "k8s.io/api/apps/v1"
+	batchv1 "k8s.io/api/batch/v1"
 )
 
 const namespacePrefix = "summon-"
@@ -138,9 +139,18 @@ func fetchContextForObject(channel chan Kubeobject, clusterName string, cluster 
 		} else {
 			return
 		}
+	} else if subject.Type == "job" {
+		jobObj := &batchv1.Job{}
 
+		pterm.Info.Printf(" Checking job in %s\n", cluster.Cluster)
+		err := crclient.Get(context.Background(), types.NamespacedName{Name: subject.Name, Namespace: subject.Namespace}, jobObj)
+		if err != nil {
+			pterm.Warning.Printf("%s in %s\n", err.Error(), cluster.Cluster)
+			return
+		}
+		channel <- Kubeobject{Object: jobObj, Client: crclient, Context: cluster}
+		return
 	}
-
 }
 
 func GetAppropriateObjectWithContext(kubeconfig string, instance string, subject Subject, inCluster bool) Kubeobject {

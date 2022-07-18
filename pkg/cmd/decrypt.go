@@ -127,7 +127,7 @@ func GetDecryptedData(kmsService kmsiface.KMSAPI, encryptedData []byte) ([]byte,
 	plainDataKey, ok := keyMap[string(p.Key)]
 	if !ok {
 		// Decrypt cipherdatakey
-		plainDataKey, err = edit.DecryptCipherDataKey(kmsService, p.Key)
+		plainDataKey, _, err = edit.DecryptCipherDataKey(kmsService, p.Key)
 		if err != nil {
 			return plaintext, errors.Wrap(err, "error decrypting value for cipherDatakey")
 		}
@@ -137,7 +137,7 @@ func GetDecryptedData(kmsService kmsiface.KMSAPI, encryptedData []byte) ([]byte,
 	// Decrypt file content
 	plaintext, ok = secretbox.Open(plaintext, p.Message, p.Nonce, plainDataKey)
 	if !ok {
-		return plaintext, errors.Wrap(err, "error decrypting value with data key")
+		return plaintext, errors.New("Error decrypting value with data key")
 	}
 	return plaintext, nil
 }

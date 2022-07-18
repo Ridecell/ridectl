@@ -45,12 +45,10 @@ func init() {
 
 var filenameFlag string
 var keyIdFlag string
-var recrypt bool
 
 var whitespaceRegexp *regexp.Regexp
 
 func init() {
-	editCmd.Flags().BoolVarP(&recrypt, "recrypt", "r", false, "(optional) re-encrypts all secrets in file")
 	editCmd.Flags().StringVarP(&filenameFlag, "file", "f", "", "(optional) Path to the file to edit")
 	editCmd.Flags().StringVarP(&keyIdFlag, "key", "k", "", "(optional) KMS key ID to use for encrypting")
 
@@ -95,6 +93,9 @@ var editCmd = &cobra.Command{
 		return nil
 	},
 	RunE: func(_ *cobra.Command, args []string) error {
+		if keyIdFlag != "" {
+			recrypt = true
+		}
 		// Work out which file we are editing.
 		filename := filenameFlag
 		if filename == "" {
@@ -166,7 +167,7 @@ var editCmd = &cobra.Command{
 		kmsService := kms.New(sess)
 
 		// Decrypt all the encrypted secrets.
-		err = inManifest.Decrypt(kmsService)
+		err = inManifest.Decrypt(kmsService, recrypt)
 		if err != nil {
 			return errors.Wrap(err, "error decrypting input manifest")
 		}
@@ -189,7 +190,7 @@ var editCmd = &cobra.Command{
 			}
 		}
 
-		err = afterManifest.Encrypt(kmsService, keyId, keyIdFlag != "" || recrypt, recrypt)
+		err = afterManifest.Encrypt(kmsService, keyId, keyIdFlag != "", recrypt)
 		if err != nil {
 			return errors.Wrap(err, "error encrypting after manifest")
 		}
@@ -202,7 +203,6 @@ var editCmd = &cobra.Command{
 		}
 		defer outFile.Close()
 		_ = afterManifest.Serialize(outFile)
-
 		return nil
 	},
 }
@@ -286,7 +286,8 @@ func editObjects(manifest edit.Manifest, comment string) (edit.Manifest, error) 
 		// If we're reencrypting ignore this equality check.
 		// Check if the file was edited at all.
 		if bytes.Equal(editorBuf.Bytes(), afterBuf.Bytes()) && !recrypt {
-			return nil, errors.New("tempfile not edited, aborting")
+			pterm.Info.Println("Edit cancelled. No changes made")
+			os.Exit(0)
 		}
 
 		// Try strip off the comment.
