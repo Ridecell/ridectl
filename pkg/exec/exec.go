@@ -44,7 +44,7 @@ func ExecuteCommand(binary string, args []string) error {
 	c.Stderr = &stderr
 	err = c.Run()
 	if err != nil {
-		return fmt.Errorf(string(stderr.Bytes()))
+		return fmt.Errorf(stderr.String())
 	}
 	return nil
 }
