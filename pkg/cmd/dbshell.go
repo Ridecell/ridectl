@@ -50,7 +50,6 @@ var dbShellCmd = &cobra.Command{
 	},
 	PreRunE: func(cmd *cobra.Command, args []string) error {
 
-		utils.CheckVPN()
 		utils.CheckPsql()
 		return nil
 	},
@@ -68,7 +67,7 @@ var dbShellCmd = &cobra.Command{
 		secretObj := &corev1.Secret{}
 		err = kubeObj.Client.Get(context.Background(), types.NamespacedName{Name: target.Name + "-rdsiam-readonly.postgres-user-password", Namespace: target.Namespace}, secretObj)
 		if err != nil {
-			return fmt.Errorf("No instance found in %s", kubeObj.Context)
+			return fmt.Errorf("No instance found in %s", err)
 		}
 
 		// Derive RDS instance name using hostname
