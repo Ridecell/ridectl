@@ -14,6 +14,8 @@ limitations under the License.
 package exec
 
 import (
+	"bytes"
+	"fmt"
 	"os"
 	"os/exec"
 	"syscall"
@@ -27,4 +29,22 @@ func Exec(command []string) error {
 	err = syscall.Exec(binary, command, os.Environ())
 	// Panic rather than returning since this should never happen.
 	panic(err)
+}
+
+// ExecuteCommand uses os/exec Command fucntion to execute command,
+// which returns the process output/error to parent process,
+// unlike syscall.Exec()
+func ExecuteCommand(binary string, args []string) error {
+	binaryPath, err := exec.LookPath(binary)
+	if err != nil {
+		return err
+	}
+	var stderr bytes.Buffer
+	c := exec.Command(binaryPath, args...)
+	c.Stderr = &stderr
+	err = c.Run()
+	if err != nil {
+		return fmt.Errorf(string(stderr.Bytes()))
+	}
+	return nil
 }

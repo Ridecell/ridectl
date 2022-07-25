@@ -148,7 +148,7 @@ func fetchContextForObject(channel chan Kubeobject, clusterName string, cluster 
 			pterm.Warning.Printf("%s in %s\n", err.Error(), cluster.Cluster)
 			return
 		}
-		channel <- Kubeobject{Object: jobObj, Client: crclient, Context: cluster}
+		channel <- Kubeobject{Object: jobObj, Client: crclient, Context: clusterName}
 		return
 	}
 }

@@ -111,7 +111,7 @@ var shellCmd = &cobra.Command{
 			}
 		}
 		if pod.Name == "" {
-			pterm.Error.Printf("no running pod found in %s", kubeObj.Context.Cluster)
+			pterm.Error.Printf("no running pod found in %s", kubeObj.Context)
 			os.Exit(1)
 		}
 

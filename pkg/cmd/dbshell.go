@@ -16,8 +16,8 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"os"
 	"reflect"
+	"strings"
 
 	"github.com/Ridecell/ridectl/pkg/exec"
 	"github.com/pterm/pterm"
@@ -59,23 +59,29 @@ var dbShellCmd = &cobra.Command{
 		kubeconfig := utils.GetKubeconfig()
 		target, err := kubernetes.ParseSubject(args[0])
 		if err != nil {
-			pterm.Error.Println(err, "Its not a valid Summonplatform or Microservice")
-			os.Exit(1)
+			return fmt.Errorf("Its not a valid Summonplatform or Microservice: %s", err)
 		}
 		kubeObj := kubernetes.GetAppropriateObjectWithContext(*kubeconfig, args[0], target, inCluster)
 		if reflect.DeepEqual(kubeObj, kubernetes.Kubeobject{}) {
-			pterm.Error.Printf("No instance found %s\n", args[0])
-			os.Exit(1)
+			return fmt.Errorf("No instance found %s\n", args[0])
 		}
 		secretObj := &corev1.Secret{}
-		err = kubeObj.Client.Get(context.Background(), types.NamespacedName{Name: target.Name + ".postgres-user-password", Namespace: target.Namespace}, secretObj)
+		err = kubeObj.Client.Get(context.Background(), types.NamespacedName{Name: target.Name + "-rdsiam-readonly.postgres-user-password", Namespace: target.Namespace}, secretObj)
 		if err != nil {
-			pterm.Error.Printf("instance not found in %s", kubeObj.Context)
-			os.Exit(1)
+			return fmt.Errorf("No instance found in %s", kubeObj.Context)
 		}
 
-		psqlCmd := []string{"psql", "-h", string(secretObj.Data["host"]), "-U", string(secretObj.Data["username"]), string(secretObj.Data["dbname"])}
-		os.Setenv("PGPASSWORD", string(secretObj.Data["password"]))
-		return exec.Exec(psqlCmd)
+		// Derive RDS instance name using hostname
+		rdsInstanceName := strings.Split(string(secretObj.Data["host"]), ".")[0]
+
+		pterm.Info.Println("Getting database login credentials")
+		dbLoginArgs := []string{"db", "login", "--db-user="+string(secretObj.Data["username"]), "--db-name="+string(secretObj.Data["dbname"]), rdsInstanceName}
+		err = exec.ExecuteCommand("tsh", dbLoginArgs)
+		if err != nil {
+			return fmt.Errorf("Could not login to database, %s", err)
+		}
+		pterm.Info.Println("Logging in into database")
+		dbConnectCmd := []string{"tsh", "db", "connect", rdsInstanceName}
+		return exec.Exec(dbConnectCmd)
 	},
 }
