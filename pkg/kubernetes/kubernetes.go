@@ -182,7 +182,6 @@ func GetAppropriateObjectWithContext(kubeconfig string, instance string, subject
 		k8sClients[clusterName] = k8sClient
 	}
 
-	pterm.Printf("\n%+v\n", k8sClients)
 	// Initialize a wait group
 	var wg sync.WaitGroup
 	wg.Add(len(k8sClients))

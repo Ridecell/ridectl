@@ -42,6 +42,7 @@ func ExecuteCommand(binary string, args []string) error {
 	var stderr bytes.Buffer
 	c := exec.Command(binaryPath, args...)
 	c.Stderr = &stderr
+	c.Stdin = os.Stdin
 	err = c.Run()
 	if err != nil {
 		return fmt.Errorf(stderr.String())
