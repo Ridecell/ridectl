@@ -175,6 +175,9 @@ func GetAppropriateObjectWithContext(kubeconfig string, instance string, subject
 
 	k8sClients := make(map[string]client.Client)
 	for clusterName, context := range contexts {
+		if !validCluster(clusterName, subject.Env) {
+			continue
+		}
 		k8sClient, err := getClientByContext(kubeconfig, context)
 		if err != nil {
 			continue
@@ -230,4 +233,19 @@ func ParseSubject(instanceName string) (Subject, error) {
 	}
 	// Nothing matched, return empty with error
 	return subject, fmt.Errorf("could not parse out information from %s.", instanceName)
+}
+
+// Return true only if given Environment is present in target cluster
+func validCluster(clusterName string, env string) bool {
+	if env == "prod" || env == "uat" {
+		if strings.HasSuffix(clusterName, "prod.kops.ridecell.io") {
+			return true
+		}
+		return false
+	} else {
+		if strings.HasSuffix(clusterName, "prod.kops.ridecell.io") {
+			return false
+		}
+	}
+	return true
 }

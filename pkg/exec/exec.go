@@ -21,6 +21,14 @@ import (
 	"syscall"
 )
 
+func CheckBinary(binary string) bool {
+	_, err := exec.LookPath(binary)
+	if err != nil {
+		return false
+	}
+	return true
+}
+
 func Exec(command []string) error {
 	binary, err := exec.LookPath(command[0])
 	if err != nil {

@@ -17,10 +17,10 @@ import (
 	"flag"
 	"net/http"
 	"os"
-	"os/exec"
 	"path/filepath"
 
 	"github.com/pterm/pterm"
+	"github.com/Ridecell/ridectl/pkg/exec"
 
 	"k8s.io/client-go/util/homedir"
 )
@@ -35,24 +35,15 @@ func GetKubeconfig() *string {
 	return kubeconfig
 }
 
-func checkBinary(binary string) bool {
-	_, err := exec.LookPath(binary)
-	if err != nil {
-		pterm.Error.Println("\n", err)
-		return false
-	}
-	return true
-}
-
 func CheckKubectl() {
-	if !checkBinary("kubectl") {
+	if !exec.CheckBinary("kubectl") {
 		pterm.Error.Printf("kubectl is not installed. Follow the instructions here: https://kubernetes.io/docs/tasks/tools/#kubectl to install it\n")
 		os.Exit(1)
 	}
 }
 
 func CheckPsql() {
-	if !checkBinary("psql") {
+	if !exec.CheckBinary("psql") {
 		pterm.Error.Printf("psql is not installed. Follow the instructions here: https://www.compose.com/articles/postgresql-tips-installing-the-postgresql-client/ to install it\n")
 		os.Exit(1)
 	}
@@ -71,5 +62,19 @@ func CheckVPN() {
 			pterm.Error.Println("VPN is not connected")
 			os.Exit(1)
 		}
+	}
+}
+
+func CheckTshLogin() {
+	if !exec.CheckBinary("tsh") {
+		pterm.Error.Println("tsh is not installed. Download latest tsh from here: https://goteleport.com/docs/installation/#macos \n")
+		os.Exit(1)
+	}
+	// Check if tsh login profile is active or not
+	statusArgs := []string{"status"}
+	err := exec.ExecuteCommand("tsh", statusArgs)
+	if err != nil {
+		pterm.Error.Println("No active teleport profile found. Refer below command to login to teleport:\ntsh login --proxy=teleport.aws-us-support.ridecell.io:443 --auth=local --user=<your-ridecell-email-id>\n")
+		os.Exit(1)
 	}
 }

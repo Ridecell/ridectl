@@ -53,7 +53,7 @@ var pyShellCmd = &cobra.Command{
 		return nil
 	},
 	PreRunE: func(cmd *cobra.Command, args []string) error {
-
+		utils.CheckTshLogin()
 		utils.CheckKubectl()
 		return nil
 	},
