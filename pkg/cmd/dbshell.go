@@ -67,14 +67,14 @@ var dbShellCmd = &cobra.Command{
 		secretObj := &corev1.Secret{}
 		err = kubeObj.Client.Get(context.Background(), types.NamespacedName{Name: target.Name + "-rdsiam-readonly.postgres-user-password", Namespace: target.Namespace}, secretObj)
 		if err != nil {
-			return fmt.Errorf("No instance found in %s", err)
+			return fmt.Errorf("Error getting secret for instance %s", err)
 		}
 
 		// Derive RDS instance name using hostname
 		rdsInstanceName := strings.Split(string(secretObj.Data["host"]), ".")[0]
 
 		pterm.Info.Println("Getting database login credentials")
-		dbLoginArgs := []string{"db", "login", "--db-user="+string(secretObj.Data["username"]), "--db-name="+string(secretObj.Data["dbname"]), rdsInstanceName}
+		dbLoginArgs := []string{"db", "login", "--db-user=" + string(secretObj.Data["username"]), "--db-name=" + string(secretObj.Data["dbname"]), rdsInstanceName}
 		err = exec.ExecuteCommand("tsh", dbLoginArgs)
 		if err != nil {
 			return fmt.Errorf("Could not login to database, %s", err)

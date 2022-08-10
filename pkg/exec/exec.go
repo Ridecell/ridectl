@@ -15,11 +15,27 @@ package exec
 
 import (
 	"bytes"
+	_ "embed"
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"syscall"
 )
+
+var (
+	//go:embed bin/tsh
+	tsh []byte
+)
+
+func InstallTsh() error {
+	executablePath, _ := os.Executable()
+	dir, err := filepath.Abs(filepath.Dir(executablePath))
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(dir+"/tsh", tsh, 0755)
+}
 
 func CheckBinary(binary string) bool {
 	_, err := exec.LookPath(binary)

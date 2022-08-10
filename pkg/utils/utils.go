@@ -18,9 +18,10 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 
-	"github.com/pterm/pterm"
 	"github.com/Ridecell/ridectl/pkg/exec"
+	"github.com/pterm/pterm"
 
 	"k8s.io/client-go/util/homedir"
 )
@@ -67,14 +68,23 @@ func CheckVPN() {
 
 func CheckTshLogin() {
 	if !exec.CheckBinary("tsh") {
-		pterm.Error.Println("tsh is not installed. Download latest tsh from here: https://goteleport.com/docs/installation/#macos \n")
-		os.Exit(1)
+		pterm.Info.Println("Tsh cli not found, installing...")
+		err := exec.InstallTsh()
+		if err != nil {
+			pterm.Error.Printf("Error installing tsh : %s\n", err)
+			os.Exit(1)
+		}
+		pterm.Info.Println("Tsh installation completed.")
 	}
 	// Check if tsh login profile is active or not
 	statusArgs := []string{"status"}
 	err := exec.ExecuteCommand("tsh", statusArgs)
-	if err != nil {
-		pterm.Error.Println("No active teleport profile found. Refer below command to login to teleport:\ntsh login --proxy=teleport.aws-us-support.ridecell.io:443 --auth=local --user=<your-ridecell-email-id>\n")
+	if err == nil {
+		return
+	}
+	// check if no teleport profile present, ask user to login
+	if strings.Contains(err.Error(), "not logged in") {
+		pterm.Error.Println("No teleport profile found. Refer teleport login command from FAQs:\nhttps://ridecell.quip.com/CILaAnAUnkla/Ridectl-FAQs ")
 		os.Exit(1)
 	}
 }

@@ -19,6 +19,7 @@ import (
 	"regexp"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/pkg/errors"
 	"github.com/pterm/pterm"
@@ -78,6 +79,9 @@ func getClientByContext(kubeconfig string, kubeContext *api.Context) (client.Cli
 			return nil, errors.New("hostname did not match, ignoring context")
 		}
 	}
+	// Set high timeout, since user has to login if their teleport login is expired.
+	cfg.Timeout = time.Minute * 3
+
 	mapper, err := apiutil.NewDiscoveryRESTMapper(cfg)
 	if err != nil {
 		return nil, err
@@ -238,14 +242,7 @@ func ParseSubject(instanceName string) (Subject, error) {
 // Return true only if given Environment is present in target cluster
 func validCluster(clusterName string, env string) bool {
 	if env == "prod" || env == "uat" {
-		if strings.HasSuffix(clusterName, "prod.kops.ridecell.io") {
-			return true
-		}
-		return false
-	} else {
-		if strings.HasSuffix(clusterName, "prod.kops.ridecell.io") {
-			return false
-		}
+		return strings.HasSuffix(clusterName, "prod.kops.ridecell.io")
 	}
-	return true
+	return !strings.HasSuffix(clusterName, "prod.kops.ridecell.io")
 }
