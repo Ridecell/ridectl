@@ -39,10 +39,7 @@ func InstallTsh() error {
 
 func CheckBinary(binary string) bool {
 	_, err := exec.LookPath(binary)
-	if err != nil {
-		return false
-	}
-	return true
+	return err == nil
 }
 
 func Exec(command []string) error {
