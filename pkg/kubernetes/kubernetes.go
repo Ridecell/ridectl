@@ -75,7 +75,7 @@ func getClientByContext(kubeconfig string, kubeContext *api.Context) (client.Cli
 			return nil, errors.Wrap(err, "failed to get client with context")
 		}
 		// Return error to skip searching non-ridecell hosts
-		if !strings.HasSuffix(cfg.Host, ".ridecell.io:3026") {
+		if !strings.HasSuffix(cfg.Host, ":3026") {
 			return nil, errors.New("hostname did not match, ignoring context")
 		}
 	}
@@ -242,7 +242,7 @@ func ParseSubject(instanceName string) (Subject, error) {
 // Return true only if given Environment is present in target cluster
 func validCluster(clusterName string, env string) bool {
 	if env == "prod" || env == "uat" {
-		return strings.HasSuffix(clusterName, "prod.kops.ridecell.io")
+		return strings.Contains(clusterName, "prod.kops")
 	}
-	return !strings.HasSuffix(clusterName, "prod.kops.ridecell.io")
+	return !strings.Contains(clusterName, "prod.kops")
 }
