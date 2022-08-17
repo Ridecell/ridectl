@@ -121,8 +121,8 @@ var shellCmd = &cobra.Command{
 		// Warn people that this is a container.
 		pterm.Warning.Printf("Remember that this is a container and most changes will have no effect\n")
 
-		kubectlArgs := []string{"kubectl", "exec", "-it", "-n", pod.Namespace, pod.Name, "--context", kubeObj.Context, "--", "bash", "-l"}
-		return exec.Exec(kubectlArgs)
+		kubectlArgs := []string{"exec", "-it", "-n", pod.Namespace, pod.Name, "--context", kubeObj.Context, "--", "bash", "-l"}
+		return exec.ExecuteCommand("kubectl", kubectlArgs, true)
 
 	},
 }

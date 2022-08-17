@@ -78,7 +78,7 @@ func CheckTshLogin() {
 	}
 	// Check if tsh login profile is active or not
 	statusArgs := []string{"status"}
-	err := exec.ExecuteCommand("tsh", statusArgs)
+	err := exec.ExecuteCommand("tsh", statusArgs, false)
 	if err == nil {
 		return
 	}

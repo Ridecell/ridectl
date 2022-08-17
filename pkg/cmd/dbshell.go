@@ -75,12 +75,12 @@ var dbShellCmd = &cobra.Command{
 
 		pterm.Info.Println("Getting database login credentials")
 		dbLoginArgs := []string{"db", "login", "--db-user=" + string(secretObj.Data["username"]), "--db-name=" + string(secretObj.Data["dbname"]), rdsInstanceName}
-		err = exec.ExecuteCommand("tsh", dbLoginArgs)
+		err = exec.ExecuteCommand("tsh", dbLoginArgs, false)
 		if err != nil {
 			return fmt.Errorf("Could not login to database, %s", err)
 		}
 		pterm.Info.Println("Logging in into database")
-		dbConnectCmd := []string{"tsh", "db", "connect", rdsInstanceName}
-		return exec.Exec(dbConnectCmd)
+		dbConnectCmd := []string{"db", "connect", rdsInstanceName}
+		return exec.ExecuteCommand("tsh", dbConnectCmd, true)
 	},
 }

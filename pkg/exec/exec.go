@@ -20,7 +20,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"syscall"
 )
 
 var (
@@ -42,31 +41,39 @@ func CheckBinary(binary string) bool {
 	return err == nil
 }
 
-func Exec(command []string) error {
-	binary, err := exec.LookPath(command[0])
-	if err != nil {
-		return err
-	}
-	err = syscall.Exec(binary, command, os.Environ())
-	// Panic rather than returning since this should never happen.
-	panic(err)
-}
-
 // ExecuteCommand uses os/exec Command fucntion to execute command,
 // which returns the process output/error to parent process,
-// unlike syscall.Exec()
-func ExecuteCommand(binary string, args []string) error {
+// If detachProcess flag set to true, then ridectl will exit with
+// no error irrespective of given command's exit code.
+func ExecuteCommand(binary string, args []string, detachProcess bool) error {
 	binaryPath, err := exec.LookPath(binary)
 	if err != nil {
 		return err
 	}
-	var stderr bytes.Buffer
+
 	c := exec.Command(binaryPath, args...)
-	c.Stderr = &stderr
 	c.Stdin = os.Stdin
+
+	// Execute a process by seperating it's Stderr and Stdout streams from ridectl code
+	// Here we will just execute the command, and complete ridectl command with no error
+	// Mainly used by "kubectl exec" and "psql" commands
+	if detachProcess {
+		c.Stdout = os.Stdout
+		c.Stderr = os.Stderr
+		_ = c.Run()
+		return nil
+	}
+
+	// Here we will capture Stderr from given command output
+	// Mainly used by "tsh status" and "tsh db login" commands
+	var stderr bytes.Buffer
+	c.Stderr = &stderr
 	err = c.Run()
 	if err != nil {
-		return fmt.Errorf(stderr.String())
+		if stderr.String() != "" {
+			return fmt.Errorf(stderr.String())
+		}
+		return fmt.Errorf("Error while executing command: %s", err.Error())
 	}
 	return nil
 }
