@@ -14,7 +14,10 @@ limitations under the License.
 package utils
 
 import (
+	"crypto/md5"
+	"encoding/hex"
 	"flag"
+	"io"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -37,14 +40,14 @@ func GetKubeconfig() *string {
 }
 
 func CheckKubectl() {
-	if !exec.CheckBinary("kubectl") {
+	if _, installed := exec.CheckBinary("kubectl"); !installed {
 		pterm.Error.Printf("kubectl is not installed. Follow the instructions here: https://kubernetes.io/docs/tasks/tools/#kubectl to install it\n")
 		os.Exit(1)
 	}
 }
 
 func CheckPsql() {
-	if !exec.CheckBinary("psql") {
+	if _, installed := exec.CheckBinary("psql"); !installed {
 		pterm.Error.Printf("psql is not installed. Follow the instructions here: https://www.compose.com/articles/postgresql-tips-installing-the-postgresql-client/ to install it\n")
 		os.Exit(1)
 	}
@@ -66,19 +69,45 @@ func CheckVPN() {
 	}
 }
 
-func CheckTshLogin() {
-	if !exec.CheckBinary("tsh") {
-		pterm.Info.Println("Tsh cli not found, installing...")
-		err := exec.InstallTsh()
-		if err != nil {
-			pterm.Error.Printf("Error installing tsh : %s\n", err)
-			os.Exit(1)
-		}
-		pterm.Info.Println("Tsh installation completed.")
+func installTsh() {
+	err := exec.InstallTsh()
+	if err != nil {
+		pterm.Error.Printf("Error installing tsh : %s\n", err)
+		os.Exit(1)
 	}
+	pterm.Info.Println("Tsh installation completed.")
+}
+
+func CheckTshLogin() {
+	binPath, installed := exec.CheckBinary("tsh")
+	if !installed {
+		pterm.Info.Println("Tsh cli not found, installing...")
+		installTsh()
+	}
+
+	//Generate MD5 hash of installed tsh binary
+	f, err := os.Open(binPath)
+ 	if err != nil {
+ 		pterm.Error.Printf("Error opening tsh : %s\n", err)
+		os.Exit(1)
+ 	}
+ 	defer f.Close()
+
+ 	hash := md5.New()
+ 	_, err = io.Copy(hash, f)
+ 	if err != nil {
+ 		pterm.Error.Printf("Error generating hash for tsh : %s\n", err)
+		os.Exit(1)
+ 	}
+	// Check if tsh binary's md5 is same; if not, install tsh
+	if hex.EncodeToString(hash.Sum(nil)) != exec.GetTshMd5Hash() {
+		pterm.Info.Println("Tsh version not matched, re-installing...")
+		installTsh()
+	}
+
 	// Check if tsh login profile is active or not
 	statusArgs := []string{"status"}
-	err := exec.ExecuteCommand("tsh", statusArgs, false)
+	err = exec.ExecuteCommand("tsh", statusArgs, false)
 	if err == nil {
 		return
 	}

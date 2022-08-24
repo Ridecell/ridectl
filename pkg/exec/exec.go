@@ -25,6 +25,8 @@ import (
 var (
 	//go:embed bin/tsh
 	tsh []byte
+	//go:embed bin/tsh.md5
+	tshMD5 string
 )
 
 func InstallTsh() error {
@@ -36,9 +38,13 @@ func InstallTsh() error {
 	return os.WriteFile(dir+"/tsh", tsh, 0755)
 }
 
-func CheckBinary(binary string) bool {
-	_, err := exec.LookPath(binary)
-	return err == nil
+func GetTshMd5Hash() string {
+	return tshMD5
+}
+
+func CheckBinary(binary string) (string, bool) {
+	binaryPath, err := exec.LookPath(binary)
+	return binaryPath, err == nil
 }
 
 // ExecuteCommand uses os/exec Command fucntion to execute command,

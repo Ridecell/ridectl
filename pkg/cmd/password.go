@@ -94,6 +94,7 @@ var passwordCmd = &cobra.Command{
 			}
 
 			pterm.Success.Printf("Password for %s: %s\n", args[0], string(secret.Data["password"]))
+			pterm.Warning.Printf("If someone has changed or reset the password manually, then above password will not work.\n")
 
 		case "postgresql":
 			// get a list of secrets which have readonly in their name
