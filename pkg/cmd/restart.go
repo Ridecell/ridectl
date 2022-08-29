@@ -160,6 +160,8 @@ var rollingRestartCmd = &cobra.Command{
 				deploymentName = fmt.Sprintf("%s-svc-%s-%s", target.Env, target.Namespace, component)
 			}
 
+			pterm.Info.Printf("Restarting pods for %s : %s\n", target.Name, component)
+
 			labelSet := labels.Set{}
 			for k, v := range podLabels {
 				labelSet[k] = v

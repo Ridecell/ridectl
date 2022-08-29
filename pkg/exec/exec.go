@@ -25,7 +25,6 @@ import (
 var (
 	//go:embed bin/tsh
 	tsh []byte
-	//go:embed bin/tsh.md5
 	tshMD5 string
 )
 

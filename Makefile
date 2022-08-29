@@ -20,8 +20,7 @@ build_macos:
 	tar -xf teleport-v$(TSH_VERSION)-darwin-amd64-bin.tar.gz
 	cp teleport/tsh pkg/exec/bin/
 	# Adding double $ in awk command to escape single $
-	md5sum teleport/tsh | awk '{ print $$1 }'| tr -d '\n' > pkg/exec/bin/tsh.md5
-	GOOS=darwin GOARCH=amd64 go build -o bin/ridectl.macos -ldflags "-X github.com/Ridecell/ridectl/pkg/cmd.version=$(shell git describe --tags)" -tags release github.com/Ridecell/ridectl/cmd/ridectl
+	GOOS=darwin GOARCH=amd64 go build -o bin/ridectl.macos -ldflags "-X github.com/Ridecell/ridectl/pkg/exec.tshMD5=$(shell md5sum teleport/tsh | awk '{ print $$1 }'| tr -d '\n') -X github.com/Ridecell/ridectl/pkg/cmd.version=$(shell git describe --tags)" -tags release github.com/Ridecell/ridectl/cmd/ridectl
 
 # Build command binary, for Linux
 build_linux:
@@ -29,5 +28,4 @@ build_linux:
 	tar -xf teleport-v$(TSH_VERSION)-linux-amd64-bin.tar.gz
 	cp teleport/tsh pkg/exec/bin/
 	# Adding double $ in awk command to escape single $
-	md5sum teleport/tsh | awk '{ print $$1 }'| tr -d '\n' > pkg/exec/bin/tsh.md5
-	GOOS=linux GOARCH=amd64 go build -o bin/ridectl.linux -ldflags "-X github.com/Ridecell/ridectl/pkg/cmd.version=$(shell git describe --tags)" -tags release github.com/Ridecell/ridectl/cmd/ridectl
+	GOOS=linux GOARCH=amd64 go build -o bin/ridectl.linux -ldflags "-X github.com/Ridecell/ridectl/pkg/exec.tshMD5=$(shell md5sum teleport/tsh | awk '{ print $$1 }'| tr -d '\n') -X github.com/Ridecell/ridectl/pkg/cmd.version=$(shell git describe --tags)" -tags release github.com/Ridecell/ridectl/cmd/ridectl
