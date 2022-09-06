@@ -70,8 +70,10 @@ var dbShellCmd = &cobra.Command{
 			return fmt.Errorf("Error getting secret for instance %s", err)
 		}
 
-		// Derive RDS instance name using hostname
-		rdsInstanceName := strings.Split(string(secretObj.Data["host"]), ".")[0]
+		clusterName := strings.TrimPrefix(kubeObj.Context, "teleport.aws-us-support.ridecell.io-")
+		clusterPrefix := strings.Split(clusterName, ".")[0]
+		// Derive RDS instance name using hostname and clusterPrefix
+		rdsInstanceName := clusterPrefix + "-" + strings.Split(string(secretObj.Data["host"]), ".")[0]
 
 		pterm.Info.Println("Getting database login credentials")
 		dbLoginArgs := []string{"db", "login", "--db-user=" + string(secretObj.Data["username"]), "--db-name=" + string(secretObj.Data["dbname"]), rdsInstanceName}
