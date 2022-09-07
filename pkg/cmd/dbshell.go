@@ -73,6 +73,10 @@ var dbShellCmd = &cobra.Command{
 		clusterName := strings.TrimPrefix(kubeObj.Context, "teleport.aws-us-support.ridecell.io-")
 		clusterPrefix := strings.Split(clusterName, ".")[0]
 		// Derive RDS instance name using hostname and clusterPrefix
+		// We are adding Cluster prefix to RDS instance names, because
+		// teleport imported RDS instances with overrided names, so that
+		// RDS instances with same name accross the regions can be distinguished.
+		// e.g. https://github.com/Ridecell/kubernetes/blob/f994f44ffcc49d6f30f4554c4bcf9a801a05e24b/overlays/aws-eu-prod/summon-uat/summon-uat-rdsinstance.yml#L50-L51
 		rdsInstanceName := clusterPrefix + "-" + strings.Split(string(secretObj.Data["host"]), ".")[0]
 
 		pterm.Info.Println("Getting database login credentials")
