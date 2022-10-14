@@ -81,7 +81,7 @@ func installTsh() {
 func CheckTshLogin() {
 	binPath, installed := exec.CheckBinary("tsh")
 	if !installed {
-		pterm.Info.Println("Tsh cli not found, installing...")
+		pterm.Info.Println("Tsh cli not found, installing using sudo...")
 		installTsh()
 	}
 
@@ -101,7 +101,7 @@ func CheckTshLogin() {
  	}
 	// Check if tsh binary's md5 is same; if not, install tsh
 	if hex.EncodeToString(hash.Sum(nil)) != exec.GetTshMd5Hash() {
-		pterm.Info.Println("Tsh version not matched, re-installing...")
+		pterm.Info.Println("Tsh version not matched, re-installing using sudo...")
 		installTsh()
 	}
 

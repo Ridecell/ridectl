@@ -34,7 +34,14 @@ func InstallTsh() error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(dir+"/tsh", tsh, 0755)
+	// First write tsh binary to tmp
+	err = os.WriteFile("/tmp/tsh", tsh, 0755)
+	if err != nil {
+		return err
+	}
+	// Copy tsh binary to Bin Path
+	cp := []string{"cp", "/tmp/tsh", dir}
+	return ExecuteCommand("sudo", cp, false)
 }
 
 func GetTshMd5Hash() string {
