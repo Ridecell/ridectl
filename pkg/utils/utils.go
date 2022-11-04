@@ -115,6 +115,6 @@ func CheckTshLogin() {
 	if strings.Contains(err.Error(), "Active profile expired") {
 		return
 	}
-	pterm.Error.Println("No teleport profile found. Refer teleport login command from FAQs:\nhttps://ridecell.quip.com/CILaAnAUnkla/Ridectl-FAQs ")
+	pterm.Error.Println("No teleport profile found. Refer teleport login command from FAQs:\nhttps://ridecell.quip.com/CILaAnAUnkla/Ridectl-FAQs#temp:C:ZZZabcdcead11c941ccbb5ad29b3 ")
 	os.Exit(1)
 }
