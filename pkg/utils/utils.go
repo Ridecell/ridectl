@@ -14,12 +14,16 @@ limitations under the License.
 package utils
 
 import (
+	"crypto/md5"
+	"encoding/hex"
 	"flag"
+	"io"
 	"net/http"
 	"os"
-	"os/exec"
 	"path/filepath"
+	"strings"
 
+	"github.com/Ridecell/ridectl/pkg/exec"
 	"github.com/pterm/pterm"
 
 	"k8s.io/client-go/util/homedir"
@@ -35,24 +39,15 @@ func GetKubeconfig() *string {
 	return kubeconfig
 }
 
-func checkBinary(binary string) bool {
-	_, err := exec.LookPath(binary)
-	if err != nil {
-		pterm.Error.Println("\n", err)
-		return false
-	}
-	return true
-}
-
 func CheckKubectl() {
-	if !checkBinary("kubectl") {
+	if _, installed := exec.CheckBinary("kubectl"); !installed {
 		pterm.Error.Printf("kubectl is not installed. Follow the instructions here: https://kubernetes.io/docs/tasks/tools/#kubectl to install it\n")
 		os.Exit(1)
 	}
 }
 
 func CheckPsql() {
-	if !checkBinary("psql") {
+	if _, installed := exec.CheckBinary("psql"); !installed {
 		pterm.Error.Printf("psql is not installed. Follow the instructions here: https://www.compose.com/articles/postgresql-tips-installing-the-postgresql-client/ to install it\n")
 		os.Exit(1)
 	}
@@ -72,4 +67,54 @@ func CheckVPN() {
 			os.Exit(1)
 		}
 	}
+}
+
+func installTsh() {
+	err := exec.InstallTsh()
+	if err != nil {
+		pterm.Error.Printf("Error installing tsh : %s\n", err)
+		os.Exit(1)
+	}
+	pterm.Info.Println("Tsh installation completed.")
+}
+
+func CheckTshLogin() {
+	binPath, installed := exec.CheckBinary("tsh")
+	if !installed {
+		pterm.Info.Println("Tsh cli not found, installing using sudo...")
+		installTsh()
+	}
+
+	//Generate MD5 hash of installed tsh binary
+	f, err := os.Open(binPath)
+ 	if err != nil {
+ 		pterm.Error.Printf("Error opening tsh : %s\n", err)
+		os.Exit(1)
+ 	}
+ 	defer f.Close()
+
+ 	hash := md5.New()
+ 	_, err = io.Copy(hash, f)
+ 	if err != nil {
+ 		pterm.Error.Printf("Error generating hash for tsh : %s\n", err)
+		os.Exit(1)
+ 	}
+	// Check if tsh binary's md5 is same; if not, install tsh
+	if hex.EncodeToString(hash.Sum(nil)) != exec.GetTshMd5Hash() {
+		pterm.Info.Println("Tsh version not matched, re-installing using sudo...")
+		installTsh()
+	}
+
+	// Check if tsh login profile is active or not
+	statusArgs := []string{"status"}
+	err = exec.ExecuteCommand("tsh", statusArgs, false)
+	if err == nil {
+		return
+	}
+	// check if no teleport profile present, ask user to login
+	if strings.Contains(err.Error(), "Active profile expired") {
+		return
+	}
+	pterm.Error.Println("No teleport profile found. Refer teleport login command from FAQs:\nhttps://ridecell.quip.com/CILaAnAUnkla/Ridectl-FAQs#temp:C:ZZZabcdcead11c941ccbb5ad29b3 ")
+	os.Exit(1)
 }

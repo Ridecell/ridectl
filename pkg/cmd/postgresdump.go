@@ -54,7 +54,7 @@ var postgresdumpCMD = &cobra.Command{
 		return nil
 	},
 	PreRunE: func(cmd *cobra.Command, args []string) error {
-		utils.CheckVPN()
+		utils.CheckTshLogin()
 		return nil
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {

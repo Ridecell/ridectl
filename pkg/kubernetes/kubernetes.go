@@ -19,6 +19,7 @@ import (
 	"regexp"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/pkg/errors"
 	"github.com/pterm/pterm"
@@ -39,7 +40,7 @@ const namespacePrefix = "summon-"
 
 type Kubeobject struct {
 	Object  client.Object
-	Context *api.Context
+	Context string
 	Client  client.Client
 }
 
@@ -74,10 +75,12 @@ func getClientByContext(kubeconfig string, kubeContext *api.Context) (client.Cli
 			return nil, errors.Wrap(err, "failed to get client with context")
 		}
 		// Return error to skip searching non-ridecell hosts
-		if !strings.Contains(cfg.Host, ".kops.ridecell.io") {
+		if !strings.HasSuffix(cfg.Host, ":3026") {
 			return nil, errors.New("hostname did not match, ignoring context")
 		}
 	}
+	// Set high timeout, since user has to login if their teleport login is expired.
+	cfg.Timeout = time.Minute * 3
 
 	mapper, err := apiutil.NewDiscoveryRESTMapper(cfg)
 	if err != nil {
@@ -100,25 +103,26 @@ func getKubeContexts() (map[string]*api.Context, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return rawConfig.Contexts, nil
 }
 
-func fetchContextForObject(channel chan Kubeobject, cluster *api.Context, crclient client.Client, subject Subject, wg *sync.WaitGroup) {
+func fetchContextForObject(channel chan Kubeobject, clusterName string, cluster *api.Context, crclient client.Client, subject Subject, wg *sync.WaitGroup) {
 
 	defer wg.Done()
 
 	var objectName string
 	if subject.Type == "summon" {
 		summonObj := &summonv1beta2.SummonPlatform{}
-		pterm.Info.Printf("Checking instance in %s\n", cluster.Cluster)
+		pterm.Info.Printf("Checking instance in %s\n", clusterName)
 		err := crclient.Get(context.TODO(), types.NamespacedName{Name: subject.Name, Namespace: subject.Namespace}, summonObj)
 		if err != nil {
-			pterm.Warning.Printf("%s in %s\n", err.Error(), cluster.Cluster)
+			pterm.Warning.Printf("%s in %s\n", err.Error(), clusterName)
 			return
 		}
 
 		if err == nil {
-			channel <- Kubeobject{Object: summonObj, Context: cluster, Client: crclient}
+			channel <- Kubeobject{Object: summonObj, Context: clusterName, Client: crclient}
 			return
 		}
 
@@ -126,16 +130,16 @@ func fetchContextForObject(channel chan Kubeobject, cluster *api.Context, crclie
 		objectName = fmt.Sprintf("%s-svc-%s-web", subject.Env, subject.Namespace)
 
 		deploymentObj := &appsv1.Deployment{}
-		pterm.Info.Printf(" Checking instance in %s\n", cluster.Cluster)
+		pterm.Info.Printf("Checking instance in %+v\n", clusterName)
 		err := crclient.Get(context.Background(), types.NamespacedName{Name: objectName, Namespace: subject.Namespace}, deploymentObj)
 		if err != nil {
-			pterm.Warning.Printf("%s in %s\n", err.Error(), cluster.Cluster)
+			pterm.Warning.Printf("%s in %s\n", err.Error(), clusterName)
 			return
 		}
 		// This makes sure we are returning the correct context.
 		// In the case of microservices, the deployment name is same for all clusters
 		if err == nil && deploymentObj.Labels["region"] == subject.Region {
-			channel <- Kubeobject{Client: crclient, Context: cluster}
+			channel <- Kubeobject{Client: crclient, Context: clusterName}
 		} else {
 			return
 		}
@@ -148,7 +152,7 @@ func fetchContextForObject(channel chan Kubeobject, cluster *api.Context, crclie
 			pterm.Warning.Printf("%s in %s\n", err.Error(), cluster.Cluster)
 			return
 		}
-		channel <- Kubeobject{Object: jobObj, Client: crclient, Context: cluster}
+		channel <- Kubeobject{Object: jobObj, Client: crclient, Context: clusterName}
 		return
 	}
 }
@@ -174,12 +178,15 @@ func GetAppropriateObjectWithContext(kubeconfig string, instance string, subject
 	}
 
 	k8sClients := make(map[string]client.Client)
-	for _, context := range contexts {
+	for clusterName, context := range contexts {
+		if !validCluster(clusterName, subject.Env) {
+			continue
+		}
 		k8sClient, err := getClientByContext(kubeconfig, context)
 		if err != nil {
 			continue
 		}
-		k8sClients[context.Cluster] = k8sClient
+		k8sClients[clusterName] = k8sClient
 	}
 
 	// Initialize a wait group
@@ -190,7 +197,7 @@ func GetAppropriateObjectWithContext(kubeconfig string, instance string, subject
 	defer close(objChannel)
 
 	for cluster, client := range k8sClients {
-		go fetchContextForObject(objChannel, contexts[cluster], client, subject, &wg)
+		go fetchContextForObject(objChannel, cluster, contexts[cluster], client, subject, &wg)
 	}
 	// Block until all of my goroutines have processed their issues.
 	wg.Wait()
@@ -230,4 +237,12 @@ func ParseSubject(instanceName string) (Subject, error) {
 	}
 	// Nothing matched, return empty with error
 	return subject, fmt.Errorf("could not parse out information from %s.", instanceName)
+}
+
+// Return true only if given Environment is present in target cluster
+func validCluster(clusterName string, env string) bool {
+	if env == "prod" || env == "uat" {
+		return strings.Contains(clusterName, "prod.kops")
+	}
+	return !strings.Contains(clusterName, "prod.kops")
 }

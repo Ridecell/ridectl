@@ -93,7 +93,7 @@ var statusCmd = &cobra.Command{
 		return nil
 	},
 	PreRunE: func(cmd *cobra.Command, args []string) error {
-		utils.CheckVPN()
+		utils.CheckTshLogin()
 		utils.CheckKubectl()
 		return nil
 	},
@@ -138,16 +138,16 @@ var statusCmd = &cobra.Command{
 
 		var sData, dData, pData string
 		if statusType == "Summon Platform" {
-			sData, err = getData("summon", kubeObj.Context.Cluster, target.Namespace, name)
+			sData, err = getData("summon", kubeObj.Context, target.Namespace, name)
 			if err != nil {
 				return err
 			}
-			dData, err = getData("deployment", kubeObj.Context.Cluster, target.Namespace, name)
+			dData, err = getData("deployment", kubeObj.Context, target.Namespace, name)
 			if err != nil {
 				return err
 			}
 		} else {
-			pData, err = getData("postgresdump", kubeObj.Context.Cluster, target.Namespace, name)
+			pData, err = getData("postgresdump", kubeObj.Context, target.Namespace, name)
 			if err != nil {
 				return err
 			}
@@ -163,13 +163,13 @@ var statusCmd = &cobra.Command{
 					area.Update(sData, "\n", dData)
 					_, _ = p.Start()
 					p.Title = "Fetching data"
-					sData, err = getData("summon", kubeObj.Context.Cluster, target.Namespace, name)
+					sData, err = getData("summon", kubeObj.Context, target.Namespace, name)
 					if err != nil {
 						return err
 					}
 					p.Increment()
 
-					dData, err = getData("deployment", kubeObj.Context.Cluster, target.Namespace, name)
+					dData, err = getData("deployment", kubeObj.Context, target.Namespace, name)
 					if err != nil {
 						return err
 					}
@@ -179,7 +179,7 @@ var statusCmd = &cobra.Command{
 					area.Update(pData)
 					_, _ = p.Start()
 					p.Title = "Fetching data"
-					pData, err = getData("posgtresdump", kubeObj.Context.Cluster, target.Namespace, name)
+					pData, err = getData("posgtresdump", kubeObj.Context, target.Namespace, name)
 					if err != nil {
 						return err
 					}

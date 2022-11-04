@@ -16,8 +16,8 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"os"
 	"reflect"
+	"strings"
 
 	"github.com/Ridecell/ridectl/pkg/exec"
 	"github.com/pterm/pterm"
@@ -49,8 +49,7 @@ var dbShellCmd = &cobra.Command{
 		return nil
 	},
 	PreRunE: func(cmd *cobra.Command, args []string) error {
-
-		utils.CheckVPN()
+		utils.CheckTshLogin()
 		utils.CheckPsql()
 		return nil
 	},
@@ -59,23 +58,35 @@ var dbShellCmd = &cobra.Command{
 		kubeconfig := utils.GetKubeconfig()
 		target, err := kubernetes.ParseSubject(args[0])
 		if err != nil {
-			pterm.Error.Println(err, "Its not a valid Summonplatform or Microservice")
-			os.Exit(1)
+			return fmt.Errorf("Its not a valid Summonplatform or Microservice: %s", err)
 		}
 		kubeObj := kubernetes.GetAppropriateObjectWithContext(*kubeconfig, args[0], target, inCluster)
 		if reflect.DeepEqual(kubeObj, kubernetes.Kubeobject{}) {
-			pterm.Error.Printf("No instance found %s\n", args[0])
-			os.Exit(1)
+			return fmt.Errorf("No instance found %s\n", args[0])
 		}
 		secretObj := &corev1.Secret{}
-		err = kubeObj.Client.Get(context.Background(), types.NamespacedName{Name: target.Name + ".postgres-user-password", Namespace: target.Namespace}, secretObj)
+		err = kubeObj.Client.Get(context.Background(), types.NamespacedName{Name: target.Name + "-rdsiam-readonly.postgres-user-password", Namespace: target.Namespace}, secretObj)
 		if err != nil {
-			pterm.Error.Printf("instance not found in %s", kubeObj.Context.Cluster)
-			os.Exit(1)
+			return fmt.Errorf("Error getting secret for instance %s", err)
 		}
 
-		psqlCmd := []string{"psql", "-h", string(secretObj.Data["host"]), "-U", string(secretObj.Data["username"]), string(secretObj.Data["dbname"])}
-		os.Setenv("PGPASSWORD", string(secretObj.Data["password"]))
-		return exec.Exec(psqlCmd)
+		clusterName := strings.TrimPrefix(kubeObj.Context, "teleport.aws-us-support.ridecell.io-")
+		clusterPrefix := strings.Split(clusterName, ".")[0]
+		// Derive RDS instance name using hostname and clusterPrefix
+		// We are adding Cluster prefix to RDS instance names, because
+		// teleport imported RDS instances with overrided names, so that
+		// RDS instances with same name accross the regions can be distinguished.
+		// e.g. https://github.com/Ridecell/kubernetes/blob/f994f44ffcc49d6f30f4554c4bcf9a801a05e24b/overlays/aws-eu-prod/summon-uat/summon-uat-rdsinstance.yml#L50-L51
+		rdsInstanceName := clusterPrefix + "-" + strings.Split(string(secretObj.Data["host"]), ".")[0]
+
+		pterm.Info.Println("Getting database login credentials")
+		dbLoginArgs := []string{"db", "login", "--db-user=" + string(secretObj.Data["username"]), "--db-name=" + string(secretObj.Data["dbname"]), rdsInstanceName}
+		err = exec.ExecuteCommand("tsh", dbLoginArgs, false)
+		if err != nil {
+			return fmt.Errorf("Could not login to database, %s", err)
+		}
+		pterm.Info.Println("Logging in into database")
+		dbConnectCmd := []string{"db", "connect", rdsInstanceName}
+		return exec.ExecuteCommand("tsh", dbConnectCmd, true)
 	},
 }

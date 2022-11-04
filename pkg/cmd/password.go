@@ -42,7 +42,9 @@ func init() {
 var passwordCmd = &cobra.Command{
 	Use:   "password [flags] <cluster_name>",
 	Short: "Gets dispatcher/postgres readonly user password/connection details for a Summon Instance",
-	Long:  `Returns dispatcher django password from a Summon Instance Secret or postgres connection details for readonly user`,
+	Long:  "Returns dispatcher django password from a Summon Instance Secret or postgres connection details for readonly user\n" +
+		"For summon instances: password <tenant>-<env>                   -- e.g. ridectl password darwin-qa\n" +
+		"For microservices: password svc-<region>-<env>-<microservice>   -- e.g. ridectl password svc-us-master-dispatch",
 	Args: func(_ *cobra.Command, args []string) error {
 		if len(args) == 0 {
 			return fmt.Errorf("cluster name argument is required")
@@ -54,7 +56,7 @@ var passwordCmd = &cobra.Command{
 	},
 
 	PreRunE: func(cmd *cobra.Command, args []string) error {
-		utils.CheckVPN()
+		utils.CheckTshLogin()
 		return nil
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -71,16 +73,23 @@ var passwordCmd = &cobra.Command{
 			pterm.Error.Printf("No instance found %s\n", args[0])
 			os.Exit(1)
 		}
-		secretTypes := []string{"django", "postgresql"}
 
-		secretPrompt := promptui.Select{
-			Label: "Select secret",
-			Items: secretTypes,
-		}
+		// Defaults to postgresql in case of microservices
+		secretType := "postgresql"
 
-		_, secretType, err := secretPrompt.Run()
-		if err != nil {
-			return errors.Wrapf(err, "Prompt failed")
+		if target.Type == "summon" {
+			secretTypes := []string{"django", "postgresql"}
+
+			secretPrompt := promptui.Select{
+				Label: "Select secret",
+				Items: secretTypes,
+			}
+
+			var err error
+			_, secretType, err = secretPrompt.Run()
+			if err != nil {
+				return errors.Wrapf(err, "Prompt failed")
+			}
 		}
 
 		secret := &corev1.Secret{}
@@ -94,6 +103,7 @@ var passwordCmd = &cobra.Command{
 			}
 
 			pterm.Success.Printf("Password for %s: %s\n", args[0], string(secret.Data["password"]))
+			pterm.Warning.Printf("If someone has changed or reset the password manually, then above password will not work.\n")
 
 		case "postgresql":
 			// get a list of secrets which have readonly in their name

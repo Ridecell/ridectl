@@ -63,7 +63,7 @@ var rollingRestartCmd = &cobra.Command{
 		return nil
 	},
 	PreRunE: func(cmd *cobra.Command, args []string) error {
-		utils.CheckVPN()
+		utils.CheckTshLogin()
 		return nil
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -159,6 +159,8 @@ var rollingRestartCmd = &cobra.Command{
 				podLabels["role"] = component
 				deploymentName = fmt.Sprintf("%s-svc-%s-%s", target.Env, target.Namespace, component)
 			}
+
+			pterm.Info.Printf("Restarting pods for %s : %s\n", target.Name, component)
 
 			labelSet := labels.Set{}
 			for k, v := range podLabels {
