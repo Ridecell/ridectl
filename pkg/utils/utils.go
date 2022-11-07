@@ -83,6 +83,8 @@ func CheckTshLogin() {
 	if !installed {
 		pterm.Info.Println("Tsh cli not found, installing using sudo...")
 		installTsh()
+		// Get binPath after installing tsh
+		binPath, _ = exec.CheckBinary("tsh")
 	}
 
 	//Generate MD5 hash of installed tsh binary
