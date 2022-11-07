@@ -85,6 +85,8 @@ func init() {
 		shouldUpdate, _ := updatePrompt.Run()
 		if shouldUpdate == "y" {
 			selfUpdate()
+			pterm.Info.Println("Ridectl update is completed.")
+			os.Exit(0)
 		}
 	}
 	// Register all types from summon-operator and ridecell-controllers secrets
