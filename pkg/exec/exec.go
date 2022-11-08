@@ -15,33 +15,79 @@ package exec
 
 import (
 	"bytes"
+	"crypto/md5"
 	_ "embed"
+	"encoding/hex"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
+
+	"github.com/pkg/errors"
+	"github.com/pterm/pterm"
 )
 
 var (
 	//go:embed bin/tsh
 	tsh []byte
 	tshMD5 string
+	tshInstallDir = "/usr/local/bin/"
 )
 
-func InstallTsh() error {
-	executablePath, _ := os.Executable()
-	dir, err := filepath.Abs(filepath.Dir(executablePath))
-	if err != nil {
+func InstallOrUpgradeTsh() error {
+	binPath, installed := CheckBinary("tsh")
+	if !installed {
+		pterm.Info.Println("Tsh binary not found, installing using sudo...")
+		// First write tsh binary to tmp
+		err := os.WriteFile("/tmp/tsh", tsh, 0755)
+		if err != nil {
+			return err
+		}
+		// Copy tsh binary to Bin Path
+		cp := []string{"cp", "/tmp/tsh", tshInstallDir}
+		err = ExecuteCommand("sudo", cp, false)
+		if err == nil {
+			pterm.Info.Println("Tsh installation completed.")
+			return nil
+		}
 		return err
 	}
-	// First write tsh binary to tmp
-	err = os.WriteFile("/tmp/tsh", tsh, 0755)
-	if err != nil {
+
+	//Generate MD5 hash of installed tsh binary
+	f, err := os.Open(binPath)
+ 	if err != nil {
+		return errors.Wrapf(err, "Error opening tsh")
+ 	}
+ 	defer f.Close()
+
+ 	hash := md5.New()
+ 	_, err = io.Copy(hash, f)
+ 	if err != nil {
+		return errors.Wrapf(err, "Error generating hash for tsh")
+ 	}
+	// Check if tsh binary's md5 is same; if not, install tsh
+	if hex.EncodeToString(hash.Sum(nil)) != GetTshMd5Hash() {
+		pterm.Info.Println("Tsh version not matched, re-installing using sudo...")
+		// First write tsh binary to tmp
+		err = os.WriteFile("/tmp/tsh", tsh, 0755)
+		if err != nil {
+			return err
+		}
+		dir, err := filepath.Abs(filepath.Dir(binPath))
+		if err != nil {
+			return err
+		}
+		// Copy tsh binary to Bin Path
+		cp := []string{"cp", "/tmp/tsh", dir}
+		err = ExecuteCommand("sudo", cp, false)
+		if err == nil {
+			pterm.Info.Println("Tsh upgrade completed.")
+			return nil
+		}
 		return err
 	}
-	// Copy tsh binary to Bin Path
-	cp := []string{"cp", "/tmp/tsh", dir}
-	return ExecuteCommand("sudo", cp, false)
+	return nil
 }
 
 func GetTshMd5Hash() string {
