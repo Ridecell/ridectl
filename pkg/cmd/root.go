@@ -85,7 +85,7 @@ func init() {
 		shouldUpdate, _ := updatePrompt.Run()
 		if shouldUpdate == "y" {
 			selfUpdate()
-			pterm.Info.Println("Ridectl update is completed.")
+			pterm.Info.Println("Ridectl update is completed. Please re-run the command.")
 			os.Exit(0)
 		}
 	}
