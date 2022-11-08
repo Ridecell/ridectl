@@ -16,6 +16,7 @@ package utils
 import (
 	"flag"
 	"net/http"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -85,4 +86,16 @@ func CheckTshLogin() {
 	}
 	pterm.Error.Println("No teleport profile found. Refer teleport login command from FAQs:\nhttps://ridecell.quip.com/CILaAnAUnkla/Ridectl-FAQs#temp:C:ZZZabcdcead11c941ccbb5ad29b3 ")
 	os.Exit(1)
+}
+
+func GetAnnouncementMessage() string {
+	resp, err := http.Get("https://ridectl.s3.us-west-2.amazonaws.com/ridectl-announcement-banner.txt")
+	defer resp.Body.Close()
+	if err == nil &&  resp.StatusCode == 200 {
+		content, err := io.ReadAll(resp.Body)
+		if err == nil {
+			return string(content)
+		}
+	}
+	return ""
 }
