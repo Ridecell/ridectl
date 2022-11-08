@@ -90,12 +90,12 @@ func CheckTshLogin() {
 
 func GetAnnouncementMessage() string {
 	resp, err := http.Get("https://ridectl.s3.us-west-2.amazonaws.com/ridectl-announcement-banner.txt")
-	defer resp.Body.Close()
 	if err == nil &&  resp.StatusCode == 200 {
 		content, err := io.ReadAll(resp.Body)
 		if err == nil {
 			return string(content)
 		}
 	}
+	defer resp.Body.Close()
 	return ""
 }
