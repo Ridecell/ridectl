@@ -14,11 +14,9 @@ limitations under the License.
 package utils
 
 import (
-	"crypto/md5"
-	"encoding/hex"
 	"flag"
-	"io"
 	"net/http"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -69,41 +67,12 @@ func CheckVPN() {
 	}
 }
 
-func installTsh() {
-	err := exec.InstallTsh()
-	if err != nil {
-		pterm.Error.Printf("Error installing tsh : %s\n", err)
-		os.Exit(1)
-	}
-	pterm.Info.Println("Tsh installation completed.")
-}
-
 func CheckTshLogin() {
-	binPath, installed := exec.CheckBinary("tsh")
-	if !installed {
-		pterm.Info.Println("Tsh cli not found, installing using sudo...")
-		installTsh()
-	}
-
-	//Generate MD5 hash of installed tsh binary
-	f, err := os.Open(binPath)
+ 	err := exec.InstallOrUpgradeTsh()
  	if err != nil {
- 		pterm.Error.Printf("Error opening tsh : %s\n", err)
+ 		pterm.Error.Printf("Error while installing or upgrading tsh : %s\n", err)
 		os.Exit(1)
  	}
- 	defer f.Close()
-
- 	hash := md5.New()
- 	_, err = io.Copy(hash, f)
- 	if err != nil {
- 		pterm.Error.Printf("Error generating hash for tsh : %s\n", err)
-		os.Exit(1)
- 	}
-	// Check if tsh binary's md5 is same; if not, install tsh
-	if hex.EncodeToString(hash.Sum(nil)) != exec.GetTshMd5Hash() {
-		pterm.Info.Println("Tsh version not matched, re-installing using sudo...")
-		installTsh()
-	}
 
 	// Check if tsh login profile is active or not
 	statusArgs := []string{"status"}
@@ -117,4 +86,16 @@ func CheckTshLogin() {
 	}
 	pterm.Error.Println("No teleport profile found. Refer teleport login command from FAQs:\nhttps://ridecell.quip.com/CILaAnAUnkla/Ridectl-FAQs#temp:C:ZZZabcdcead11c941ccbb5ad29b3 ")
 	os.Exit(1)
+}
+
+func GetAnnouncementMessage() string {
+	resp, err := http.Get("https://ridectl.s3.us-west-2.amazonaws.com/ridectl-announcement-banner.txt")
+	if err == nil &&  resp.StatusCode == 200 {
+		content, err := io.ReadAll(resp.Body)
+		if err == nil {
+			return string(content)
+		}
+	}
+	defer resp.Body.Close()
+	return ""
 }

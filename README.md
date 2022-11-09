@@ -57,28 +57,24 @@ For a full list of functionalities, run `ridectl --help`
 ### Manual Installation
 You can find pre-compiled macOS and Linux binaries for `ridectl` [on the GitHub releases page](https://github.com/Ridecell/ridectl/releases/latest).
 
-Download the one appropriate to your platform, unzip it, and copy it to `/usr/local/bin/ridectl` or similar. Run `ridectl -h` to confirm it is installed correctly.
+Download the one appropriate to your platform, unzip it, and copy it to `/usr/local/bin/ridectl` or similar. Run `ridectl status` for further configutation.
 
 # Mac-os
 ```
 curl -L "https://github.com/Ridecell/ridectl/releases/latest/download/ridectl_macos.zip" -o ./ridectl_macos.zip
 unzip ridectl_macos.zip
 chmod 0755 ridectl
-cp ridectl /usr/local/bin/ridectl
-ridectl -h
+sudo cp ridectl /usr/local/bin/ridectl
+# Follow instructions for further configuration
+ridectl status
 ```
-When running ridectl for first time, mac os will not allow the binary to execute. So solve this issue, navigate to System Prefrences > Security & Privacy and in General section, allow ridectl to open.
+**Note:** When running `ridectl` for first time, Mac OS will not allow the binary to execute. So, to solve this issue, navigate to `System Prefrences` > `Security & Privacy` and in `General` section, allow `ridectl` to open.
 # Linux
 ```
 curl -L "https://github.com/Ridecell/ridectl/releases/latest/download/ridectl_linux.zip" -o ./ridectl_linux.zip
 unzip ridectl_linux.zip
 chmod 0755 ridectl
-cp ridectl /usr/local/bin/ridectl
-ridectl -h
+sudo cp ridectl /usr/local/bin/ridectl
+# Follow instructions for further configuration
+ridectl status
 ```
-
-# Add kubernetes contexts
-You can follow the quip doc [here](https://ridecell.quip.com/O8W1AaqtWWAH/Ridectl)
-
-Note:
-Old ridectl code is still present [here](https://github.com/Ridecell/ridectl/tree/ridectl-v0.0.0). Ref:- ridectl-v0.0.0
