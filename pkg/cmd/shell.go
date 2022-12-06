@@ -77,7 +77,13 @@ var shellCmd = &cobra.Command{
 
 		kubeObj := kubernetes.GetAppropriateObjectWithContext(*kubeconfig, args[0], target, inCluster)
 		if reflect.DeepEqual(kubeObj, kubernetes.Kubeobject{}) {
-			pterm.Error.Printf("No instance found %s\n", args[0])
+			pterm.Error.Printf("No instance found [%s]. Double check the following:\n" +
+			"- Instance name is correct\n" +
+			"- You have the required access in Infra-Auth\n" +
+			"- Your github token created for ridectl is not expired\n" +
+			"- Your github token is properly set and up to date\n" +
+			"- You have all kubernetes clusters configured\n\n" +
+			"For more details and help with the above, see: https://docs.google.com/document/d/1v6lbH4NgN6rHBHpELWrcQ4CyqwVeSgeP/preview#heading=h.xq8mwj7wt9h1\n", args[0])
 			os.Exit(1)
 		}
 
