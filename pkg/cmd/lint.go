@@ -287,7 +287,6 @@ func lintFile(filename string, imageTags []string) error {
 
 	var fernetKeyFound bool
 	var unencryptedValueFound bool
-	var webSiteKeyFound bool
 	var gatewayWebClientTokenFound bool
 
 	for secretKey, secretValue := range manifest[2].Data {
