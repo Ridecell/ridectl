@@ -279,8 +279,17 @@ func lintFile(filename string, imageTags []string) error {
 		return fmt.Errorf("%s: EncryptedSecret is required to be the third object in manifest", filename)
 	}
 
+	var checkCustomerPortalReqs bool
+
+	if summonObj.Spec.CustomerPortal.Version != "" {
+		checkCustomerPortalReqs = true
+	}
+
 	var fernetKeyFound bool
 	var unencryptedValueFound bool
+	var webSiteKeyFound bool
+	var gatewayWebClientTokenFound bool
+
 	for secretKey, secretValue := range manifest[2].Data {
 		if !strings.HasPrefix(secretValue, "AQICAH") && !strings.HasPrefix(secretValue, "crypto ") {
 			unencryptedValueFound = true
@@ -290,6 +299,16 @@ func lintFile(filename string, imageTags []string) error {
 		// Check if FERNET_KEYS key is present or not, as its required in all summon yaml.
 		if secretKey == "FERNET_KEYS" {
 			fernetKeyFound = true
+		}
+
+		// If customerPortal is enabled, check that GATEWAY_WEB_CLIENT_TOKEN and WEB_SITE_KEY secrets are configured.
+		// These are required for customerportal to successfully deploy.
+		if secretKey == "WEB_SITE_KEY" {
+			webSiteKeyFound = true
+		}
+
+		if secretKey == "GATEWAY_WEB_CLIENT_TOKEN" {
+			gatewayWebClientTokenFound = true
 		}
 
 		allSecretLocations[secretValue] = append(allSecretLocations[secretValue], secretLocation{ObjName: summonObj.Name, KeyName: secretKey})
@@ -304,6 +323,11 @@ func lintFile(filename string, imageTags []string) error {
 		return fmt.Errorf("%s: Key FERNET_KEYS is not present in EncryptedSecret, please refer https://github.com/Ridecell/kubernetes-summon#adding-fernet-keys for help.", filename)
 	}
 
+	if checkCustomerPortalReqs && (!webSiteKeyFound || !gatewayWebClientTokenFound) {
+		return fmt.Errorf("%s: WEB_SITE_KEY and GATEWAY_WEB_CLIENT_TOKEN must be present if customerPortal is enabled. " +
+		  "Please refer to https://github.com/Ridecell/comp-customer-portal#required-kubernetes-config-for-successful-deployment " +
+		  "for help.", summonObj.Name)
+	}
 	// Start checking from the second object in the manifest, ignore the namespace object
 	for _, object := range manifest[1:] {
 		if object.Meta.GetName() != expectedName {
