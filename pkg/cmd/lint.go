@@ -301,12 +301,8 @@ func lintFile(filename string, imageTags []string) error {
 			fernetKeyFound = true
 		}
 
-		// If customerPortal is enabled, check that GATEWAY_WEB_CLIENT_TOKEN and WEB_SITE_KEY secrets are configured.
-		// These are required for customerportal to successfully deploy.
-		if secretKey == "WEB_SITE_KEY" {
-			webSiteKeyFound = true
-		}
-
+		// If customerPortal is enabled, check that GATEWAY_WEB_CLIENT_TOKEN secret is configured.
+		// It is required for customerportal to successfully deploy.
 		if secretKey == "GATEWAY_WEB_CLIENT_TOKEN" {
 			gatewayWebClientTokenFound = true
 		}
@@ -323,8 +319,8 @@ func lintFile(filename string, imageTags []string) error {
 		return fmt.Errorf("%s: Key FERNET_KEYS is not present in EncryptedSecret, please refer https://github.com/Ridecell/kubernetes-summon#adding-fernet-keys for help.", filename)
 	}
 
-	if checkCustomerPortalReqs && (!webSiteKeyFound || !gatewayWebClientTokenFound) {
-		return fmt.Errorf("%s: WEB_SITE_KEY and GATEWAY_WEB_CLIENT_TOKEN must be present if customerPortal is enabled. " +
+	if checkCustomerPortalReqs && !gatewayWebClientTokenFound {
+		return fmt.Errorf("%s: GATEWAY_WEB_CLIENT_TOKEN must be present if customerPortal is enabled. " +
 		  "Please refer to https://github.com/Ridecell/comp-customer-portal#required-kubernetes-config-for-successful-deployment " +
 		  "for help.", summonObj.Name)
 	}

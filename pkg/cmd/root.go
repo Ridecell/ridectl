@@ -104,7 +104,7 @@ func init() {
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
 		pterm.Error.Println(err)
-		pterm.Error.Println("For FAQs and Troubleshooting: https://ridecell.quip.com/CILaAnAUnkla/Ridectl-FAQs")
+		pterm.Error.Println("For FAQs and Troubleshooting: https://docs.google.com/document/d/1v6lbH4NgN6rHBHpELWrcQ4CyqwVeSgeP/preview")
 		os.Exit(1)
 	}
 }
