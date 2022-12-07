@@ -20,13 +20,15 @@ import (
 	"strings"
 
 	"github.com/Ridecell/ridectl/pkg/exec"
+	"github.com/manifoldco/promptui"
+	"github.com/pkg/errors"
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
+	"k8s.io/apimachinery/pkg/types"
 
 	kubernetes "github.com/Ridecell/ridectl/pkg/kubernetes"
 	utils "github.com/Ridecell/ridectl/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/types"
 )
 
 func init() {
@@ -64,29 +66,58 @@ var dbShellCmd = &cobra.Command{
 		if reflect.DeepEqual(kubeObj, kubernetes.Kubeobject{}) {
 			return fmt.Errorf("No instance found %s\n", args[0])
 		}
+
+		modeTypes := []string{"read-only", "read-write"}
+
+		modePrompt := promptui.Select{
+			Label: "Select DB login mode",
+			Items: modeTypes,
+		}
+
+		_, mode, err := modePrompt.Run()
+		if err != nil {
+			return errors.Wrapf(err, "Prompt failed")
+		}
+
 		secretObj := &corev1.Secret{}
-		err = kubeObj.Client.Get(context.Background(), types.NamespacedName{Name: target.Name + "-rdsiam-readonly.postgres-user-password", Namespace: target.Namespace}, secretObj)
-		if err != nil {
-			return fmt.Errorf("Error getting secret for instance %s", err)
-		}
 
-		clusterName := strings.TrimPrefix(kubeObj.Context, "teleport.aws-us-support.ridecell.io-")
-		clusterPrefix := strings.Split(clusterName, ".")[0]
-		// Derive RDS instance name using hostname and clusterPrefix
-		// We are adding Cluster prefix to RDS instance names, because
-		// teleport imported RDS instances with overrided names, so that
-		// RDS instances with same name accross the regions can be distinguished.
-		// e.g. https://github.com/Ridecell/kubernetes/blob/f994f44ffcc49d6f30f4554c4bcf9a801a05e24b/overlays/aws-eu-prod/summon-uat/summon-uat-rdsinstance.yml#L50-L51
-		rdsInstanceName := clusterPrefix + "-" + strings.Split(string(secretObj.Data["host"]), ".")[0]
+		switch mode {
+		case "read-only":
+			err = kubeObj.Client.Get(context.Background(), types.NamespacedName{Name: target.Name + "-rdsiam-readonly.postgres-user-password", Namespace: target.Namespace}, secretObj)
+			if err != nil {
+				return fmt.Errorf("Error getting secret for instance %s", err)
+			}
 
-		pterm.Info.Println("Getting database login credentials")
-		dbLoginArgs := []string{"db", "login", "--db-user=" + string(secretObj.Data["username"]), "--db-name=" + string(secretObj.Data["dbname"]), rdsInstanceName}
-		err = exec.ExecuteCommand("tsh", dbLoginArgs, false)
-		if err != nil {
-			return fmt.Errorf("Could not login to database, %s", err)
+			clusterName := strings.TrimPrefix(kubeObj.Context, "teleport.aws-us-support.ridecell.io-")
+			clusterPrefix := strings.Split(clusterName, ".")[0]
+			// Derive RDS instance name using hostname and clusterPrefix
+			// We are adding Cluster prefix to RDS instance names, because
+			// teleport imported RDS instances with overrided names, so that
+			// RDS instances with same name accross the regions can be distinguished.
+			// e.g. https://github.com/Ridecell/kubernetes/blob/f994f44ffcc49d6f30f4554c4bcf9a801a05e24b/overlays/aws-eu-prod/summon-uat/summon-uat-rdsinstance.yml#L50-L51
+			rdsInstanceName := clusterPrefix + "-" + strings.Split(string(secretObj.Data["host"]), ".")[0]
+
+			pterm.Info.Println("Getting database login credentials")
+			dbLoginArgs := []string{"db", "login", "--db-user=" + string(secretObj.Data["username"]), "--db-name=" + string(secretObj.Data["dbname"]), rdsInstanceName}
+			err = exec.ExecuteCommand("tsh", dbLoginArgs, false)
+			if err != nil {
+				return fmt.Errorf("Could not login to database, %s", err)
+			}
+			pterm.Info.Println("Logging in into database with read-only mode")
+			dbConnectCmd := []string{"db", "connect", rdsInstanceName}
+			return exec.ExecuteCommand("tsh", dbConnectCmd, true)
+		case "read-write":
+			pterm.Info.Println("Getting database login credentials")
+			// Read application database credentials for login
+			err = kubeObj.Client.Get(context.Background(), types.NamespacedName{Name: target.Name + ".postgres-user-password", Namespace: target.Namespace}, secretObj)
+			if err != nil {
+				return fmt.Errorf("Error getting secret for instance %s", err)
+			}
+			pterm.Warning.Println("Logging in into database with read-write mode")
+			// Since RDS is only accesible from kuberntes cluster, executing psql command from a pod in cluster.
+			kubectlArgs := []string{"exec", "-it", "-n", "ridectl", "ridectl-helper-0", "--context", kubeObj.Context, "--", "env", "PGPASSWORD=" + string(secretObj.Data["password"]), "psql", "-h", string(secretObj.Data["host"]), "-U", string(secretObj.Data["username"]), string(secretObj.Data["dbname"])}
+			return exec.ExecuteCommand("kubectl", kubectlArgs, true)
 		}
-		pterm.Info.Println("Logging in into database")
-		dbConnectCmd := []string{"db", "connect", rdsInstanceName}
-		return exec.ExecuteCommand("tsh", dbConnectCmd, true)
+		return nil
 	},
 }
