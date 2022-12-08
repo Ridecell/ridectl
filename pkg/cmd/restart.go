@@ -58,7 +58,7 @@ var rollingRestartCmd = &cobra.Command{
 		"Specify instance name / microservice name in following format:\n" +
 		"Summon instances :   <tenant>-<env>                      -- e.g. summontest-dev\n" +
 		"Microservices    :   svc-<region>-<env>-<microservice>   -- e.g. svc-us-master-webhook-sms\n\n" +
-		"For restarting pods, provide component name. For example\n:" +
+		"For restarting pods, provide component name. For example:\n" +
 		"  Summon components: web, celeryd, static, celeryredbeat, kafkaconsumer, daphne, channelworker, platform-one, etc\n" +
 		"  Microservice components: web, celery-beat, celery-worker, kafka-consumer, etc",
 	Args: func(_ *cobra.Command, args []string) error {
