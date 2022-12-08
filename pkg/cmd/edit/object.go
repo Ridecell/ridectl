@@ -460,6 +460,70 @@ func DecryptCipherDataKey(kmsService kmsiface.KMSAPI, cipherDataKey []byte) (*[3
 	return plainDataKey, *decryptRsp.KeyId, nil
 }
 
+// A function that decrypts a single encrypted string. It borrows logic from Decrypt()
+// and DecryptCipherDataKey().
+func DecryptSecretValue(kmsService kmsiface.KMSAPI, val string) (string, error) {
+	useDataKey := false
+
+	if strings.HasPrefix(val, "crypto") {
+		useDataKey = true
+		array := strings.Split(val, " ")
+		val = array[len(array)-1]
+	}
+
+	decodedValue := make([]byte, base64.StdEncoding.DecodedLen(len(val)))
+	l, err := base64.StdEncoding.Decode(decodedValue, []byte(val))
+	if err != nil {
+		return "", errors.Wrapf(err, "error base64 decoding value for %s", val)
+	}
+
+	// If True, decrypt using data key
+	if useDataKey {
+		var p Payload
+		_ = gob.NewDecoder(bytes.NewReader(decodedValue)).Decode(&p)
+
+		decryptRsp, err := kmsService.Decrypt(&kms.DecryptInput{
+			CiphertextBlob: p.Key,
+			EncryptionContext: map[string]*string{
+				"RidecellOperator": aws.String("true"),
+			},
+		})
+
+		if err != nil {
+			return "", err
+		}
+
+		plainDataKey := &[32]byte{}
+		copy(plainDataKey[:], decryptRsp.Plaintext)
+
+		// Decrypt message
+		var plaintext []byte
+		plaintext, ok := secretbox.Open(plaintext, p.Message, p.Nonce, plainDataKey)
+		if !ok {
+			return "", errors.Errorf("error decrypting value with data key for %s", val)
+		}
+
+		return string(plaintext), err
+	}
+
+	decryptedValue, err := kmsService.Decrypt(&kms.DecryptInput{
+		CiphertextBlob: decodedValue[:l],
+		EncryptionContext: map[string]*string{
+			"RidecellOperator": aws.String("true"),
+		},
+	})
+	if err != nil {
+		return "", errors.Wrapf(err, "error decrypting value for %s", val)
+	}
+
+	decryptedString := string(decryptedValue.Plaintext)
+	if decryptedString == secretsv1beta2.EncryptedSecretEmptyKey {
+		decryptedString = ""
+	}
+
+	return decryptedString, err
+}
+
 func getAliasByKey(kmsService kmsiface.KMSAPI, keyId string) string {
 
 	// check if the key is an alias

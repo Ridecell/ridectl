@@ -26,6 +26,9 @@ import (
 	"strings"
 
 	"github.com/Ridecell/ridectl/pkg/cmd/edit"
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/kms"
 	"github.com/heroku/docker-registry-client/registry"
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
@@ -279,31 +282,12 @@ func lintFile(filename string, imageTags []string) error {
 		return fmt.Errorf("%s: EncryptedSecret is required to be the third object in manifest", filename)
 	}
 
-	var checkCustomerPortalReqs bool
-
-	if summonObj.Spec.CustomerPortal.Version != "" {
-		checkCustomerPortalReqs = true
-	}
-
-	var fernetKeyFound bool
 	var unencryptedValueFound bool
-	var gatewayWebClientTokenFound bool
 
 	for secretKey, secretValue := range manifest[2].Data {
 		if !strings.HasPrefix(secretValue, "AQICAH") && !strings.HasPrefix(secretValue, "crypto ") {
 			unencryptedValueFound = true
 			pterm.Warning.Printf("%s: EncryptedSecret %s missing preamble, may not be encrypted.", filename, secretKey)
-		}
-
-		// Check if FERNET_KEYS key is present or not, as its required in all summon yaml.
-		if secretKey == "FERNET_KEYS" {
-			fernetKeyFound = true
-		}
-
-		// If customerPortal is enabled, check that GATEWAY_WEB_CLIENT_TOKEN secret is configured.
-		// It is required for customerportal to successfully deploy.
-		if secretKey == "GATEWAY_WEB_CLIENT_TOKEN" {
-			gatewayWebClientTokenFound = true
 		}
 
 		allSecretLocations[secretValue] = append(allSecretLocations[secretValue], secretLocation{ObjName: summonObj.Name, KeyName: secretKey})
@@ -314,11 +298,33 @@ func lintFile(filename string, imageTags []string) error {
 		return fmt.Errorf("")
 	}
 
-	if !fernetKeyFound {
+	val, ok := manifest[2].Data["FERNET_KEYS"]
+
+	if !ok {
 		return fmt.Errorf("%s: Key FERNET_KEYS is not present in EncryptedSecret, please refer https://github.com/Ridecell/kubernetes-summon#adding-fernet-keys for help.", filename)
 	}
 
-	if checkCustomerPortalReqs && !gatewayWebClientTokenFound {
+	// Create AWS KMS session to decrypt and lint secret value
+	sess := session.Must(session.NewSessionWithOptions(session.Options{
+		SharedConfigState: session.SharedConfigEnable,
+		Config: aws.Config{
+			Region: aws.String("us-west-1"),
+		},
+	}))
+	kmsService := kms.New(sess)
+	plaintext, err := edit.DecryptSecretValue(kmsService, val)
+
+	if err != nil {
+		return fmt.Errorf("Unable to get decrypt of FernetKey (%s)\n", val)
+	}
+
+	if plaintext == "" {
+		return fmt.Errorf("%s's FERNET_KEYS must not be an empty value.\n", summonObj.Name)
+	}
+
+	// If customerPortal is enabled, check that GATEWAY_WEB_CLIENT_TOKEN secret is configured.
+	// It is required for customerportal to successfully deploy.
+	if summonObj.Spec.CustomerPortal.Version != "" && manifest[2].Data["GATEWAY_WEB_CLIENT_TOKEN"] == "" {
 		return fmt.Errorf("%s: GATEWAY_WEB_CLIENT_TOKEN must be present if customerPortal is enabled. " +
 		  "Please refer to https://github.com/Ridecell/comp-customer-portal#required-kubernetes-config-for-successful-deployment " +
 		  "for help.", summonObj.Name)
