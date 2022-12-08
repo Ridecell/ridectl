@@ -20,13 +20,11 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"reflect"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/Ridecell/ridecell-controllers/apis/db/v1beta2"
-	"github.com/Ridecell/ridectl/pkg/kubernetes"
 	"github.com/Ridecell/ridectl/pkg/utils"
 	"github.com/pkg/errors"
 	"github.com/pterm/pterm"
@@ -41,12 +39,12 @@ func init() {
 }
 
 var postgresdumpCMD = &cobra.Command{
-	Use:   "postgresdump [flags] <microservice_name> <backup_name>",
+	Use:   "postgresdump [flags] <microservice_or_tenant_name> <backup_name>",
 	Short: "Take postgres DB dump",
 	Long:  `Take postgres DB dump, encrypt backup file and push it to s3 bucket`,
 	Args: func(_ *cobra.Command, args []string) error {
 		if len(args) == 0 {
-			return fmt.Errorf("microservice name argument is required")
+			return fmt.Errorf("microservice or tenant name argument is required")
 		}
 		if len(args) > 2 {
 			return fmt.Errorf("too many arguments")
@@ -59,31 +57,20 @@ var postgresdumpCMD = &cobra.Command{
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
 		ctx := context.Background()
-		kubeconfig := utils.GetKubeconfig()
+
 		args[0] = strings.ToLower(args[0])
 		if len(args) == 2 {
 			args[1] = strings.ToLower(args[1])
 		}
-		target, err := kubernetes.ParseSubject(args[0])
-		if err != nil {
-			pterm.Error.Println(err, "It is not a valid Microservice")
-			os.Exit(1)
-		}
 
-		kubeObj := kubernetes.GetAppropriateObjectWithContext(*kubeconfig, args[0], target, inCluster)
-		if reflect.DeepEqual(kubeObj, kubernetes.Kubeobject{}) {
-			pterm.Error.Printf("No instance found [%s]. Double check the following:\n" +
-			"- Instance name is correct\n" +
-			"- You have the required access in Infra-Auth\n" +
-			"- Your github token created for ridectl is not expired\n" +
-			"- Your github token is properly set and up to date\n" +
-			"- You have all kubernetes clusters configured\n\n" +
-			"For more details and help with the above, see: https://docs.google.com/document/d/1v6lbH4NgN6rHBHpELWrcQ4CyqwVeSgeP/preview#heading=h.xq8mwj7wt9h1\n", args[0])
+		target, kubeObj, exist := utils.DoesInstanceExist(args[0], inCluster)
+
+		if !exist {
 			os.Exit(1)
 		}
 
 		postgresUserList := &v1beta2.PostgresUserList{}
-		err = kubeObj.Client.List(ctx, postgresUserList, client.InNamespace(target.Namespace))
+		err := kubeObj.Client.List(ctx, postgresUserList, client.InNamespace(target.Namespace))
 		if err != nil {
 			return errors.Wrap(err, "failed to get postgres user")
 		}

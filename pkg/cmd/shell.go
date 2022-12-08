@@ -20,14 +20,12 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"reflect"
 
 	"github.com/Ridecell/ridectl/pkg/exec"
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	kubernetes "github.com/Ridecell/ridectl/pkg/kubernetes"
 	utils "github.com/Ridecell/ridectl/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -58,10 +56,9 @@ var shellCmd = &cobra.Command{
 		return nil
 	},
 	RunE: func(_ *cobra.Command, args []string) error {
-		kubeconfig := utils.GetKubeconfig()
-		target, err := kubernetes.ParseSubject(args[0])
-		if err != nil {
-			pterm.Error.Println(err, "Its not a valid Summonplatform or Microservice")
+		target, kubeObj, exist := utils.DoesInstanceExist(args[0], inCluster)
+
+		if !exist {
 			os.Exit(1)
 		}
 
@@ -75,18 +72,6 @@ var shellCmd = &cobra.Command{
 			podLabels["role"] = "web"
 		}
 
-		kubeObj := kubernetes.GetAppropriateObjectWithContext(*kubeconfig, args[0], target, inCluster)
-		if reflect.DeepEqual(kubeObj, kubernetes.Kubeobject{}) {
-			pterm.Error.Printf("No instance found [%s]. Double check the following:\n" +
-			"- Instance name is correct\n" +
-			"- You have the required access in Infra-Auth\n" +
-			"- Your github token created for ridectl is not expired\n" +
-			"- Your github token is properly set and up to date\n" +
-			"- You have all kubernetes clusters configured\n\n" +
-			"For more details and help with the above, see: https://docs.google.com/document/d/1v6lbH4NgN6rHBHpELWrcQ4CyqwVeSgeP/preview#heading=h.xq8mwj7wt9h1\n", args[0])
-			os.Exit(1)
-		}
-
 		labelSet := labels.Set{}
 		for k, v := range podLabels {
 			labelSet[k] = v
@@ -98,13 +83,13 @@ var shellCmd = &cobra.Command{
 		}
 
 		podList := &corev1.PodList{}
-		err = kubeObj.Client.List(context.Background(), podList, listOptions)
+		err := kubeObj.Client.List(context.Background(), podList, listOptions)
 		if err != nil {
-			pterm.Error.Printf("instance not found in %s", kubeObj.Context)
+			pterm.Error.Printf("Cannot find pod to shell into %s", kubeObj.Context)
 			os.Exit(1)
 		}
 		if len(podList.Items) < 1 {
-			pterm.Error.Printf("instance not found in %s", kubeObj.Context)
+			pterm.Error.Printf("Cannot find pod to shell into %s", kubeObj.Context)
 			os.Exit(1)
 		}
 

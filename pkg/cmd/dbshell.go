@@ -16,14 +16,13 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"reflect"
+	"os"
 	"strings"
 
 	"github.com/Ridecell/ridectl/pkg/exec"
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 
-	kubernetes "github.com/Ridecell/ridectl/pkg/kubernetes"
 	utils "github.com/Ridecell/ridectl/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -55,23 +54,14 @@ var dbShellCmd = &cobra.Command{
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
 
-		kubeconfig := utils.GetKubeconfig()
-		target, err := kubernetes.ParseSubject(args[0])
-		if err != nil {
-			return fmt.Errorf("Its not a valid Summonplatform or Microservice: %s", err)
+		target, kubeObj, exist := utils.DoesInstanceExist(args[0], inCluster)
+
+		if !exist {
+			os.Exit(1)
 		}
-		kubeObj := kubernetes.GetAppropriateObjectWithContext(*kubeconfig, args[0], target, inCluster)
-		if reflect.DeepEqual(kubeObj, kubernetes.Kubeobject{}) {
-			return fmt.Errorf("No instance found [%s]. Double check the following:\n" +
-							  "- Instance name is correct\n" +
-							  "- You have the required access in Infra-Auth\n" +
-							  "- Your github token created for ridectl is not expired\n" +
-							  "- Your github token is properly set and up to date\n" +
-							  "- You have all kubernetes clusters configured\n\n" +
-							  "For more details and help with the above, see: https://docs.google.com/document/d/1v6lbH4NgN6rHBHpELWrcQ4CyqwVeSgeP/preview#heading=h.xq8mwj7wt9h1\n", args[0])
-		}
+
 		secretObj := &corev1.Secret{}
-		err = kubeObj.Client.Get(context.Background(), types.NamespacedName{Name: target.Name + "-rdsiam-readonly.postgres-user-password", Namespace: target.Namespace}, secretObj)
+		err := kubeObj.Client.Get(context.Background(), types.NamespacedName{Name: target.Name + "-rdsiam-readonly.postgres-user-password", Namespace: target.Namespace}, secretObj)
 		if err != nil {
 			return fmt.Errorf("Error getting secret for instance %s", err)
 		}
