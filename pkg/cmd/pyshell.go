@@ -25,12 +25,12 @@ import (
 	"github.com/Ridecell/ridectl/pkg/exec"
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
+	"k8s.io/apimachinery/pkg/labels"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kubernetes "github.com/Ridecell/ridectl/pkg/kubernetes"
 	utils "github.com/Ridecell/ridectl/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/labels"
 )
 
 func init() {
@@ -105,7 +105,7 @@ var pyShellCmd = &cobra.Command{
 		pod := corev1.Pod{}
 		for _, po := range podList.Items {
 			// choose only first running pod
-			if po.Status.Phase == "Running" {
+			if kubernetes.IsContainerReady(&po.Status) {
 				pod = po
 				break
 			}

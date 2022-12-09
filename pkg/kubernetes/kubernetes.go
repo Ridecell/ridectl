@@ -34,6 +34,7 @@ import (
 	summonv1beta2 "github.com/Ridecell/summon-operator/apis/app/v1beta2"
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
+	v1 "k8s.io/api/core/v1"
 )
 
 const namespacePrefix = "summon-"
@@ -245,4 +246,16 @@ func validCluster(clusterName string, env string) bool {
 		return strings.Contains(clusterName, "prod.kops")
 	}
 	return !strings.Contains(clusterName, "prod.kops")
+}
+
+// Returns Pod container's status if it is ready
+func IsContainerReady(status *v1.PodStatus) bool {
+	if status != nil && status.Conditions != nil {
+		for i := range status.Conditions {
+			if status.Conditions[i].Type == v1.ContainersReady {
+				return status.Conditions[i].Status == v1.ConditionTrue
+			}
+		}
+	}
+	return false
 }

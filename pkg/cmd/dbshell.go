@@ -16,6 +16,7 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"os"
 	"reflect"
 	"strings"
 
@@ -113,6 +114,19 @@ var dbShellCmd = &cobra.Command{
 			if err != nil {
 				return fmt.Errorf("Error getting secret for instance %s", err)
 			}
+
+			// Prompt user for confirming read-write mode for Prod/UAT env.
+			if target.Env == "prod" || target.Env == "uat" {
+				confirmPrompt := promptui.Prompt{
+					Label:     "This is " + target.Env + " environment. Make sure you really want to use read-write mode",
+					IsConfirm: true,
+				}
+				goAhead, _ := confirmPrompt.Run()
+				if goAhead != "y" {
+					os.Exit(0)
+				}
+			}
+
 			pterm.Warning.Println("Logging in into database with read-write mode")
 			// Since RDS is only accesible from kuberntes cluster, executing psql command from a pod in cluster.
 			kubectlArgs := []string{"exec", "-it", "-n", "ridectl", "ridectl-helper-0", "--context", kubeObj.Context, "--", "env", "PGPASSWORD=" + string(secretObj.Data["password"]), "psql", "-h", string(secretObj.Data["host"]), "-U", string(secretObj.Data["username"]), string(secretObj.Data["dbname"])}
