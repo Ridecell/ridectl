@@ -105,7 +105,7 @@ var shellCmd = &cobra.Command{
 		pod := corev1.Pod{}
 		for _, po := range podList.Items {
 			// choose only first running pod
-			if po.Status.Phase == "Running" {
+			if kubernetes.IsContainerReady(&po.Status) {
 				pod = po
 				break
 			}

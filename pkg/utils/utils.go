@@ -15,8 +15,8 @@ package utils
 
 import (
 	"flag"
-	"net/http"
 	"io"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
@@ -68,11 +68,15 @@ func CheckVPN() {
 }
 
 func CheckTshLogin() {
- 	err := exec.InstallOrUpgradeTsh()
- 	if err != nil {
- 		pterm.Error.Printf("Error while installing or upgrading tsh : %s\n", err)
+	checkTSH, ok := os.LookupEnv("RIDECTL_TSH_CHECK")
+	if ok && checkTSH == "false" {
+		return
+	}
+	err := exec.InstallOrUpgradeTsh()
+	if err != nil {
+		pterm.Error.Printf("Error while installing or upgrading tsh : %s\n", err)
 		os.Exit(1)
- 	}
+	}
 
 	// Check if tsh login profile is active or not
 	statusArgs := []string{"status"}
@@ -90,7 +94,7 @@ func CheckTshLogin() {
 
 func GetAnnouncementMessage() string {
 	resp, err := http.Get("https://ridectl.s3.us-west-2.amazonaws.com/ridectl-announcement-banner.txt")
-	if err == nil &&  resp.StatusCode == 200 {
+	if err == nil && resp.StatusCode == 200 {
 		content, err := io.ReadAll(resp.Body)
 		if err == nil {
 			return string(content)
