@@ -22,6 +22,7 @@ import (
 	"os"
 
 	"github.com/Ridecell/ridectl/pkg/exec"
+	"github.com/Ridecell/ridectl/pkg/kubernetes"
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 	"sigs.k8s.io/controller-runtime/pkg/client"
