@@ -298,13 +298,14 @@ func lintFile(filename string, imageTags []string) error {
 		return fmt.Errorf("")
 	}
 
-	val, ok := manifest[2].Data["FERNET_KEYS"]
+	// Check FERNET_KEYS exists, otherwise return error and exit fn
+	_, ok = manifest[2].Data["FERNET_KEYS"]
 
 	if !ok {
 		return fmt.Errorf("%s: Key FERNET_KEYS is not present in EncryptedSecret, please refer https://github.com/Ridecell/kubernetes-summon#adding-fernet-keys for help.", filename)
 	}
 
-	// Create AWS KMS session to decrypt and lint secret value
+	// Create AWS KMS session to decrypt secret values so we can lint them
 	sess := session.Must(session.NewSessionWithOptions(session.Options{
 		SharedConfigState: session.SharedConfigEnable,
 		Config: aws.Config{
@@ -312,13 +313,13 @@ func lintFile(filename string, imageTags []string) error {
 		},
 	}))
 	kmsService := kms.New(sess)
-	plaintext, err := edit.DecryptSecretValue(kmsService, val)
 
+	err = manifest.Decrypt(kmsService, false)
 	if err != nil {
-		return fmt.Errorf("Unable to get decrypt of FernetKey (%s)\n", val)
+		return fmt.Errorf("Unable to decrypt secret values for %s to lint: %s", summonObj.Name, err)
 	}
-
-	if plaintext == "" {
+	// manifest data now has decrypted value; check that FERNET_KEYS is not empty
+	if manifest[2].Data["FERNET_KEYS"] == "" {
 		return fmt.Errorf("%s's FERNET_KEYS must not be an empty value.\n", summonObj.Name)
 	}
 
