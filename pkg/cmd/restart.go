@@ -58,7 +58,9 @@ var rollingRestartCmd = &cobra.Command{
 		"Specify instance name / microservice name in following format:\n" +
 		"Summon instances :   <tenant>-<env>                      -- e.g. summontest-dev\n" +
 		"Microservices    :   svc-<region>-<env>-<microservice>   -- e.g. svc-us-master-webhook-sms\n\n" +
-		"For restarting pods, provide component name like: web, celeryd, static, celeryredbeat, etc",
+		"For restarting pods, provide component name. For example:\n" +
+		"  Summon components: web, celeryd, static, celeryredbeat, kafkaconsumer, daphne, channelworker, platform-one, etc\n" +
+		"  Microservice components: web, celery-beat, celery-worker, kafka-consumer, etc",
 	Args: func(_ *cobra.Command, args []string) error {
 		return nil
 	},
@@ -67,12 +69,9 @@ var rollingRestartCmd = &cobra.Command{
 		return nil
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
-		kubeconfig := utils.GetKubeconfig()
-		var target kubernetes.Subject
 
 		validateInstance := func(input string) error {
-			var err error
-			target, err = kubernetes.ParseSubject(input)
+			_, err := kubernetes.ParseSubject(input)
 			if err != nil {
 				return errors.New("Its not a valid Summonplatform or Microservice")
 			}
@@ -102,9 +101,9 @@ var rollingRestartCmd = &cobra.Command{
 				return errors.Wrapf(err, "Prompt failed")
 			}
 
-			kubeObj := kubernetes.GetAppropriateObjectWithContext(*kubeconfig, instanceName, target, inCluster)
-			if reflect.DeepEqual(kubeObj, kubernetes.Kubeobject{}) {
-				pterm.Error.Printf("No instance found %s\n", instanceName)
+			target, kubeObj, exist := utils.DoesInstanceExist(instanceName, inCluster)
+			
+			if !exist {
 				os.Exit(1)
 			}
 
@@ -132,7 +131,7 @@ var rollingRestartCmd = &cobra.Command{
 				return errors.Wrapf(err, "Prompt failed")
 			}
 			prompt = promptui.Prompt{
-				Label: "Enter component type (e.g. web, celeryd, static, etc)",
+				Label: "Enter component type (e.g. web, celeryd/celery-worker, static, celeryredbeat/celery-beat, kafkaconsumer/kafka-consumer, etc)",
 				//Validate: validate,
 			}
 			component, err := prompt.Run()
@@ -140,9 +139,8 @@ var rollingRestartCmd = &cobra.Command{
 				return errors.Wrapf(err, "Prompt failed")
 			}
 
-			kubeObj := kubernetes.GetAppropriateObjectWithContext(*kubeconfig, instanceName, target, inCluster)
-			if reflect.DeepEqual(kubeObj, kubernetes.Kubeobject{}) {
-				pterm.Error.Printf("No instance found %s\n", instanceName)
+			target, kubeObj, exist := utils.DoesInstanceExist(instanceName, inCluster)
+			if !exist {
 				os.Exit(1)
 			}
 
@@ -227,6 +225,7 @@ var rollingRestartCmd = &cobra.Command{
 				Type:      "job",
 			}
 
+			kubeconfig := utils.GetKubeconfig()
 			kubeObj := kubernetes.GetAppropriateObjectWithContext(*kubeconfig, "", target, inCluster)
 			if reflect.DeepEqual(kubeObj, kubernetes.Kubeobject{}) {
 				pterm.Error.Printf("No PostgresDump job found %s\n", pgdumpName+"-pgdump")

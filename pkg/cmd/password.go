@@ -20,10 +20,8 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"reflect"
 	"strings"
 
-	"github.com/Ridecell/ridectl/pkg/kubernetes"
 	"github.com/Ridecell/ridectl/pkg/utils"
 	"github.com/manifoldco/promptui"
 	"github.com/pkg/errors"
@@ -40,14 +38,14 @@ func init() {
 }
 
 var passwordCmd = &cobra.Command{
-	Use:   "password [flags] <cluster_name>",
+	Use:   "password [flags] <tenant_name>",
 	Short: "Gets dispatcher/postgres readonly user password/connection details for a Summon Instance",
 	Long:  "Returns dispatcher django password from a Summon Instance Secret or postgres connection details for readonly user\n" +
 		"For summon instances: password <tenant>-<env>                   -- e.g. ridectl password darwin-qa\n" +
 		"For microservices: password svc-<region>-<env>-<microservice>   -- e.g. ridectl password svc-us-master-dispatch",
 	Args: func(_ *cobra.Command, args []string) error {
 		if len(args) == 0 {
-			return fmt.Errorf("cluster name argument is required")
+			return fmt.Errorf("tenant name argument is required")
 		}
 		if len(args) > 1 {
 			return fmt.Errorf("too many arguments")
@@ -61,21 +59,17 @@ var passwordCmd = &cobra.Command{
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
 		ctx := context.Background()
-		kubeconfig := utils.GetKubeconfig()
-		target, err := kubernetes.ParseSubject(args[0])
-		if err != nil {
-			pterm.Error.Println(err, "Its not a valid Summonplatform or Microservice")
-			os.Exit(1)
-		}
 
-		kubeObj := kubernetes.GetAppropriateObjectWithContext(*kubeconfig, args[0], target, inCluster)
-		if reflect.DeepEqual(kubeObj, kubernetes.Kubeobject{}) {
-			pterm.Error.Printf("No instance found %s\n", args[0])
+		target, kubeObj, exist := utils.DoesInstanceExist(args[0], inCluster)
+
+		if !exist {
 			os.Exit(1)
 		}
 
 		// Defaults to postgresql in case of microservices
 		secretType := "postgresql"
+
+		var err error
 
 		if target.Type == "summon" {
 			secretTypes := []string{"django", "postgresql"}
@@ -85,7 +79,6 @@ var passwordCmd = &cobra.Command{
 				Items: secretTypes,
 			}
 
-			var err error
 			_, secretType, err = secretPrompt.Run()
 			if err != nil {
 				return errors.Wrapf(err, "Prompt failed")
@@ -99,7 +92,7 @@ var passwordCmd = &cobra.Command{
 		case "django":
 			err = kubeObj.Client.Get(ctx, types.NamespacedName{Name: fmt.Sprintf("%s.django-password", args[0]), Namespace: target.Namespace}, secret)
 			if err != nil {
-				return errors.Wrapf(err, "error getting secret  for instance %s", args[0])
+				return errors.Wrapf(err, "error getting secret for instance %s", args[0])
 			}
 
 			pterm.Success.Printf("Password for %s: %s\n", args[0], string(secret.Data["password"]))
@@ -137,7 +130,7 @@ var passwordCmd = &cobra.Command{
 			// get the password from the selected secret
 			err = kubeObj.Client.Get(ctx, types.NamespacedName{Name: result, Namespace: target.Namespace}, secret)
 			if err != nil {
-				return errors.Wrapf(err, "error getting secret  for instance %s", args[0])
+				return errors.Wrapf(err, "error getting secret for instance %s", args[0])
 			}
 
 			pterm.Success.Printf("Readonly User Connection Details\n")

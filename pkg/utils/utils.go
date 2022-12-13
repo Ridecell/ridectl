@@ -18,10 +18,12 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"reflect"
 	"path/filepath"
 	"strings"
 
 	"github.com/Ridecell/ridectl/pkg/exec"
+	"github.com/Ridecell/ridectl/pkg/kubernetes"
 	"github.com/pterm/pterm"
 
 	"k8s.io/client-go/util/homedir"
@@ -88,8 +90,30 @@ func CheckTshLogin() {
 	if strings.Contains(err.Error(), "Active profile expired") {
 		return
 	}
-	pterm.Error.Println("No teleport profile found. Refer teleport login command from FAQs:\nhttps://ridecell.quip.com/CILaAnAUnkla/Ridectl-FAQs#temp:C:ZZZabcdcead11c941ccbb5ad29b3 ")
+	pterm.Error.Println("No teleport profile found. Refer teleport login command from FAQs:\nhttps://docs.google.com/document/d/1v6lbH4NgN6rHBHpELWrcQ4CyqwVeSgeP/preview#heading=h.kyqd59381iiz ")
 	os.Exit(1)
+}
+
+func DoesInstanceExist(name string, inCluster bool) (kubernetes.Subject, kubernetes.Kubeobject, bool) {
+	kubeconfig := GetKubeconfig()
+	target, err := kubernetes.ParseSubject(name)
+	var kubeObj kubernetes.Kubeobject
+	if err != nil {
+		pterm.Error.Println(err, "It's not a valid Summonplatform or Microservice")
+		return target, kubeObj, false
+	}
+
+	// inCluster from root.go is set via ridectl cmd args, defaulting to false.
+	kubeObj = kubernetes.GetAppropriateObjectWithContext(*kubeconfig, name, target, inCluster)
+	if reflect.DeepEqual(kubeObj, kubernetes.Kubeobject{}) {
+		pterm.Error.Printf("No instance found [%s]. Double check the following:\n" +
+		"- Instance name is correct\n" +
+		"- You have the required access in Infra-Auth\n" +
+		"For more details and help with the above, see: https://docs.google.com/document/d/1v6lbH4NgN6rHBHpELWrcQ4CyqwVeSgeP/preview#heading=h.xq8mwj7wt9h1\n", name)
+		return target, kubeObj, false
+	}
+
+	return target, kubeObj, true
 }
 
 func GetAnnouncementMessage() string {

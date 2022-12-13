@@ -20,15 +20,14 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"reflect"
 
 	"github.com/Ridecell/ridectl/pkg/exec"
+	"github.com/Ridecell/ridectl/pkg/kubernetes"
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 	"k8s.io/apimachinery/pkg/labels"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	kubernetes "github.com/Ridecell/ridectl/pkg/kubernetes"
 	utils "github.com/Ridecell/ridectl/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
 )
@@ -58,10 +57,10 @@ var pyShellCmd = &cobra.Command{
 		return nil
 	},
 	RunE: func(_ *cobra.Command, args []string) error {
-		kubeconfig := utils.GetKubeconfig()
-		target, err := kubernetes.ParseSubject(args[0])
-		if err != nil {
-			pterm.Error.Println(err, "Its not a valid Summonplatform or Microservice")
+
+		target, kubeObj, exist := utils.DoesInstanceExist(args[0], inCluster)
+
+		if !exist {
 			os.Exit(1)
 		}
 
@@ -75,12 +74,6 @@ var pyShellCmd = &cobra.Command{
 			podLabels["role"] = "web"
 		}
 
-		kubeObj := kubernetes.GetAppropriateObjectWithContext(*kubeconfig, args[0], target, inCluster)
-		if reflect.DeepEqual(kubeObj, kubernetes.Kubeobject{}) {
-			pterm.Error.Printf("No instance found %s\n", args[0])
-			os.Exit(1)
-		}
-
 		labelSet := labels.Set{}
 		for k, v := range podLabels {
 			labelSet[k] = v
@@ -92,7 +85,7 @@ var pyShellCmd = &cobra.Command{
 		}
 
 		podList := &corev1.PodList{}
-		err = kubeObj.Client.List(context.Background(), podList, listOptions)
+		err := kubeObj.Client.List(context.Background(), podList, listOptions)
 		if err != nil {
 			pterm.Error.Printf("instance not found in %s", kubeObj.Context)
 			os.Exit(1)

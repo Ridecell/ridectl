@@ -17,7 +17,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"reflect"
 	"strings"
 
 	"github.com/Ridecell/ridectl/pkg/exec"
@@ -27,7 +26,6 @@ import (
 	"github.com/spf13/cobra"
 	"k8s.io/apimachinery/pkg/types"
 
-	kubernetes "github.com/Ridecell/ridectl/pkg/kubernetes"
 	utils "github.com/Ridecell/ridectl/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
 )
@@ -58,14 +56,10 @@ var dbShellCmd = &cobra.Command{
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
 
-		kubeconfig := utils.GetKubeconfig()
-		target, err := kubernetes.ParseSubject(args[0])
-		if err != nil {
-			return fmt.Errorf("Its not a valid Summonplatform or Microservice: %s", err)
-		}
-		kubeObj := kubernetes.GetAppropriateObjectWithContext(*kubeconfig, args[0], target, inCluster)
-		if reflect.DeepEqual(kubeObj, kubernetes.Kubeobject{}) {
-			return fmt.Errorf("No instance found %s\n", args[0])
+		target, kubeObj, exist := utils.DoesInstanceExist(args[0], inCluster)
+
+		if !exist {
+			os.Exit(1)
 		}
 
 		modeTypes := []string{"read-only", "read-write"}

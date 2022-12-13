@@ -19,7 +19,6 @@ package cmd
 import (
 	"os"
 	osExec "os/exec"
-	"reflect"
 	"strings"
 	"time"
 
@@ -28,8 +27,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
-
-	kubernetes "github.com/Ridecell/ridectl/pkg/kubernetes"
 )
 
 func init() {
@@ -110,7 +107,7 @@ var statusCmd = &cobra.Command{
 		}
 		validator := func(input string) error {
 			if input == "" {
-				return errors.New("Invalid summont tenant name or microservice name")
+				return errors.New("Invalid summon tenant name or microservice name")
 			}
 			return nil
 		}
@@ -123,16 +120,8 @@ var statusCmd = &cobra.Command{
 			return errors.Wrapf(err, "Prompt failed")
 		}
 
-		kubeconfig := utils.GetKubeconfig()
-		target, err := kubernetes.ParseSubject(name)
-		if err != nil {
-			pterm.Error.Println(err, "Its not a valid Summonplatform or Microservice")
-			os.Exit(1)
-		}
-
-		kubeObj := kubernetes.GetAppropriateObjectWithContext(*kubeconfig, name, target, inCluster)
-		if reflect.DeepEqual(kubeObj, kubernetes.Kubeobject{}) {
-			pterm.Error.Printf("No instance found %s\n", name)
+		target, kubeObj, exist := utils.DoesInstanceExist(name, inCluster)
+		if !exist {
 			os.Exit(1)
 		}
 

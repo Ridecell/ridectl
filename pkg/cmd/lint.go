@@ -26,6 +26,9 @@ import (
 	"strings"
 
 	"github.com/Ridecell/ridectl/pkg/cmd/edit"
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/kms"
 	"github.com/heroku/docker-registry-client/registry"
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
@@ -279,17 +282,12 @@ func lintFile(filename string, imageTags []string) error {
 		return fmt.Errorf("%s: EncryptedSecret is required to be the third object in manifest", filename)
 	}
 
-	var fernetKeyFound bool
 	var unencryptedValueFound bool
+
 	for secretKey, secretValue := range manifest[2].Data {
 		if !strings.HasPrefix(secretValue, "AQICAH") && !strings.HasPrefix(secretValue, "crypto ") {
 			unencryptedValueFound = true
 			pterm.Warning.Printf("%s: EncryptedSecret %s missing preamble, may not be encrypted.", filename, secretKey)
-		}
-
-		// Check if FERNET_KEYS key is present or not, as its required in all summon yaml.
-		if secretKey == "FERNET_KEYS" {
-			fernetKeyFound = true
 		}
 
 		allSecretLocations[secretValue] = append(allSecretLocations[secretValue], secretLocation{ObjName: summonObj.Name, KeyName: secretKey})
@@ -300,10 +298,38 @@ func lintFile(filename string, imageTags []string) error {
 		return fmt.Errorf("")
 	}
 
-	if !fernetKeyFound {
+	// Check FERNET_KEYS exists, otherwise return error and exit fn
+	_, ok = manifest[2].Data["FERNET_KEYS"]
+
+	if !ok {
 		return fmt.Errorf("%s: Key FERNET_KEYS is not present in EncryptedSecret, please refer https://github.com/Ridecell/kubernetes-summon#adding-fernet-keys for help.", filename)
 	}
 
+	// Create AWS KMS session to decrypt secret values so we can lint them
+	sess := session.Must(session.NewSessionWithOptions(session.Options{
+		SharedConfigState: session.SharedConfigEnable,
+		Config: aws.Config{
+			Region: aws.String("us-west-1"),
+		},
+	}))
+	kmsService := kms.New(sess)
+
+	err = manifest.Decrypt(kmsService, false)
+	if err != nil {
+		return fmt.Errorf("Unable to decrypt secret values for %s to lint: %s", summonObj.Name, err)
+	}
+	// manifest data now has decrypted value; check that FERNET_KEYS is not empty
+	if manifest[2].Data["FERNET_KEYS"] == "" {
+		return fmt.Errorf("%s's FERNET_KEYS must not be an empty value.\n", summonObj.Name)
+	}
+
+	// If customerPortal is enabled, check that GATEWAY_WEB_CLIENT_TOKEN secret is configured.
+	// It is required for customerportal to successfully deploy.
+	if summonObj.Spec.CustomerPortal.Version != "" && manifest[2].Data["GATEWAY_WEB_CLIENT_TOKEN"] == "" {
+		return fmt.Errorf("%s: GATEWAY_WEB_CLIENT_TOKEN must be present if customerPortal is enabled. " +
+		  "Please refer to https://github.com/Ridecell/comp-customer-portal#required-kubernetes-config-for-successful-deployment " +
+		  "for help.", summonObj.Name)
+	}
 	// Start checking from the second object in the manifest, ignore the namespace object
 	for _, object := range manifest[1:] {
 		if object.Meta.GetName() != expectedName {
