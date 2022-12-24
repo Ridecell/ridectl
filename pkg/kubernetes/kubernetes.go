@@ -158,24 +158,24 @@ func fetchContextForObject(channel chan Kubeobject, clusterName string, cluster 
 	}
 }
 
-func GetAppropriateObjectWithContext(kubeconfig string, instance string, subject Subject, inCluster bool) Kubeobject {
+func GetAppropriateObjectWithContext(kubeconfig string, instance string, subject Subject, inCluster bool) (Kubeobject, error) {
 
 	if inCluster {
 		var kubeObj Kubeobject
 		k8sclient, err := getClientByContext("", nil)
 		if err != nil {
 			pterm.Error.Println(err, "Error getting incluster client")
-			return kubeObj
+			return kubeObj, err
 		}
 		kubeObj = Kubeobject{
 			Client: k8sclient,
 		}
-		return kubeObj
+		return kubeObj, nil
 	}
 	contexts, err := getKubeContexts()
 	if err != nil {
 		pterm.Error.Println("Error getting kubecontexts", err)
-		return Kubeobject{}
+		return Kubeobject{}, err
 	}
 
 	k8sClients := make(map[string]client.Client)
@@ -203,9 +203,9 @@ func GetAppropriateObjectWithContext(kubeconfig string, instance string, subject
 	// Block until all of my goroutines have processed their issues.
 	wg.Wait()
 	if len(objChannel) < 1 {
-		return Kubeobject{}
+		return Kubeobject{}, nil
 	}
-	return <-objChannel
+	return <-objChannel, nil
 }
 
 // Parses the instance and returns an array of strings denoting: [region, env, subject, namespace]
