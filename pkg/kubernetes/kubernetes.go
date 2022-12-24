@@ -16,6 +16,7 @@ package kubernetes
 import (
 	"context"
 	"fmt"
+	"os"
 	"regexp"
 	"strings"
 	"sync"
@@ -75,8 +76,12 @@ func getClientByContext(kubeconfig string, kubeContext *api.Context) (client.Cli
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to get client with context")
 		}
+
+		// host port check does not apply to github runners using ridectl
+		checkTSH := os.Getenv("RIDECTL_TSH_CHECK")
+
 		// Return error to skip searching non-ridecell hosts
-		if !strings.HasSuffix(cfg.Host, ":3026") {
+		if checkTSH != "false" && !strings.HasSuffix(cfg.Host, ":3026") {
 			return nil, errors.New("hostname did not match, ignoring context")
 		}
 	}
@@ -164,18 +169,17 @@ func GetAppropriateObjectWithContext(kubeconfig string, instance string, subject
 		var kubeObj Kubeobject
 		k8sclient, err := getClientByContext("", nil)
 		if err != nil {
-			pterm.Error.Println(err, "Error getting incluster client")
-			return kubeObj, err
+			return kubeObj, errors.Wrap(err, ": Error getting incluster client")
 		}
 		kubeObj = Kubeobject{
 			Client: k8sclient,
 		}
 		return kubeObj, nil
 	}
+
 	contexts, err := getKubeContexts()
 	if err != nil {
-		pterm.Error.Println("Error getting kubecontexts", err)
-		return Kubeobject{}, err
+		return Kubeobject{}, errors.Wrap(err, ": Error getting kubecontexts")
 	}
 
 	k8sClients := make(map[string]client.Client)
