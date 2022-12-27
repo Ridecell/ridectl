@@ -194,6 +194,10 @@ func GetAppropriateObjectWithContext(kubeconfig string, instance string, subject
 		k8sClients[clusterName] = k8sClient
 	}
 
+	if len(k8sClients) < 1 {
+		return Kubeobject{}, errors.New("No valid cluster was found")
+	}
+
 	// Initialize a wait group
 	var wg sync.WaitGroup
 	wg.Add(len(k8sClients))
