@@ -16,6 +16,7 @@ package kubernetes
 import (
 	"context"
 	"fmt"
+	"os"
 	"regexp"
 	"strings"
 	"sync"
@@ -75,8 +76,12 @@ func getClientByContext(kubeconfig string, kubeContext *api.Context) (client.Cli
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to get client with context")
 		}
+
+		// host port check does not apply to github runners using ridectl
+		checkTSH := os.Getenv("RIDECTL_TSH_CHECK")
+
 		// Return error to skip searching non-ridecell hosts
-		if !strings.HasSuffix(cfg.Host, ":3026") {
+		if checkTSH != "false" && !strings.HasSuffix(cfg.Host, ":3026") {
 			return nil, errors.New("hostname did not match, ignoring context")
 		}
 	}
@@ -158,24 +163,23 @@ func fetchContextForObject(channel chan Kubeobject, clusterName string, cluster 
 	}
 }
 
-func GetAppropriateObjectWithContext(kubeconfig string, instance string, subject Subject, inCluster bool) Kubeobject {
+func GetAppropriateObjectWithContext(kubeconfig string, instance string, subject Subject, inCluster bool) (Kubeobject, error) {
 
 	if inCluster {
 		var kubeObj Kubeobject
 		k8sclient, err := getClientByContext("", nil)
 		if err != nil {
-			pterm.Error.Println(err, "Error getting incluster client")
-			return kubeObj
+			return kubeObj, errors.Wrap(err, ": Error getting incluster client")
 		}
 		kubeObj = Kubeobject{
 			Client: k8sclient,
 		}
-		return kubeObj
+		return kubeObj, nil
 	}
+
 	contexts, err := getKubeContexts()
 	if err != nil {
-		pterm.Error.Println("Error getting kubecontexts", err)
-		return Kubeobject{}
+		return Kubeobject{}, errors.Wrap(err, ": Error getting kubecontexts")
 	}
 
 	k8sClients := make(map[string]client.Client)
@@ -188,6 +192,10 @@ func GetAppropriateObjectWithContext(kubeconfig string, instance string, subject
 			continue
 		}
 		k8sClients[clusterName] = k8sClient
+	}
+
+	if len(k8sClients) < 1 {
+		return Kubeobject{}, errors.New("No valid cluster was found")
 	}
 
 	// Initialize a wait group
@@ -203,9 +211,9 @@ func GetAppropriateObjectWithContext(kubeconfig string, instance string, subject
 	// Block until all of my goroutines have processed their issues.
 	wg.Wait()
 	if len(objChannel) < 1 {
-		return Kubeobject{}
+		return Kubeobject{}, nil
 	}
-	return <-objChannel
+	return <-objChannel, nil
 }
 
 // Parses the instance and returns an array of strings denoting: [region, env, subject, namespace]

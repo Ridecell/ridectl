@@ -226,7 +226,11 @@ var rollingRestartCmd = &cobra.Command{
 			}
 
 			kubeconfig := utils.GetKubeconfig()
-			kubeObj := kubernetes.GetAppropriateObjectWithContext(*kubeconfig, "", target, inCluster)
+			kubeObj, err := kubernetes.GetAppropriateObjectWithContext(*kubeconfig, "", target, inCluster)
+			if err != nil {
+				pterm.Error.Printf(err.Error())
+				os.Exit(1)
+			}
 			if reflect.DeepEqual(kubeObj, kubernetes.Kubeobject{}) {
 				pterm.Error.Printf("No PostgresDump job found %s\n", pgdumpName+"-pgdump")
 				os.Exit(1)

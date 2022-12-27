@@ -104,7 +104,11 @@ func DoesInstanceExist(name string, inCluster bool) (kubernetes.Subject, kuberne
 	}
 
 	// inCluster from root.go is set via ridectl cmd args, defaulting to false.
-	kubeObj = kubernetes.GetAppropriateObjectWithContext(*kubeconfig, name, target, inCluster)
+	kubeObj, err = kubernetes.GetAppropriateObjectWithContext(*kubeconfig, name, target, inCluster)
+	if err != nil {
+		pterm.Error.Printf(err.Error())
+		return target, kubeObj, false
+	}
 	if reflect.DeepEqual(kubeObj, kubernetes.Kubeobject{}) {
 		pterm.Error.Printf("No instance found [%s]. Double check the following:\n" +
 		"- Instance name is correct\n" +
