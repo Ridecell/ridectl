@@ -4,7 +4,7 @@ go 1.17
 
 require (
 	github.com/Ridecell/ridecell-controllers v0.0.0-20211019083602-39744a13278a
-	github.com/Ridecell/summon-operator v0.0.0-20230116112029-58718738d049
+	github.com/Ridecell/summon-operator v0.0.0-20230125215137-a1629f2f97ce
 	github.com/aws/aws-sdk-go v1.44.5
 	github.com/heroku/docker-registry-client v0.0.0-20190909225348-afc9e1acc3d5
 	github.com/inconshreveable/go-update v0.0.0-20160112193335-8152e7eb6ccf
