@@ -23,6 +23,7 @@ import (
 	"encoding/gob"
 	"io/ioutil"
 	"os"
+	"fmt"
 
 	"github.com/Ridecell/ridectl/pkg/cmd/edit"
 	"github.com/aws/aws-sdk-go/aws"
@@ -122,7 +123,9 @@ var encryptCmd = &cobra.Command{
 				return errors.Wrap(err, "error generating nonce.")
 			}
 			// Encrypt message
+			fmt.Println(fileContent)
 			p.Message = secretbox.Seal(p.Message, fileContent, p.Nonce, plainDataKey)
+			pterm.Info.Println("Encrypting using key: " + keyId)
 			buf := &bytes.Buffer{}
 			if err = gob.NewEncoder(buf).Encode(p); err != nil {
 				return errors.Wrapf(err, "error encrypting value using data key for file %s", filename)
