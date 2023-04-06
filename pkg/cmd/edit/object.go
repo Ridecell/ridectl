@@ -18,6 +18,7 @@ package edit
 
 import (
 	"bytes"
+	"context"
 	"crypto/rand"
 	"encoding/base64"
 	"encoding/gob"
@@ -26,9 +27,11 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/kms"
-	"github.com/aws/aws-sdk-go/service/kms/kmsiface"
+	// "github.com/aws/aws-sdk-go/aws"
+	// "github.com/aws/aws-sdk-go/service/kms"
+	// "github.com/aws/aws-sdk-go/service/kms/kmsiface"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/kms"
 	"github.com/pkg/errors"
 	"github.com/pterm/pterm"
 	"golang.org/x/crypto/nacl/secretbox"
@@ -181,7 +184,7 @@ func newKeysLocations(raw []byte, offset int) ([]KeysLocation, error) {
 	return locs, nil
 }
 
-func (o *Object) Decrypt(kmsService kmsiface.KMSAPI, recrypt bool) error {
+func (o *Object) Decrypt(kmsService *kms.Client, recrypt bool) error {
 	if o.Kind == "" {
 		return nil
 	}
@@ -245,10 +248,10 @@ func (o *Object) Decrypt(kmsService kmsiface.KMSAPI, recrypt bool) error {
 		}
 
 		// Decrypt using KMS service
-		decryptedValue, err := kmsService.Decrypt(&kms.DecryptInput{
+		decryptedValue, err := kmsService.Decrypt(context.TODO(), &kms.DecryptInput{
 			CiphertextBlob: decodedValue[:l],
-			EncryptionContext: map[string]*string{
-				"RidecellOperator": aws.String("true"),
+			EncryptionContext: map[string]string{
+				"RidecellOperator": "true",
 			},
 		})
 		if err != nil {
@@ -284,7 +287,7 @@ func (o *Object) Decrypt(kmsService kmsiface.KMSAPI, recrypt bool) error {
 	return nil
 }
 
-func (o *Object) Encrypt(kmsService kmsiface.KMSAPI, defaultKeyId string, forceKeyId bool, reEncrypt bool) error {
+func (o *Object) Encrypt(kmsService *kms.Client, defaultKeyId string, forceKeyId bool, reEncrypt bool) error {
 	if o.Kind == "" {
 		return nil
 	}
@@ -423,13 +426,13 @@ func (o *Object) Serialize(out io.Writer) error {
 	return nil
 }
 
-func GenerateDataKey(kmsService kmsiface.KMSAPI, keyId string) (*[32]byte, []byte, error) {
+func GenerateDataKey(kmsService *kms.Client, keyId string) (*[32]byte, []byte, error) {
 	// Generate data key
-	rsp, err := kmsService.GenerateDataKey(&kms.GenerateDataKeyInput{
+	rsp, err := kmsService.GenerateDataKey(context.TODO(), &kms.GenerateDataKeyInput{
 		KeyId:         aws.String(keyId),
-		NumberOfBytes: aws.Int64(32),
-		EncryptionContext: map[string]*string{
-			"RidecellOperator": aws.String("true"),
+		NumberOfBytes: aws.Int32(32),
+		EncryptionContext: map[string]string{
+			"RidecellOperator": "true",
 		},
 	})
 	if err != nil {
@@ -442,11 +445,11 @@ func GenerateDataKey(kmsService kmsiface.KMSAPI, keyId string) (*[32]byte, []byt
 	return key, rsp.CiphertextBlob, nil
 }
 
-func DecryptCipherDataKey(kmsService kmsiface.KMSAPI, cipherDataKey []byte) (*[32]byte, string, error) {
-	decryptRsp, err := kmsService.Decrypt(&kms.DecryptInput{
+func DecryptCipherDataKey(kmsService *kms.Client, cipherDataKey []byte) (*[32]byte, string, error) {
+	decryptRsp, err := kmsService.Decrypt(context.TODO(), &kms.DecryptInput{
 		CiphertextBlob: cipherDataKey,
-		EncryptionContext: map[string]*string{
-			"RidecellOperator": aws.String("true"),
+		EncryptionContext: map[string]string{
+			"RidecellOperator": "true",
 		},
 	})
 
@@ -460,7 +463,7 @@ func DecryptCipherDataKey(kmsService kmsiface.KMSAPI, cipherDataKey []byte) (*[3
 	return plainDataKey, *decryptRsp.KeyId, nil
 }
 
-func getAliasByKey(kmsService kmsiface.KMSAPI, keyId string) string {
+func getAliasByKey(kmsService *kms.Client, keyId string) string {
 
 	// check if the key is an alias
 	if strings.HasPrefix(keyId, "alias") {
@@ -468,7 +471,7 @@ func getAliasByKey(kmsService kmsiface.KMSAPI, keyId string) string {
 	}
 	// get aliasname from key id
 	var aliases []string
-	aliasRsp, err := kmsService.ListAliases(&kms.ListAliasesInput{
+	aliasRsp, err := kmsService.ListAliases(context.TODO(), &kms.ListAliasesInput{
 		KeyId: aws.String(keyId),
 	})
 	if err != nil {
