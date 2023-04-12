@@ -157,21 +157,9 @@ var editCmd = &cobra.Command{
 			return errors.Wrap(err, "error decoding input YAML")
 		}
 
-		// // Create a KMS session
-		// // TODO error handling for AWS creds
-		// sess := session.Must(session.NewSessionWithOptions(session.Options{
-		// 	SharedConfigState: session.SharedConfigEnable,
-		// 	Config: aws.Config{
-		// 		Region: aws.String("us-west-1"),
-		// 	},
-		// }))
-		// kmsService := kms.New(sess)
-
 		// Load the Shared AWS Configuration (~/.aws/config)
 		cfg, err := config.LoadDefaultConfig(context.TODO(),
 			config.WithRegion("us-west-1"),
-			//config.WithDefaultsMode(aws.DefaultsModeAuto),
-			config.WithSharedConfigProfile("prod"),
 		)
 		if err != nil {
 			return errors.Wrapf(err, "error creating AWS session")
