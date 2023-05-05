@@ -21,13 +21,13 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/gob"
-	"io/ioutil"
 	"os"
 	"strings"
 
 	"github.com/Ridecell/ridectl/pkg/cmd/edit"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/kms"
+
 	// "github.com/aws/aws-sdk-go/aws/session"
 	// "github.com/aws/aws-sdk-go/service/kms"
 	// "github.com/aws/aws-sdk-go/service/kms/kmsiface"
@@ -88,7 +88,7 @@ var decryptCmd = &cobra.Command{
 
 		for _, filename := range fileNames {
 			// read file content
-			fileContent, err := ioutil.ReadFile(filename)
+			fileContent, err := os.ReadFile(filename)
 			if err != nil {
 				return errors.Wrapf(err, "error reading file: %s", filename)
 			}
@@ -104,7 +104,7 @@ var decryptCmd = &cobra.Command{
 
 			// Check if out_filename exists and has same decrypted data
 			// If true, don't need to write file
-			decryptedFileContent, err := ioutil.ReadFile(out_filename)
+			decryptedFileContent, err := os.ReadFile(out_filename)
 			if err == nil {
 				if string(decryptedFileContent) == string(plaintext) {
 					pterm.Info.Println("No changes: " + out_filename)
@@ -113,7 +113,7 @@ var decryptCmd = &cobra.Command{
 			}
 
 			// write decrypted content in <filename>.decrypted
-			err = ioutil.WriteFile(out_filename, plaintext, 0644)
+			err = os.WriteFile(out_filename, plaintext, 0644)
 			if err != nil {
 				return errors.Wrapf(err, "error writing file: %s", filename)
 			}

@@ -22,7 +22,6 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"encoding/gob"
-	"io/ioutil"
 	"os"
 
 	"github.com/Ridecell/ridectl/pkg/cmd/edit"
@@ -102,14 +101,14 @@ var encryptCmd = &cobra.Command{
 		var p *edit.Payload
 		for _, filename := range fileNames {
 			// read file content
-			fileContent, err := ioutil.ReadFile(filename)
+			fileContent, err := os.ReadFile(filename)
 			if err != nil {
 				return errors.Wrapf(err, "error reading file: %s", filename)
 			}
 
 			// Check if there is need to encrypt the file - the file content is changed.
 			if !recrypt {
-				encryptedFileContent, err := ioutil.ReadFile(filename + ".encrypted")
+				encryptedFileContent, err := os.ReadFile(filename + ".encrypted")
 				if err == nil {
 					decryptedFileContent, err := GetDecryptedData(kmsService, encryptedFileContent)
 					if err == nil {
@@ -140,7 +139,7 @@ var encryptCmd = &cobra.Command{
 			encryptedFileContent := string(base64.StdEncoding.EncodeToString(buf.Bytes()))
 
 			// write encrypted content in <filename>.encrypted
-			err = ioutil.WriteFile(filename+".encrypted", []byte(encryptedFileContent), 0644)
+			err = os.WriteFile(filename+".encrypted", []byte(encryptedFileContent), 0644)
 			if err != nil {
 				return errors.Wrapf(err, "error writing file: %s", filename)
 			}

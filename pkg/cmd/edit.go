@@ -21,7 +21,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -258,7 +257,7 @@ func editObjects(manifest edit.Manifest, comment string) (edit.Manifest, error) 
 		editorReader := bytes.NewReader(editorBuf.Bytes())
 
 		// Open a temporary file.
-		tmpfile, err := ioutil.TempFile("", ".*.yml")
+		tmpfile, err := os.CreateTemp("", ".*.yml")
 		if err != nil {
 			return nil, errors.Wrap(err, "error making tempfile")
 		}
@@ -314,7 +313,7 @@ func editObjects(manifest edit.Manifest, comment string) (edit.Manifest, error) 
 	}
 }
 
-// func createDefaultData(instance string) (io.Reader, error) {
+// func createDefaultData(instance string) (os.Reader, error) {
 // 	target, err := kubernetes.ParseSubject(instance)
 // 	if err != nil {
 // 		return nil, fmt.Errorf("unable to parse instance name %s", instance)
