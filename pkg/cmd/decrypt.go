@@ -18,17 +18,16 @@ package cmd
 
 import (
 	"bytes"
+	"context"
 	"encoding/base64"
 	"encoding/gob"
-	"io/ioutil"
 	"os"
 	"strings"
 
 	"github.com/Ridecell/ridectl/pkg/cmd/edit"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/kms"
-	"github.com/aws/aws-sdk-go/service/kms/kmsiface"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/kms"
+
 	"github.com/pkg/errors"
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
@@ -66,18 +65,18 @@ var decryptCmd = &cobra.Command{
 		return nil
 	},
 	RunE: func(_ *cobra.Command, fileNames []string) error {
-		// Create AWS KMS session
-		sess := session.Must(session.NewSessionWithOptions(session.Options{
-			SharedConfigState: session.SharedConfigEnable,
-			Config: aws.Config{
-				Region: aws.String("us-west-1"),
-			},
-		}))
-		kmsService := kms.New(sess)
+		// Load the Shared AWS Configuration (~/.aws/config)
+		cfg, err := config.LoadDefaultConfig(context.TODO(), config.WithRegion("us-west-1"))
+		if err != nil {
+			return errors.Wrapf(err, "error creating AWS session")
+		}
+
+		// Create an Amazon KMS service client
+		kmsService := kms.NewFromConfig(cfg)
 
 		for _, filename := range fileNames {
 			// read file content
-			fileContent, err := ioutil.ReadFile(filename)
+			fileContent, err := os.ReadFile(filename)
 			if err != nil {
 				return errors.Wrapf(err, "error reading file: %s", filename)
 			}
@@ -93,7 +92,7 @@ var decryptCmd = &cobra.Command{
 
 			// Check if out_filename exists and has same decrypted data
 			// If true, don't need to write file
-			decryptedFileContent, err := ioutil.ReadFile(out_filename)
+			decryptedFileContent, err := os.ReadFile(out_filename)
 			if err == nil {
 				if string(decryptedFileContent) == string(plaintext) {
 					pterm.Info.Println("No changes: " + out_filename)
@@ -102,7 +101,7 @@ var decryptCmd = &cobra.Command{
 			}
 
 			// write decrypted content in <filename>.decrypted
-			err = ioutil.WriteFile(out_filename, plaintext, 0644)
+			err = os.WriteFile(out_filename, plaintext, 0644)
 			if err != nil {
 				return errors.Wrapf(err, "error writing file: %s", filename)
 			}
@@ -113,7 +112,7 @@ var decryptCmd = &cobra.Command{
 	},
 }
 
-func GetDecryptedData(kmsService kmsiface.KMSAPI, encryptedData []byte) ([]byte, error) {
+func GetDecryptedData(kmsService *kms.Client, encryptedData []byte) ([]byte, error) {
 	var p edit.Payload
 	var plaintext []byte
 

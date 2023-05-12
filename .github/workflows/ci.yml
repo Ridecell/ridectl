@@ -9,26 +9,19 @@ jobs:
     env:
       TOKEN: ${{ secrets.USER_GITHUB_TOKEN }}
     steps:
-      - name: Setup go 1.17
-        uses: actions/setup-go@v2
+      - uses: actions/checkout@v3
+      - name: Setup go
+        uses: actions/setup-go@v4
         with:
-          go-version: 1.17
-      - uses: actions/checkout@v2
-      - uses: actions/cache@v2
-        with:
-          path: |
-            ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
-      - name: Install lint
-        run: |
-          # binary will be $(go env GOPATH)/bin/golangci-lint
-          curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.45.2
-      - name: Run lint
+          go-version-file: go.mod
+      - name: Setup gitconfig fot private go module
         run: |
           git config --global url."https://${TOKEN}:x-oauth-basic@github.com/Ridecell".insteadOf "https://github.com/Ridecell"
-          golangci-lint run --timeout 5m
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v3
+        with:
+          args: --timeout 5m
+          skip-cache: true
 
   build:
     name: Build
@@ -37,23 +30,11 @@ jobs:
     env:
       TOKEN: ${{ secrets.USER_GITHUB_TOKEN }}
     steps:
-      - name: Setup go 1.17
-        uses: actions/setup-go@v2
+      - uses: actions/checkout@v3
+      - name: Setup go
+        uses: actions/setup-go@v4
         with:
-          go-version: 1.17
-      - name: Set up github environment variables
-        uses: FranzDiebold/github-env-vars-action@v2
-      - uses: actions/checkout@v2
-      - uses: actions/cache@v2
-        with:
-          path: |
-            ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
-      - name: Install dependencies
-        run: |
-          go get -d ./...
+          go-version-file: go.mod
       - name: build
         run: |
           make build_macos build_linux
@@ -65,4 +46,4 @@ jobs:
           mv bin/ridectl.macos bin/ridectl && zip -jrm bin/ridectl_macos.zip bin/ridectl
           mv bin/ridectl.linux bin/ridectl && zip -jrm bin/ridectl_linux.zip bin/ridectl
           go get github.com/tcnksm/ghr
-          ghr -c ${CI_SHA_SHORT} ${CI_ACTION_REF_NAME} bin/
+          ghr -c ${github.CI_SHA_SHORT} ${github.GITHUB_REF_NAME} bin/

@@ -19,7 +19,7 @@ import (
 	"io"
 	"regexp"
 
-	"github.com/aws/aws-sdk-go/service/kms/kmsiface"
+	"github.com/aws/aws-sdk-go-v2/service/kms"
 	"github.com/pkg/errors"
 )
 
@@ -55,7 +55,7 @@ func NewManifest(in io.Reader) (Manifest, error) {
 	return objects, nil
 }
 
-func (m Manifest) Decrypt(kmsService kmsiface.KMSAPI, recrypt bool) error {
+func (m Manifest) Decrypt(kmsService *kms.Client, recrypt bool) error {
 	for _, obj := range m {
 		err := obj.Decrypt(kmsService, recrypt)
 		if err != nil {
@@ -65,7 +65,7 @@ func (m Manifest) Decrypt(kmsService kmsiface.KMSAPI, recrypt bool) error {
 	return nil
 }
 
-func (m Manifest) Encrypt(kmsService kmsiface.KMSAPI, defaultKeyId string, forceKeyId bool, reEncrypt bool) error {
+func (m Manifest) Encrypt(kmsService *kms.Client, defaultKeyId string, forceKeyId bool, reEncrypt bool) error {
 	for _, obj := range m {
 		err := obj.Encrypt(kmsService, defaultKeyId, forceKeyId, reEncrypt)
 		if err != nil {
