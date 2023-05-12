@@ -75,22 +75,13 @@ var encryptCmd = &cobra.Command{
 		}
 		pterm.Info.Println("Encrypting using key: " + keyId)
 
-		// // generate data key
-		// sess := session.Must(session.NewSessionWithOptions(session.Options{
-		// 	SharedConfigState: session.SharedConfigEnable,
-		// 	Config: aws.Config{
-		// 		Region: aws.String("us-west-1"),
-		// 	},
-		// }))
-		// kmsService := kms.New(sess)
-
 		// Load the Shared AWS Configuration (~/.aws/config)
 		cfg, err := config.LoadDefaultConfig(context.TODO(), config.WithRegion("us-west-1"))
 		if err != nil {
 			return errors.Wrapf(err, "error creating AWS session")
 		}
 
-		// Create an Amazon S3 service client
+		// Create an Amazon KMS service client
 		kmsService := kms.NewFromConfig(cfg)
 
 		plainDataKey, cipherDataKey, err := edit.GenerateDataKey(kmsService, keyId)

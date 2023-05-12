@@ -29,9 +29,6 @@ import (
 
 	"github.com/Ridecell/ridectl/pkg/cmd/edit"
 	"github.com/pterm/pterm"
-
-	//"github.com/Ridecell/ridectl/pkg/kubernetes"
-	//"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/kms"
 	"github.com/manifoldco/promptui"
@@ -164,7 +161,7 @@ var editCmd = &cobra.Command{
 			return errors.Wrapf(err, "error creating AWS session")
 		}
 
-		// Create an Amazon S3 service client
+		// Create an Amazon KMS service client
 		kmsService := kms.NewFromConfig(cfg)
 
 		// Decrypt all the encrypted secrets.

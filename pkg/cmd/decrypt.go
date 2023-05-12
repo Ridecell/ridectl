@@ -28,9 +28,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/kms"
 
-	// "github.com/aws/aws-sdk-go/aws/session"
-	// "github.com/aws/aws-sdk-go/service/kms"
-	// "github.com/aws/aws-sdk-go/service/kms/kmsiface"
 	"github.com/pkg/errors"
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
@@ -68,22 +65,13 @@ var decryptCmd = &cobra.Command{
 		return nil
 	},
 	RunE: func(_ *cobra.Command, fileNames []string) error {
-		// Create AWS KMS session
-		// sess := session.Must(session.NewSessionWithOptions(session.Options{
-		// 	SharedConfigState: session.SharedConfigEnable,
-		// 	Config: aws.Config{
-		// 		Region: aws.String("us-west-1"),
-		// 	},
-		// }))
-		// kmsService := kms.New(sess)
-
 		// Load the Shared AWS Configuration (~/.aws/config)
 		cfg, err := config.LoadDefaultConfig(context.TODO(), config.WithRegion("us-west-1"))
 		if err != nil {
 			return errors.Wrapf(err, "error creating AWS session")
 		}
 
-		// Create an Amazon S3 service client
+		// Create an Amazon KMS service client
 		kmsService := kms.NewFromConfig(cfg)
 
 		for _, filename := range fileNames {
