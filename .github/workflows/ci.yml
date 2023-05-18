@@ -45,5 +45,5 @@ jobs:
         run: |
           mv bin/ridectl.macos bin/ridectl && zip -jrm bin/ridectl_macos.zip bin/ridectl
           mv bin/ridectl.linux bin/ridectl && zip -jrm bin/ridectl_linux.zip bin/ridectl
-          go get github.com/tcnksm/ghr
+          go install github.com/tcnksm/ghr@latest
           ghr -c ${{ github.sha }} ${{ github.ref_name }} bin/
