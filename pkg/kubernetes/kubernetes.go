@@ -81,7 +81,7 @@ func getClientByContext(kubeconfig string, kubeContext *api.Context) (client.Cli
 		checkTSH := os.Getenv("RIDECTL_TSH_CHECK")
 
 		// Return error to skip searching non-ridecell hosts
-		if checkTSH != "false" && !strings.HasSuffix(cfg.Host, ":3026") {
+		if checkTSH != "false" && !strings.Contains(cfg.Host, "teleport") {
 			return nil, errors.New("hostname did not match, ignoring context")
 		}
 	}

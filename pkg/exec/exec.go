@@ -30,8 +30,8 @@ import (
 
 var (
 	//go:embed bin/tsh
-	tsh []byte
-	tshMD5 string
+	tsh           []byte
+	tshMD5        string
 	tshInstallDir = "/usr/local/bin/"
 )
 
@@ -56,20 +56,28 @@ func InstallOrUpgradeTsh() error {
 
 	//Generate MD5 hash of installed tsh binary
 	f, err := os.Open(binPath)
- 	if err != nil {
+	if err != nil {
 		return errors.Wrapf(err, "Error opening tsh")
- 	}
- 	defer f.Close()
+	}
+	defer f.Close()
 
- 	hash := md5.New()
- 	_, err = io.Copy(hash, f)
- 	if err != nil {
+	hash := md5.New()
+	_, err = io.Copy(hash, f)
+	if err != nil {
 		return errors.Wrapf(err, "Error generating hash for tsh")
- 	}
+	}
 	// Check if tsh binary's md5 is same; if not, install tsh
 	if hex.EncodeToString(hash.Sum(nil)) != GetTshMd5Hash() {
 		pterm.Info.Println("Tsh version not matched, re-installing using sudo...")
-		// First write tsh binary to tmp
+
+		// First remove old tsh binary
+		rm := []string{"rm", "-rf", binPath}
+		err = ExecuteCommand("sudo", rm, false)
+		if err != nil {
+			return err
+		}
+
+		// Now write tsh binary to tmp
 		err = os.WriteFile("/tmp/tsh", tsh, 0755)
 		if err != nil {
 			return err
