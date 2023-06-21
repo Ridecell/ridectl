@@ -98,9 +98,8 @@ func CheckTshLogin() {
 }
 
 func populateKubeConfig() {
-	// Check last modified date of /tmp/ridectl-kube.log file
-	now := time.Now()
-	filename := "/tmp/ridectl-kube.log"
+	// Check last modified date of /tmp/ridectl-kube.lock file
+	filename := "/tmp/ridectl-kube.lock"
 	tmpFile, err := os.Stat(filename)
 	if err != nil {
 		// Executing tsh kube login
@@ -117,6 +116,7 @@ func populateKubeConfig() {
 		return
 	}
 	// Check if file is modified in last 7 days
+	now := time.Now()
 	if now.Sub(tmpFile.ModTime()).Hours()/24 > 7 {
 		kubeLoginArgs := []string{"kube", "login", "--all"}
 		err = exec.ExecuteCommand("tsh", kubeLoginArgs, false)
