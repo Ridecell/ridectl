@@ -22,20 +22,19 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
 	"path/filepath"
 	"runtime"
 
+	"github.com/Ridecell/ridectl/pkg/utils"
 	"github.com/inconshreveable/go-update"
 	"github.com/manifoldco/promptui"
 	"github.com/mitchellh/go-homedir"
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 	"k8s.io/client-go/kubernetes/scheme"
-	"github.com/Ridecell/ridectl/pkg/utils"
 
 	dbv1beta2 "github.com/Ridecell/ridecell-controllers/apis/db/v1beta2"
 	secretsv1beta2 "github.com/Ridecell/ridecell-controllers/apis/secrets/v1beta2"
@@ -169,7 +168,7 @@ func selfUpdate() {
 	p.Increment()
 
 	p.Title = "Extracting"
-	buf, err := ioutil.ReadAll(res.Body)
+	buf, err := io.ReadAll(res.Body)
 	if err != nil {
 		pterm.Error.Printf("Failed to create buffer for zip file: %s\n", err)
 	}
@@ -216,5 +215,5 @@ func displayAnnouncementBanner() {
 		return
 	}
 
-	pterm.Info.Printf(announcementMessage+"\n")
+	pterm.Info.Printf(announcementMessage + "\n")
 }

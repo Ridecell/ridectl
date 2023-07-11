@@ -18,16 +18,15 @@ package cmd
 
 import (
 	"bytes"
+	"context"
 	"crypto/rand"
 	"encoding/base64"
 	"encoding/gob"
-	"io/ioutil"
 	"os"
 
 	"github.com/Ridecell/ridectl/pkg/cmd/edit"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/kms"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/kms"
 	"github.com/pkg/errors"
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
@@ -76,14 +75,15 @@ var encryptCmd = &cobra.Command{
 		}
 		pterm.Info.Println("Encrypting using key: " + keyId)
 
-		// generate data key
-		sess := session.Must(session.NewSessionWithOptions(session.Options{
-			SharedConfigState: session.SharedConfigEnable,
-			Config: aws.Config{
-				Region: aws.String("us-west-1"),
-			},
-		}))
-		kmsService := kms.New(sess)
+		// Load the Shared AWS Configuration (~/.aws/config)
+		cfg, err := config.LoadDefaultConfig(context.TODO(), config.WithRegion("us-west-1"))
+		if err != nil {
+			return errors.Wrapf(err, "error creating AWS session")
+		}
+
+		// Create an Amazon KMS service client
+		kmsService := kms.NewFromConfig(cfg)
+
 		plainDataKey, cipherDataKey, err := edit.GenerateDataKey(kmsService, keyId)
 		if err != nil {
 			return errors.Wrapf(err, "error generating data key using KMS key: %s", keyId)
@@ -92,14 +92,14 @@ var encryptCmd = &cobra.Command{
 		var p *edit.Payload
 		for _, filename := range fileNames {
 			// read file content
-			fileContent, err := ioutil.ReadFile(filename)
+			fileContent, err := os.ReadFile(filename)
 			if err != nil {
 				return errors.Wrapf(err, "error reading file: %s", filename)
 			}
 
 			// Check if there is need to encrypt the file - the file content is changed.
 			if !recrypt {
-				encryptedFileContent, err := ioutil.ReadFile(filename + ".encrypted")
+				encryptedFileContent, err := os.ReadFile(filename + ".encrypted")
 				if err == nil {
 					decryptedFileContent, err := GetDecryptedData(kmsService, encryptedFileContent)
 					if err == nil {
@@ -130,7 +130,7 @@ var encryptCmd = &cobra.Command{
 			encryptedFileContent := string(base64.StdEncoding.EncodeToString(buf.Bytes()))
 
 			// write encrypted content in <filename>.encrypted
-			err = ioutil.WriteFile(filename+".encrypted", []byte(encryptedFileContent), 0644)
+			err = os.WriteFile(filename+".encrypted", []byte(encryptedFileContent), 0644)
 			if err != nil {
 				return errors.Wrapf(err, "error writing file: %s", filename)
 			}

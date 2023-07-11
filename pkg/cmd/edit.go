@@ -18,9 +18,9 @@ package cmd
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -29,11 +29,8 @@ import (
 
 	"github.com/Ridecell/ridectl/pkg/cmd/edit"
 	"github.com/pterm/pterm"
-
-	//"github.com/Ridecell/ridectl/pkg/kubernetes"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/kms"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/kms"
 	"github.com/manifoldco/promptui"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -156,15 +153,16 @@ var editCmd = &cobra.Command{
 			return errors.Wrap(err, "error decoding input YAML")
 		}
 
-		// Create a KMS session
-		// TODO error handling for AWS creds
-		sess := session.Must(session.NewSessionWithOptions(session.Options{
-			SharedConfigState: session.SharedConfigEnable,
-			Config: aws.Config{
-				Region: aws.String("us-west-1"),
-			},
-		}))
-		kmsService := kms.New(sess)
+		// Load the Shared AWS Configuration (~/.aws/config)
+		cfg, err := config.LoadDefaultConfig(context.TODO(),
+			config.WithRegion("us-west-1"),
+		)
+		if err != nil {
+			return errors.Wrapf(err, "error creating AWS session")
+		}
+
+		// Create an Amazon KMS service client
+		kmsService := kms.NewFromConfig(cfg)
 
 		// Decrypt all the encrypted secrets.
 		err = inManifest.Decrypt(kmsService, recrypt)
@@ -256,7 +254,7 @@ func editObjects(manifest edit.Manifest, comment string) (edit.Manifest, error) 
 		editorReader := bytes.NewReader(editorBuf.Bytes())
 
 		// Open a temporary file.
-		tmpfile, err := ioutil.TempFile("", ".*.yml")
+		tmpfile, err := os.CreateTemp("", ".*.yml")
 		if err != nil {
 			return nil, errors.Wrap(err, "error making tempfile")
 		}
@@ -312,7 +310,7 @@ func editObjects(manifest edit.Manifest, comment string) (edit.Manifest, error) 
 	}
 }
 
-// func createDefaultData(instance string) (io.Reader, error) {
+// func createDefaultData(instance string) (os.Reader, error) {
 // 	target, err := kubernetes.ParseSubject(instance)
 // 	if err != nil {
 // 		return nil, fmt.Errorf("unable to parse instance name %s", instance)

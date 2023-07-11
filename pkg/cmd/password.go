@@ -111,7 +111,7 @@ var passwordCmd = &cobra.Command{
 			}
 			for _, secret := range secrets.Items {
 				//add the readonly secrets to the list if name contains readonly
-				if strings.Contains(secret.Name, "-readonly.postgres-user-password") {
+				if strings.Contains(secret.Name, "-readonly.postgres-user-password") && !strings.Contains(secret.Name, "-rdsiam-readonly.postgres-user-password") {
 					readOnlysecrets = append(readOnlysecrets, secret.Name)
 				}
 			}
