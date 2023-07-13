@@ -118,6 +118,11 @@ func isLatestVersion() bool {
 	body, _ := io.ReadAll(resp.Body)
 	resp.Body.Close()
 
+	if resp.StatusCode == 403 {
+		pterm.Warning.Printf("Unable to check latest version (version check API unavailable). Continuing.\n")
+		return true
+	}
+
 	var data versionInfo
 	var retry bool
 	err = json.Unmarshal(body, &data)
@@ -131,7 +136,7 @@ func isLatestVersion() bool {
 	}
 
 	if version != data.TagName {
-		pterm.Warning.Printf("You are running older version of ridectl %s\n", version)
+		pterm.Warning.Printf("You are running an older version of ridectl: %s. Latest: %s\n.", version, data.TagName)
 		return false
 	}
 
