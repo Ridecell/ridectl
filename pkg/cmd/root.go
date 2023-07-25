@@ -30,7 +30,6 @@ import (
 
 	"github.com/Ridecell/ridectl/pkg/utils"
 	"github.com/inconshreveable/go-update"
-	"github.com/manifoldco/promptui"
 	"github.com/mitchellh/go-homedir"
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
@@ -82,17 +81,17 @@ func init() {
 
 	// check version and update if not latest
 	if !isLatestVersion() {
-		updatePrompt := promptui.Prompt{
-			Label:     "Do you want to update to latest version",
-			IsConfirm: true,
-		}
-		shouldUpdate, _ := updatePrompt.Run()
-		if shouldUpdate == "y" {
+		skipUpgrade := os.Getenv("RIDECTL_SKIP_UPGRADE")
+		if skipUpgrade != "true" {
+			pterm.Info.Println("Upgrading ridectl.")
 			selfUpdate()
 			pterm.Info.Println("Ridectl update is completed. Please re-run the command.")
 			os.Exit(0)
+		} else {
+			pterm.Info.Println("RIDECTL_SKIP_UPGRADE is set to true, skipping ridectl upgrade.")
 		}
 	}
+
 	// Register all types from summon-operator and ridecell-controllers secrets
 	_ = summonv1beta2.AddToScheme(scheme.Scheme)
 	_ = secretsv1beta2.AddToScheme(scheme.Scheme)
@@ -136,7 +135,7 @@ func isLatestVersion() bool {
 	}
 
 	if version != data.TagName {
-		pterm.Warning.Printf("You are running an older version of ridectl: %s. Latest: %s\n.", version, data.TagName)
+		pterm.Warning.Printf("You are running an older version of ridectl: %s. Latest: %s.\n", version, data.TagName)
 		return false
 	}
 
