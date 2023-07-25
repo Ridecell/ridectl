@@ -83,11 +83,12 @@ func init() {
 	if !isLatestVersion() {
 		skipUpgrade := os.Getenv("RIDECTL_SKIP_UPGRADE")
 		if skipUpgrade != "true" {
+			pterm.Info.Println("Upgrading ridectl.")
 			selfUpdate()
 			pterm.Info.Println("Ridectl update is completed. Please re-run the command.")
 			os.Exit(0)
 		} else {
-			pterm.Warning.Println("RIDECTL_SKIP_UPGRADE is set to true, hence skipping ridectl upgrade.")
+			pterm.Info.Println("RIDECTL_SKIP_UPGRADE is set to true, skipping ridectl upgrade.")
 		}
 	}
 
