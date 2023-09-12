@@ -119,7 +119,8 @@ var statusCmd = &cobra.Command{
 		if err != nil {
 			return errors.Wrapf(err, "Prompt failed")
 		}
-
+		
+		name = strings.Trim(name," ")
 		target, kubeObj, exist := utils.DoesInstanceExist(name, inCluster)
 		if !exist {
 			os.Exit(1)
