@@ -82,6 +82,10 @@ func getData(objType string, context string, namespace string, tenant string) (s
 	return string(data), err
 }
 
+func trimWhiteSpaces(input string) string {
+	return strings.TrimSpace(input)
+}
+
 var statusCmd = &cobra.Command{
 	Use:   "status",
 	Short: "Get status report of an Summon Instance",
@@ -120,7 +124,8 @@ var statusCmd = &cobra.Command{
 			return errors.Wrapf(err, "Prompt failed")
 		}
 		
-		name = strings.Trim(name," ")
+		// Trimming the starting and ending white-spaces from user input string
+        name = trimWhiteSpaces(name)
 		target, kubeObj, exist := utils.DoesInstanceExist(name, inCluster)
 		if !exist {
 			os.Exit(1)

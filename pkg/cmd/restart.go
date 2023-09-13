@@ -139,6 +139,8 @@ var rollingRestartCmd = &cobra.Command{
 				return errors.Wrapf(err, "Prompt failed")
 			}
 
+			// Trimming the starting and ending white-spaces from component
+            component = trimWhiteSpaces(component)
 			target, kubeObj, exist := utils.DoesInstanceExist(instanceName, inCluster)
 			if !exist {
 				os.Exit(1)
