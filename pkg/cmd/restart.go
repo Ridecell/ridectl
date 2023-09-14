@@ -151,7 +151,7 @@ var rollingRestartCmd = &cobra.Command{
 			// Trimming the starting and ending white-spaces from component and tenet-name
             component = trimWhiteSpaces(component)
 			target.Name = trimWhiteSpaces(target.Name)
-			fmt.Println("Target Name :", target.Name)
+
 			if target.Type == "summon" {
 				podLabels["app.kubernetes.io/instance"] = fmt.Sprintf("%s-%s", target.Name, component)
 				deploymentName = fmt.Sprintf("%s-%s", target.Name, component)
