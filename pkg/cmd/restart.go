@@ -139,8 +139,7 @@ var rollingRestartCmd = &cobra.Command{
 				return errors.Wrapf(err, "Prompt failed")
 			}
 
-			// Trimming the starting and ending white-spaces from component
-            component = trimWhiteSpaces(component)
+
 			target, kubeObj, exist := utils.DoesInstanceExist(instanceName, inCluster)
 			if !exist {
 				os.Exit(1)
@@ -149,6 +148,10 @@ var rollingRestartCmd = &cobra.Command{
 			var deploymentName string
 			podLabels := make(map[string]string)
 
+			// Trimming the starting and ending white-spaces from component and tenet-name
+            component = trimWhiteSpaces(component)
+			target.Name = trimWhiteSpaces(target.Name)
+			fmt.Println("Target Name :", target.Name)
 			if target.Type == "summon" {
 				podLabels["app.kubernetes.io/instance"] = fmt.Sprintf("%s-%s", target.Name, component)
 				deploymentName = fmt.Sprintf("%s-%s", target.Name, component)
