@@ -168,3 +168,7 @@ func GetAnnouncementMessage() string {
 	defer resp.Body.Close()
 	return ""
 }
+
+func TrimWhiteSpaces(input string) string {
+	return strings.TrimSpace(input)
+}
