@@ -149,7 +149,7 @@ var rollingRestartCmd = &cobra.Command{
 			podLabels := make(map[string]string)
 
 			// Trimming the starting and ending white-spaces from component and tenet-name
-            component = trimWhiteSpaces(component)
+            		component = trimWhiteSpaces(component)
 			target.Name = trimWhiteSpaces(target.Name)
 
 			if target.Type == "summon" {
