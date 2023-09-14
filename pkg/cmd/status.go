@@ -123,7 +123,7 @@ var statusCmd = &cobra.Command{
 		}
 		
 		// Trimming the starting and ending white-spaces from user input string
-        name = utils.TrimWhiteSpaces(name)
+        	name = utils.TrimWhiteSpaces(name)
 		target, kubeObj, exist := utils.DoesInstanceExist(name, inCluster)
 		if !exist {
 			os.Exit(1)
