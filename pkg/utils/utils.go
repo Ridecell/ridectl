@@ -49,7 +49,7 @@ func CheckKubectl() {
 
 func CheckPsql() {
 	if _, installed := exec.CheckBinary("psql"); !installed {
-		pterm.Error.Printf("psql is not installed. Follow the instructions here: https://www.compose.com/articles/postgresql-tips-installing-the-postgresql-client/ to install it\n")
+		pterm.Error.Printf("psql is not installed locally. Follow the instructions here: https://www.timescale.com/blog/how-to-install-psql-on-mac-ubuntu-debian-windows to install it locally\n")
 		os.Exit(1)
 	}
 }
