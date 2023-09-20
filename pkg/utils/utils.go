@@ -169,6 +169,3 @@ func GetAnnouncementMessage() string {
 	return ""
 }
 
-func ValidateInput(input string) bool {
-	return strings.Contains(input, " ")
-}

@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"os"
 	"reflect"
+	"strings"
 	"time"
 
 	"github.com/Ridecell/ridectl/pkg/kubernetes"
@@ -75,8 +76,8 @@ var rollingRestartCmd = &cobra.Command{
 			if err != nil {
 				return errors.New("Its not a valid Summonplatform or Microservice")
 			}
-			if utils.ValidateInput(input) {
-				return errors.New("Remove white-spaces from input " + "[" + input + "]")
+			if strings.Contains(input, " ") {
+				return errors.New("Remove white-spaces from input [" + input + "]")
 			}
 			return nil
 		}

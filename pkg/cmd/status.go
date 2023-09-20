@@ -111,8 +111,8 @@ var statusCmd = &cobra.Command{
 			if input == "" {
 				return errors.New("Invalid summon tenant name or microservice name")
 			}
-			if utils.ValidateInput(input) {
-				return errors.New("Remove white-spaces from input " + "[" + input + "]")
+			if strings.Contains(input, " ") {
+				return errors.New("Remove white-spaces from input [" + input + "]")
 			}
 			return nil
 		}
