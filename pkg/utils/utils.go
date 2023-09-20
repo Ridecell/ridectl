@@ -169,6 +169,6 @@ func GetAnnouncementMessage() string {
 	return ""
 }
 
-func SanitizInput(input string) string {
-	return strings.TrimSpace(input)
+func SanitizInput(input string) bool {
+	return strings.Contains(input, " ")
 }

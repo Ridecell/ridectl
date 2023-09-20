@@ -75,6 +75,9 @@ var rollingRestartCmd = &cobra.Command{
 			if err != nil {
 				return errors.New("Its not a valid Summonplatform or Microservice")
 			}
+			if utils.SanitizInput(input) {
+				return errors.New("Remove white-spaces from input " + "[" + input + "]")
+			}
 			return nil
 		}
 
@@ -146,11 +149,7 @@ var rollingRestartCmd = &cobra.Command{
 			}
 
 			var deploymentName string
-			podLabels := make(map[string]string)
-
-			// Trimming the starting and ending white-spaces from component and tenet-name
-            		component = utils.SanitizInput(component)
-			target.Name = utils.SanitizInput(target.Name)			
+			podLabels := make(map[string]string)		
 
 			if target.Type == "summon" {
 				podLabels["app.kubernetes.io/instance"] = fmt.Sprintf("%s-%s", target.Name, component)
