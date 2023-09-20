@@ -75,7 +75,7 @@ var rollingRestartCmd = &cobra.Command{
 			if err != nil {
 				return errors.New("Its not a valid Summonplatform or Microservice")
 			}
-			if utils.SanitizInput(input) {
+			if utils.ValidateInput(input) {
 				return errors.New("Remove white-spaces from input " + "[" + input + "]")
 			}
 			return nil

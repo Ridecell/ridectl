@@ -169,6 +169,6 @@ func GetAnnouncementMessage() string {
 	return ""
 }
 
-func SanitizInput(input string) bool {
+func ValidateInput(input string) bool {
 	return strings.Contains(input, " ")
 }
