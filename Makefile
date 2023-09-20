@@ -14,7 +14,6 @@
 
 TSH_VERSION = 13.3.8
 
-
 # Build command binary, for macOS
 build_macos:
 	./build_ridectl.sh macos $(TSH_VERSION)

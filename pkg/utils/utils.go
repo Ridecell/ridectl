@@ -168,4 +168,3 @@ func GetAnnouncementMessage() string {
 	defer resp.Body.Close()
 	return ""
 }
-

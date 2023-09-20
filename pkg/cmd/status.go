@@ -82,8 +82,6 @@ func getData(objType string, context string, namespace string, tenant string) (s
 	return string(data), err
 }
 
-
-
 var statusCmd = &cobra.Command{
 	Use:   "status",
 	Short: "Get status report of an Summon Instance",
