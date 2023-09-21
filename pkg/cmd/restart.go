@@ -73,11 +73,11 @@ var rollingRestartCmd = &cobra.Command{
 
 		validateInstance := func(input string) error {
 			_, err := kubernetes.ParseSubject(input)
-			if err != nil {
-				return errors.New("Its not a valid Summonplatform or Microservice")
-			}
 			if strings.Contains(input, " ") {
 				return errors.New("Remove white-spaces from input [" + input + "]")
+			}
+			if err != nil {
+				return errors.New("Its not a valid Summonplatform or Microservice")
 			}
 			return nil
 		}
