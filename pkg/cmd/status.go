@@ -109,6 +109,9 @@ var statusCmd = &cobra.Command{
 			if input == "" {
 				return errors.New("Invalid summon tenant name or microservice name")
 			}
+			if strings.Contains(input, " ") {
+				return errors.New("Remove white-spaces from input [" + input + "]")
+			}
 			return nil
 		}
 		instanceNamePromt := promptui.Prompt{
@@ -119,7 +122,6 @@ var statusCmd = &cobra.Command{
 		if err != nil {
 			return errors.Wrapf(err, "Prompt failed")
 		}
-
 		target, kubeObj, exist := utils.DoesInstanceExist(name, inCluster)
 		if !exist {
 			os.Exit(1)

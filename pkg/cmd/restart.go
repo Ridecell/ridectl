@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"os"
 	"reflect"
+	"strings"
 	"time"
 
 	"github.com/Ridecell/ridectl/pkg/kubernetes"
@@ -71,9 +72,21 @@ var rollingRestartCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 
 		validateInstance := func(input string) error {
+			if strings.Contains(input, " ") {
+				return errors.New("Remove white-spaces from input [" + input + "]")
+			}
 			_, err := kubernetes.ParseSubject(input)
 			if err != nil {
 				return errors.New("Its not a valid Summonplatform or Microservice")
+			}
+			return nil
+		}
+		validateInput := func(input string) error {
+			if input == "" {
+				return errors.New("Invalid component or Postgresdump object name")
+			}
+			if strings.Contains(input, " ") {
+				return errors.New("Remove white-spaces from input [" + input + "]")
 			}
 			return nil
 		}
@@ -132,7 +145,7 @@ var rollingRestartCmd = &cobra.Command{
 			}
 			prompt = promptui.Prompt{
 				Label: "Enter component type (e.g. web, celeryd/celery-worker, static, celeryredbeat/celery-beat, kafkaconsumer/kafka-consumer, etc)",
-				//Validate: validate,
+				Validate: validateInput,
 			}
 			component, err := prompt.Run()
 			if err != nil {
@@ -205,6 +218,7 @@ var rollingRestartCmd = &cobra.Command{
 		case "PostgresDump Job":
 			prompt := promptui.Prompt{
 				Label: "Enter Postgresdump object name",
+				Validate: validateInput,
 			}
 			pgdumpName, err := prompt.Run()
 			if err != nil {
@@ -212,6 +226,7 @@ var rollingRestartCmd = &cobra.Command{
 			}
 			prompt = promptui.Prompt{
 				Label: "Enter Postgresdump object namespace",
+				Validate: validateInput,
 			}
 			pgdumpNamespace, err := prompt.Run()
 			if err != nil {
