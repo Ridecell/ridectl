@@ -16,5 +16,8 @@ DESIRED VERSIONS:
   TripShare: {{.spec.tripShare.version}}{{end}}
 
 CURRENT VERSIONS:
-  Summon: {{.status.notification.notifyVersion}}
-  {{range $key, $val := .status.notification}}{{if ne $key "notifyVersion"}}{{$key}}: {{$val}}{{"\n  "}}{{end}}{{end}}
+  {{range $key, $val := .status.notification}}{{if and (ne $key "slack") (ne $key "newRelic")}}{{$key}}: {{$val}}{{"\n  "}}{{end}}{{end}}
+  Slack:
+    {{range $key, $val := .status.notification.slack}}{{$key}}: {{$val}}{{"\n    "}}{{end}}
+  NewRelic:
+    {{range $key, $val := .status.notification.newRelic}}{{$key}}: {{$val}}{{"\n    "}}{{end}}
