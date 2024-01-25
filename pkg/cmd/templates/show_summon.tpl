@@ -19,5 +19,3 @@ CURRENT VERSIONS:
   {{range $key, $val := .status.notification}}{{if and (ne $key "slack") (ne $key "newRelic")}}{{$key}}: {{$val}}{{"\n  "}}{{end}}{{end}}
   Slack:
     {{range $key, $val := .status.notification.slack}}{{$key}}: {{$val}}{{"\n    "}}{{end}}
-  NewRelic:
-    {{range $key, $val := .status.notification.newRelic}}{{$key}}: {{$val}}{{"\n    "}}{{end}}
