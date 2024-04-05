@@ -9,16 +9,16 @@ jobs:
     env:
       TOKEN: ${{ secrets.USER_GITHUB_TOKEN }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Setup go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
       - name: Setup gitconfig fot private go module
         run: |
           git config --global url."https://${TOKEN}:x-oauth-basic@github.com/Ridecell".insteadOf "https://github.com/Ridecell"
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@v3
+        uses: golangci/golangci-lint-action@v4
         with:
           args: --timeout 5m
           skip-cache: true
@@ -30,9 +30,9 @@ jobs:
     env:
       TOKEN: ${{ secrets.USER_GITHUB_TOKEN }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Setup go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
       - name: build

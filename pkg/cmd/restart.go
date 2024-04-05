@@ -115,7 +115,7 @@ var rollingRestartCmd = &cobra.Command{
 			}
 
 			target, kubeObj, exist := utils.DoesInstanceExist(instanceName, inCluster)
-			
+
 			if !exist {
 				os.Exit(1)
 			}
@@ -144,7 +144,7 @@ var rollingRestartCmd = &cobra.Command{
 				return errors.Wrapf(err, "Prompt failed")
 			}
 			prompt = promptui.Prompt{
-				Label: "Enter component type (e.g. web, celeryd/celery-worker, static, celeryredbeat/celery-beat, kafkaconsumer/kafka-consumer, etc)",
+				Label:    "Enter component type (e.g. web, celeryd/celery-worker, static, celeryredbeat/celery-beat, kafkaconsumer/kafka-consumer, etc)",
 				Validate: validateInput,
 			}
 			component, err := prompt.Run()
@@ -217,7 +217,7 @@ var rollingRestartCmd = &cobra.Command{
 
 		case "PostgresDump Job":
 			prompt := promptui.Prompt{
-				Label: "Enter Postgresdump object name",
+				Label:    "Enter Postgresdump object name",
 				Validate: validateInput,
 			}
 			pgdumpName, err := prompt.Run()
@@ -225,7 +225,7 @@ var rollingRestartCmd = &cobra.Command{
 				return errors.Wrapf(err, "Prompt failed")
 			}
 			prompt = promptui.Prompt{
-				Label: "Enter Postgresdump object namespace",
+				Label:    "Enter Postgresdump object namespace",
 				Validate: validateInput,
 			}
 			pgdumpNamespace, err := prompt.Run()
