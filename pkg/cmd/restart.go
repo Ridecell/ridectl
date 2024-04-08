@@ -201,7 +201,7 @@ var rollingRestartCmd = &cobra.Command{
 				}
 
 				// waiting for the deployment to be ready
-				err = wait.Poll(time.Second*5, time.Minute*3, func() (bool, error) {
+				err = wait.PollUntilContextTimeout(context.TODO(), time.Second*5, time.Minute*3, false, func(ctx context.Context) (bool, error) {
 					_ = kubeObj.Client.Get(context.TODO(), types.NamespacedName{Name: deploymentName, Namespace: target.Namespace}, deployment)
 
 					if deployment.Status.ReadyReplicas == deployment.Status.Replicas {

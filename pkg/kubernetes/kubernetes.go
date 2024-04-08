@@ -16,7 +16,6 @@ package kubernetes
 import (
 	"context"
 	"fmt"
-	"net/http"
 	"os"
 	"regexp"
 	"strings"
@@ -58,7 +57,6 @@ type Subject struct {
 func getClientByContext(kubeconfig string, kubeContext *api.Context) (client.Client, error) {
 
 	var cfg *rest.Config
-	var httpClient *http.Client
 	var err error
 	if kubeconfig == "" {
 		// empty kubeconfig, use in-cluster config
@@ -89,7 +87,10 @@ func getClientByContext(kubeconfig string, kubeContext *api.Context) (client.Cli
 	}
 	// Set high timeout, since user has to login if their teleport login is expired.
 	cfg.Timeout = time.Minute * 3
-
+	httpClient, err := rest.HTTPClientFor(cfg)
+	if err != nil {
+		return nil, err
+	}
 	mapper, err := apiutil.NewDynamicRESTMapper(cfg, httpClient)
 	if err != nil {
 		return nil, err
