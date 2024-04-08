@@ -6,7 +6,7 @@ require (
 	github.com/Ridecell/ridecell-controllers v0.0.0-20211019083602-39744a13278a
 	github.com/Ridecell/summon-operator v0.0.0-20230710101119-aea4bd5d5f2a
 	github.com/aws/aws-sdk-go-v2 v1.26.1
-	github.com/aws/aws-sdk-go-v2/config v1.27.10
+	github.com/aws/aws-sdk-go-v2/config v1.27.11
 	github.com/aws/aws-sdk-go-v2/service/kms v1.30.1
 	github.com/inconshreveable/go-update v0.0.0-20160112193335-8152e7eb6ccf
 	github.com/manifoldco/promptui v0.9.0
@@ -16,9 +16,7 @@ require (
 	github.com/spf13/cobra v1.8.0
 	golang.org/x/crypto v0.22.0
 	gopkg.in/yaml.v2 v2.4.0
-	//k8s.io/api v0.26.3
 	k8s.io/apimachinery v0.29.3
-	// k8s.io/client-go v13.0.0+incompatible
 	sigs.k8s.io/controller-runtime v0.17.2
 )
 
@@ -37,13 +35,13 @@ require (
 require (
 	atomicgo.dev/cursor v0.2.0 // indirect
 	atomicgo.dev/keyboard v0.2.9 // indirect
-	github.com/aws/aws-sdk-go-v2/credentials v1.17.10 // indirect
+	github.com/aws/aws-sdk-go-v2/credentials v1.17.11 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.16.1 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/configsources v1.3.5 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.6.5 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/ini v1.8.0 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.11.7 // indirect
-	github.com/aws/aws-sdk-go-v2/service/sso v1.20.4 // indirect
+	github.com/aws/aws-sdk-go-v2/service/sso v1.20.5 // indirect
 	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.23.4 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sts v1.28.6 // indirect
 	github.com/aws/smithy-go v1.20.2 // indirect
@@ -62,7 +60,6 @@ require (
 	github.com/google/gofuzz v1.2.0 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/gookit/color v1.5.4 // indirect
-	//github.com/imdario/mergo v0.3.15 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
@@ -103,6 +100,4 @@ replace github.com/imdario/mergo => github.com/imdario/mergo v0.3.16
 
 replace k8s.io/api => k8s.io/api v0.26.3
 
-// Fixes commit hash mismatch errors. More here https://github.com/cockroachdb/errors/releases/tag/v1.8.6
-// Similar issue: https://github.com/cockroachdb/errors/issues/82
 exclude github.com/cockroachdb/errors v1.8.5
