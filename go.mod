@@ -85,4 +85,6 @@ require (
 
 replace github.com/imdario/mergo => github.com/imdario/mergo v0.3.16
 
+// Fixes commit hash mismatch errors. More here https://github.com/cockroachdb/errors/releases/tag/v1.8.6
+// Similar issue: https://github.com/cockroachdb/errors/issues/82
 exclude github.com/cockroachdb/errors v1.8.5
