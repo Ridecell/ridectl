@@ -16,30 +16,22 @@ require (
 	github.com/spf13/cobra v1.8.0
 	golang.org/x/crypto v0.22.0
 	gopkg.in/yaml.v2 v2.4.0
-	k8s.io/apimachinery v0.29.3
-	sigs.k8s.io/controller-runtime v0.17.2
-)
-
-require (
 	k8s.io/api v0.29.3
-	k8s.io/client-go v13.0.0+incompatible
-)
-
-require (
-	atomicgo.dev/schedule v0.1.0 // indirect
-	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.11.2 // indirect
-	github.com/google/gnostic-models v0.6.9-0.20230804172637-c7be7c783f49 // indirect
-	github.com/imdario/mergo v1.0.0 // indirect
+	k8s.io/apimachinery v0.29.3
+	k8s.io/client-go v0.29.3
+	sigs.k8s.io/controller-runtime v0.17.2
 )
 
 require (
 	atomicgo.dev/cursor v0.2.0 // indirect
 	atomicgo.dev/keyboard v0.2.9 // indirect
+	atomicgo.dev/schedule v0.1.0 // indirect
 	github.com/aws/aws-sdk-go-v2/credentials v1.17.11 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.16.1 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/configsources v1.3.5 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.6.5 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/ini v1.8.0 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.11.2 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.11.7 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sso v1.20.5 // indirect
 	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.23.4 // indirect
@@ -56,10 +48,11 @@ require (
 	github.com/go-openapi/swag v0.23.0 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
-	github.com/google/gnostic v0.7.0 // indirect
+	github.com/google/gnostic-models v0.6.9-0.20230804172637-c7be7c783f49 // indirect
 	github.com/google/gofuzz v1.2.0 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/gookit/color v1.5.4 // indirect
+	github.com/imdario/mergo v1.0.0 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
@@ -90,14 +83,6 @@ require (
 	sigs.k8s.io/yaml v1.4.0 // indirect
 )
 
-replace k8s.io/client-go => k8s.io/client-go v0.24.13
-
-replace github.com/abbot/go-http-auth => github.com/containous/go-http-auth v0.4.1-0.20200324110947-a37a7636d23e
-
-replace github.com/go-check/check => github.com/containous/check v0.0.0-20170915194414-ca0bf163426a
-
 replace github.com/imdario/mergo => github.com/imdario/mergo v0.3.16
-
-replace k8s.io/api => k8s.io/api v0.26.3
 
 exclude github.com/cockroachdb/errors v1.8.5
