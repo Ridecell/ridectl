@@ -40,7 +40,7 @@ func init() {
 var passwordCmd = &cobra.Command{
 	Use:   "password [flags] <tenant_name>",
 	Short: "Gets dispatcher/postgres readonly user password/connection details for a Summon Instance",
-	Long:  "Returns dispatcher django password from a Summon Instance Secret or postgres connection details for readonly user\n" +
+	Long: "Returns dispatcher django password from a Summon Instance Secret or postgres connection details for readonly user\n" +
 		"For summon instances: password <tenant>-<env>                   -- e.g. ridectl password darwin-qa\n" +
 		"For microservices: password svc-<region>-<env>-<microservice>   -- e.g. ridectl password svc-us-master-dispatch",
 	Args: func(_ *cobra.Command, args []string) error {

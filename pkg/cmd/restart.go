@@ -115,7 +115,7 @@ var rollingRestartCmd = &cobra.Command{
 			}
 
 			target, kubeObj, exist := utils.DoesInstanceExist(instanceName, inCluster)
-			
+
 			if !exist {
 				os.Exit(1)
 			}
@@ -144,7 +144,7 @@ var rollingRestartCmd = &cobra.Command{
 				return errors.Wrapf(err, "Prompt failed")
 			}
 			prompt = promptui.Prompt{
-				Label: "Enter component type (e.g. web, celeryd/celery-worker, static, celeryredbeat/celery-beat, kafkaconsumer/kafka-consumer, etc)",
+				Label:    "Enter component type (e.g. web, celeryd/celery-worker, static, celeryredbeat/celery-beat, kafkaconsumer/kafka-consumer, etc)",
 				Validate: validateInput,
 			}
 			component, err := prompt.Run()
@@ -201,7 +201,7 @@ var rollingRestartCmd = &cobra.Command{
 				}
 
 				// waiting for the deployment to be ready
-				err = wait.Poll(time.Second*5, time.Minute*3, func() (bool, error) {
+				err = wait.PollUntilContextTimeout(context.TODO(), time.Second*5, time.Minute*3, false, func(ctx context.Context) (bool, error) {
 					_ = kubeObj.Client.Get(context.TODO(), types.NamespacedName{Name: deploymentName, Namespace: target.Namespace}, deployment)
 
 					if deployment.Status.ReadyReplicas == deployment.Status.Replicas {
@@ -217,7 +217,7 @@ var rollingRestartCmd = &cobra.Command{
 
 		case "PostgresDump Job":
 			prompt := promptui.Prompt{
-				Label: "Enter Postgresdump object name",
+				Label:    "Enter Postgresdump object name",
 				Validate: validateInput,
 			}
 			pgdumpName, err := prompt.Run()
@@ -225,7 +225,7 @@ var rollingRestartCmd = &cobra.Command{
 				return errors.Wrapf(err, "Prompt failed")
 			}
 			prompt = promptui.Prompt{
-				Label: "Enter Postgresdump object namespace",
+				Label:    "Enter Postgresdump object namespace",
 				Validate: validateInput,
 			}
 			pgdumpNamespace, err := prompt.Run()
