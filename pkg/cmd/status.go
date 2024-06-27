@@ -107,7 +107,7 @@ var statusCmd = &cobra.Command{
 		}
 		validator := func(input string) error {
 			if input == "" {
-				return errors.New("Invalid summon tenant name or microservice name")
+				return errors.New("Invalid summon tenant name")
 			}
 			if strings.Contains(input, " ") {
 				return errors.New("Remove white-spaces from input [" + input + "]")
@@ -115,7 +115,7 @@ var statusCmd = &cobra.Command{
 			return nil
 		}
 		instanceNamePromt := promptui.Prompt{
-			Label:    "Enter summon tenant(sandbox-dev)/microservice(svc-us-master-microservice) name",
+			Label:    "Enter summon tenant (sandbox-dev) name",
 			Validate: validator,
 		}
 		name, err := instanceNamePromt.Run()
