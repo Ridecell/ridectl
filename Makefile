@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-TSH_VERSION = 14.3.13
+TSH_VERSION = 15.4.9
 
 # Build command binary, for macOS
 build_macos:
