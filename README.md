@@ -54,19 +54,12 @@ For a full list of functionalities, run `ridectl --help`
 
 ## Installing `ridectl`
 
-### Manual Installation
-You can find pre-compiled macOS and Linux binaries for `ridectl` [on the GitHub releases page](https://github.com/Ridecell/ridectl/releases/latest).
-
-Download the one appropriate to your platform, unzip it, and copy it to `/usr/local/bin/ridectl` or similar. Run `ridectl status` for further configutation.
-
 # Mac-os
 ```
 curl -L "https://github.com/Ridecell/ridectl/releases/latest/download/ridectl_macos.zip" -o ./ridectl_macos.zip
 unzip ridectl_macos.zip
 chmod 0755 ridectl
 sudo cp ridectl /usr/local/bin/ridectl
-# Follow instructions for further configuration
-ridectl status
 ```
 **Note:** When running `ridectl` for first time, Mac OS will not allow the binary to execute. So, to solve this issue, navigate to `System Prefrences` > `Security & Privacy` and in `General` section, allow `ridectl` to open.
 # Linux
@@ -75,6 +68,4 @@ curl -L "https://github.com/Ridecell/ridectl/releases/latest/download/ridectl_li
 unzip ridectl_linux.zip
 chmod 0755 ridectl
 sudo cp ridectl /usr/local/bin/ridectl
-# Follow instructions for further configuration
-ridectl status
 ```
