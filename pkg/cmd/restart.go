@@ -243,7 +243,7 @@ var rollingRestartCmd = &cobra.Command{
 			kubeconfig := utils.GetKubeconfig()
 			kubeObj, err := kubernetes.GetAppropriateObjectWithContext(*kubeconfig, "", target, inCluster)
 			if err != nil {
-				pterm.Error.Printf(err.Error())
+				pterm.Error.Printf("%s", err.Error())
 				os.Exit(1)
 			}
 			if reflect.DeepEqual(kubeObj, kubernetes.Kubeobject{}) {

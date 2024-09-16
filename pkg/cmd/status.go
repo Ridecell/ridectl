@@ -182,9 +182,9 @@ var statusCmd = &cobra.Command{
 			}
 		} else {
 			if statusType == "Summon Platform" {
-				pterm.Success.Printf(sData + "\n" + dData)
+				pterm.Success.Printf("%s\n%s", sData, dData)
 			} else {
-				pterm.Success.Printf(pData)
+				pterm.Success.Printf("%s", pData)
 			}
 		}
 		return nil

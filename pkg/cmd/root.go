@@ -214,5 +214,5 @@ func displayAnnouncementBanner() {
 		return
 	}
 
-	pterm.Info.Printf(announcementMessage + "\n")
+	pterm.Info.Printf("%s\n", announcementMessage)
 }
