@@ -17,8 +17,8 @@ github.com/MarvinJWendt/testza v0.5.2 h1:53KDo64C1z/h/d/stCYCPY69bt/OSwjq5KpFNwi
 github.com/MarvinJWendt/testza v0.5.2/go.mod h1:xu53QFE5sCdjtMCKk8YMQ2MnymimEctc4n3EjyIYvEY=
 github.com/Ridecell/ridecell-controllers v0.0.0-20240404104926-a7f0de0ec6ca h1:cBNqVt5V6WLni8HW1u6MZJUzYoAYT426kG4Q3ZPMQqU=
 github.com/Ridecell/ridecell-controllers v0.0.0-20240404104926-a7f0de0ec6ca/go.mod h1:A9IS5Fxgr5Kt8L5+Q5Z8mDJVvLtZWlM9jUPT7/GpTsE=
-github.com/Ridecell/summon-operator v0.0.0-20240405133227-5a42fddb03c7 h1:m4JJSdDLzgNhvi+RdrAp/F6P6A6xorZgk7tQ4wJ7ZlE=
-github.com/Ridecell/summon-operator v0.0.0-20240405133227-5a42fddb03c7/go.mod h1:itkR/RkrWXNslZ5VcbgpwM/zzLYHoxzuQZs0CxvHIz4=
+github.com/Ridecell/summon-operator v0.0.0-20240812144338-f38221eb2924 h1:CYGiiD/L7cmM8qS8hD/S61JbKmuki4ZOr0pzDb80MWw=
+github.com/Ridecell/summon-operator v0.0.0-20240812144338-f38221eb2924/go.mod h1:itkR/RkrWXNslZ5VcbgpwM/zzLYHoxzuQZs0CxvHIz4=
 github.com/atomicgo/cursor v0.0.1/go.mod h1:cBON2QmmrysudxNBFthvMtN32r3jxVRIvzkUiF/RuIk=
 github.com/aws/aws-sdk-go-v2 v1.26.1 h1:5554eUqIYVWpU0YmeeYZ0wU64H2VLBs8TlhRB2L+EkA=
 github.com/aws/aws-sdk-go-v2 v1.26.1/go.mod h1:ffIFB97e2yNsv4aTSGkqtHnppsIJzw7G7BReUZ3jCXM=
