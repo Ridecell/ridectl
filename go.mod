@@ -4,7 +4,7 @@ go 1.22
 
 require (
 	github.com/Ridecell/ridecell-controllers v0.0.0-20240404104926-a7f0de0ec6ca
-	github.com/Ridecell/summon-operator v0.0.0-20240405133227-5a42fddb03c7
+	github.com/Ridecell/summon-operator v0.0.0-20240812144338-f38221eb2924
 	github.com/aws/aws-sdk-go-v2 v1.26.1
 	github.com/aws/aws-sdk-go-v2/config v1.27.11
 	github.com/aws/aws-sdk-go-v2/service/kms v1.30.1
