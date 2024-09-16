@@ -137,7 +137,8 @@ func ExecuteCommand(binary string, args []string, detachProcess bool) error {
 	err = c.Run()
 	if err != nil {
 		if stderr.String() != "" {
-			return fmt.Errorf(stderr.String())
+			
+			return fmt.Errorf("%s", stderr.String())
 		}
 		return fmt.Errorf("Error while executing command: %s", err.Error())
 	}
