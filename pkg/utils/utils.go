@@ -14,7 +14,6 @@ limitations under the License.
 package utils
 
 import (
-	"flag"
 	"io"
 	"net/http"
 	"os"
@@ -30,12 +29,22 @@ import (
 	"k8s.io/client-go/util/homedir"
 )
 
-func GetKubeconfig() *string {
+func GetKubeconfig(kubeconfigFlag string) *string {
 	var kubeconfig *string
-	if home := homedir.HomeDir(); home != "" {
-		kubeconfig = flag.String("kubeconfig", filepath.Join(home, ".kube", "config"), "(optional) absolute path to the kubeconfig file")
+	var kubeconfigEnv string
+
+	if kubeconfigFlag != "" {
+		kubeconfig = &kubeconfigFlag
+	} else if kubeconfigEnv = os.Getenv("KUBECONFIG"); kubeconfigEnv != "" {
+		paths := strings.Split(kubeconfigEnv, ":")
+		kubeconfig = &paths[len(paths)-1]
 	} else {
-		kubeconfig = flag.String("kubeconfig", "", "absolute path to the kubeconfig file")
+		if home := homedir.HomeDir(); home != "" {
+			defaultPath := filepath.Join(home, ".kube", "config")
+			kubeconfig = &defaultPath
+		} else {
+			panic("Could not find home directory")
+		}
 	}
 	return kubeconfig
 }
@@ -131,8 +140,8 @@ func populateKubeConfig() {
 	}
 }
 
-func DoesInstanceExist(name string, inCluster bool) (kubernetes.Subject, kubernetes.Kubeobject, bool) {
-	kubeconfig := GetKubeconfig()
+func DoesInstanceExist(name string, inCluster bool, kubeconfigFlag string) (kubernetes.Subject, kubernetes.Kubeobject, bool) {
+	kubeconfig := GetKubeconfig(kubeconfigFlag)
 	target, err := kubernetes.ParseSubject(name)
 	var kubeObj kubernetes.Kubeobject
 	if err != nil {

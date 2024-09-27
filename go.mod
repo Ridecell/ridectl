@@ -1,6 +1,6 @@
 module github.com/Ridecell/ridectl
 
-go 1.22
+go 1.22.0
 
 require (
 	github.com/Ridecell/ridecell-controllers v0.0.0-20240404104926-a7f0de0ec6ca
@@ -10,7 +10,6 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/kms v1.30.1
 	github.com/inconshreveable/go-update v0.0.0-20160112193335-8152e7eb6ccf
 	github.com/manifoldco/promptui v0.9.0
-	github.com/mitchellh/go-homedir v1.1.0
 	github.com/pkg/errors v0.9.1
 	github.com/pterm/pterm v0.12.79
 	github.com/spf13/cobra v1.8.0

@@ -114,7 +114,7 @@ var rollingRestartCmd = &cobra.Command{
 				return errors.Wrapf(err, "Prompt failed")
 			}
 
-			target, kubeObj, exist := utils.DoesInstanceExist(instanceName, inCluster)
+			target, kubeObj, exist := utils.DoesInstanceExist(instanceName, inCluster, kubeconfigFlag)
 
 			if !exist {
 				os.Exit(1)
@@ -152,7 +152,7 @@ var rollingRestartCmd = &cobra.Command{
 				return errors.Wrapf(err, "Prompt failed")
 			}
 
-			target, kubeObj, exist := utils.DoesInstanceExist(instanceName, inCluster)
+			target, kubeObj, exist := utils.DoesInstanceExist(instanceName, inCluster, kubeconfigFlag)
 			if !exist {
 				os.Exit(1)
 			}
@@ -240,7 +240,7 @@ var rollingRestartCmd = &cobra.Command{
 				Type:      "job",
 			}
 
-			kubeconfig := utils.GetKubeconfig()
+			kubeconfig := utils.GetKubeconfig(kubeconfigFlag)
 			kubeObj, err := kubernetes.GetAppropriateObjectWithContext(*kubeconfig, "", target, inCluster)
 			if err != nil {
 				pterm.Error.Printf("%s", err.Error())

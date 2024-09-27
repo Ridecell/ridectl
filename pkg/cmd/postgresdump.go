@@ -63,7 +63,7 @@ var postgresdumpCMD = &cobra.Command{
 			args[1] = strings.ToLower(args[1])
 		}
 
-		target, kubeObj, exist := utils.DoesInstanceExist(args[0], inCluster)
+		target, kubeObj, exist := utils.DoesInstanceExist(args[0], inCluster, kubeconfigFlag)
 
 		if !exist {
 			os.Exit(1)

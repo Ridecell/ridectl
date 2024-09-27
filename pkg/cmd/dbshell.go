@@ -56,7 +56,7 @@ var dbShellCmd = &cobra.Command{
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
 
-		target, kubeObj, exist := utils.DoesInstanceExist(args[0], inCluster)
+		target, kubeObj, exist := utils.DoesInstanceExist(args[0], inCluster, kubeconfigFlag)
 
 		if !exist {
 			os.Exit(1)
