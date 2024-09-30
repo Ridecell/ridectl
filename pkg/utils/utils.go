@@ -14,7 +14,6 @@ limitations under the License.
 package utils
 
 import (
-	"flag"
 	"io"
 	"net/http"
 	"os"
@@ -30,14 +29,28 @@ import (
 	"k8s.io/client-go/util/homedir"
 )
 
-func GetKubeconfig() *string {
-	var kubeconfig *string
-	if home := homedir.HomeDir(); home != "" {
-		kubeconfig = flag.String("kubeconfig", filepath.Join(home, ".kube", "config"), "(optional) absolute path to the kubeconfig file")
-	} else {
-		kubeconfig = flag.String("kubeconfig", "", "absolute path to the kubeconfig file")
+func GetKubeconfig(kubeconfigFlag string) *string {
+	// If provided, use value from the input flag --kubeconfig
+	if kubeconfigFlag != "" {
+		return &kubeconfigFlag
 	}
-	return kubeconfig
+
+	// Look for the environoment veriable named KUBECONFIG
+	// Note: KUBECONFIG stores the array of paths, separated by the delimiter ':'.
+	// 		 As single path to the kubeconfig is expected by the library, hence using the last entry in the array.	
+	if kubeconfigEnv := os.Getenv("KUBECONFIG"); kubeconfigEnv != "" {
+		paths := strings.Split(kubeconfigEnv, ":")
+		lastPath := paths[len(paths)-1]
+		return &lastPath
+	}
+
+	// By default look at the default location i.e "~/.kube/config"
+	if home := homedir.HomeDir(); home != "" {
+		defaultPath := filepath.Join(home, ".kube", "config")
+		return &defaultPath
+	} else {
+		panic("Could not find the home directory")
+	}
 }
 
 func CheckKubectl() {
@@ -131,8 +144,8 @@ func populateKubeConfig() {
 	}
 }
 
-func DoesInstanceExist(name string, inCluster bool) (kubernetes.Subject, kubernetes.Kubeobject, bool) {
-	kubeconfig := GetKubeconfig()
+func DoesInstanceExist(name string, inCluster bool, kubeconfigFlag string) (kubernetes.Subject, kubernetes.Kubeobject, bool) {
+	kubeconfig := GetKubeconfig(kubeconfigFlag)
 	target, err := kubernetes.ParseSubject(name)
 	var kubeObj kubernetes.Kubeobject
 	if err != nil {
