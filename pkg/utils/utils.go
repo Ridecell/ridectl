@@ -30,23 +30,24 @@ import (
 )
 
 func GetKubeconfig(kubeconfigFlag string) *string {
-	var kubeconfig *string
 	var kubeconfigEnv string
 
 	if kubeconfigFlag != "" {
-		kubeconfig = &kubeconfigFlag
-	} else if kubeconfigEnv = os.Getenv("KUBECONFIG"); kubeconfigEnv != "" {
-		paths := strings.Split(kubeconfigEnv, ":")
-		kubeconfig = &paths[len(paths)-1]
-	} else {
-		if home := homedir.HomeDir(); home != "" {
-			defaultPath := filepath.Join(home, ".kube", "config")
-			kubeconfig = &defaultPath
-		} else {
-			panic("Could not find home directory")
-		}
+		return &kubeconfigFlag
 	}
-	return kubeconfig
+
+	if kubeconfigEnv = os.Getenv("KUBECONFIG"); kubeconfigEnv != "" {
+		paths := strings.Split(kubeconfigEnv, ":")
+		lastPath := paths[len(paths)-1]
+		return &lastPath
+	}
+
+	if home := homedir.HomeDir(); home != "" {
+		defaultPath := filepath.Join(home, ".kube", "config")
+		return &defaultPath
+	} else {
+		panic("Could not find the home directory")
+	}
 }
 
 func CheckKubectl() {
