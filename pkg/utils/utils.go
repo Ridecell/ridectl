@@ -30,8 +30,6 @@ import (
 )
 
 func GetKubeconfig(kubeconfigFlag string) *string {
-	var kubeconfigEnv string
-
 	// If provided, use value from the input flag --kubeconfig
 	if kubeconfigFlag != "" {
 		return &kubeconfigFlag
@@ -40,7 +38,7 @@ func GetKubeconfig(kubeconfigFlag string) *string {
 	// Look for the environoment veriable named KUBECONFIG
 	// Note: KUBECONFIG stores the array of paths, separated by the delimiter ':'.
 	// 		 As single path to the kubeconfig is expected by the library, hence using the last entry in the array.	
-	if kubeconfigEnv = os.Getenv("KUBECONFIG"); kubeconfigEnv != "" {
+	if kubeconfigEnv := os.Getenv("KUBECONFIG"); kubeconfigEnv != "" {
 		paths := strings.Split(kubeconfigEnv, ":")
 		lastPath := paths[len(paths)-1]
 		return &lastPath
