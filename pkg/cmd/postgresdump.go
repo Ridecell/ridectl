@@ -105,7 +105,7 @@ var postgresdumpCMD = &cobra.Command{
 		if err != nil {
 			return errors.Wrap(err, "failed to create postgresdump instance")
 		}
-		// Do not change the following output format, kubernetes-microservices deploy uses it in Backup DB step.
+		// Do not change the following output format, kubernetes-microservices deploy workflow uses it in Backup DB step.
 		pterm.Info.Printf("Created postgresdump kind with Name: %s Namespace: %s .\n", instanceName, postgresdumpObj.Namespace)
 		pterm.Info.Printf("You can check status of DB backup using 'ridectl status' command \n")
 		return nil
