@@ -32,16 +32,21 @@ import (
 func GetKubeconfig(kubeconfigFlag string) *string {
 	var kubeconfigEnv string
 
+	// If provided, use value from the input flag --kubeconfig
 	if kubeconfigFlag != "" {
 		return &kubeconfigFlag
 	}
 
+	// Look for the environoment veriable named KUBECONFIG
+	// Note: KUBECONFIG stores the array of paths, separated by the delimiter ':'.
+	// 		 As single path to the kubeconfig is expected by the library, hence using the last entry in the array.	
 	if kubeconfigEnv = os.Getenv("KUBECONFIG"); kubeconfigEnv != "" {
 		paths := strings.Split(kubeconfigEnv, ":")
 		lastPath := paths[len(paths)-1]
 		return &lastPath
 	}
 
+	// By default look at the default location i.e "~/.kube/config"
 	if home := homedir.HomeDir(); home != "" {
 		defaultPath := filepath.Join(home, ".kube", "config")
 		return &defaultPath
