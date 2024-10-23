@@ -18,7 +18,6 @@ package cmd
 
 import (
 	"bytes"
-	"context"
 	"fmt"
 	"io"
 	"os"
@@ -28,7 +27,6 @@ import (
 	"strings"
 
 	"github.com/Ridecell/ridectl/pkg/cmd/edit"
-	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/kms"
 	"github.com/manifoldco/promptui"
 	"github.com/pkg/errors"
@@ -153,10 +151,7 @@ var editCmd = &cobra.Command{
 			return errors.Wrap(err, "error decoding input YAML")
 		}
 
-		// Load the Shared AWS Configuration (~/.aws/config)
-		cfg, err := config.LoadDefaultConfig(context.TODO(),
-			config.WithRegion("us-west-1"),
-		)
+		cfg, err := createAWSConfig("kms-grants", "us-west-1")
 		if err != nil {
 			return errors.Wrapf(err, "error creating AWS session")
 		}

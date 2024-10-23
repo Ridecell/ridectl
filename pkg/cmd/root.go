@@ -19,6 +19,7 @@ package cmd
 import (
 	"archive/zip"
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -26,10 +27,16 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"regexp"
 	"runtime"
+	"strings"
 
 	"github.com/Ridecell/ridectl/pkg/utils"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/inconshreveable/go-update"
+	"github.com/manifoldco/promptui"
+	"github.com/pkg/errors"
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -41,10 +48,13 @@ import (
 )
 
 var (
-	kubeconfigFlag string
-	versionFlag    bool
-	version        string
-	inCluster      bool
+	kubeconfigFlag    string
+	versionFlag       bool
+	version           string
+	inCluster         bool
+	noAWSSSO          bool
+	ridectlHomeDir    string
+	ridectlConfigFile string
 )
 var rootCmd = &cobra.Command{
 	Use:           "ridectl",
@@ -70,6 +80,7 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&kubeconfigFlag, "kubeconfig", "", "(optional) absolute path to the kubeconfig file")
 	rootCmd.Flags().BoolVar(&versionFlag, "version", false, "--version")
 	rootCmd.PersistentFlags().BoolVar(&inCluster, "incluster", false, "(optional) use in cluster kube config")
+	rootCmd.PersistentFlags().BoolVar(&noAWSSSO, "no-aws-sso", false, "(optional) do not use AWS SSO for AWS authentication; use shared default configuration instead.")
 
 	// Display announcement banner if present
 	displayAnnouncementBanner()
@@ -92,6 +103,16 @@ func init() {
 	_ = secretsv1beta2.AddToScheme(scheme.Scheme)
 	_ = hackapis.AddToScheme(scheme.Scheme)
 	_ = dbv1beta2.AddToScheme(scheme.Scheme)
+
+	// Create ~/.ridectl directory for aws sso cache
+	userHomeDir, err := os.UserHomeDir()
+	if err != nil {
+		pterm.Error.Printf("error getting user home directory: %v", err)
+		os.Exit(1)
+	}
+	ridectlHomeDir = userHomeDir + "/.ridectl"
+	createDirIfNotPresent(ridectlHomeDir)
+	ridectlConfigFile = ridectlHomeDir + "/ridectl.cfg"
 }
 
 func Execute() {
@@ -210,4 +231,92 @@ func displayAnnouncementBanner() {
 	}
 
 	pterm.Info.Printf("%s\n", announcementMessage)
+}
+
+func createDirIfNotPresent(dirPath string) {
+	err := os.MkdirAll(dirPath, os.ModePerm)
+	if err != nil {
+		pterm.Error.Printf("error creating %s directory: %v", dirPath, err)
+		os.Exit(1)
+	}
+}
+
+func createAWSConfig(roleName, region string) (aws.Config, error) {
+	var cfg aws.Config
+	updateAWSAccountInfo := false
+
+	startUrl, accountId := utils.LoadAWSAccountInfo(ridectlConfigFile, roleName)
+	if startUrl == "" || accountId == "" {
+		updateAWSAccountInfo = true
+
+		prompt := promptui.Prompt{
+			Label:    "Enter AWS SSO Start url",
+			Validate: validateStartUrl,
+		}
+		var err error
+		startUrl, err = prompt.Run()
+		if err != nil {
+			return cfg, errors.Wrapf(err, "Prompt failed")
+		}
+
+		prompt = promptui.Prompt{
+			Label:    "Enter AWS Account ID",
+			Validate: validateAccountId,
+		}
+		accountId, err = prompt.Run()
+		if err != nil {
+			return cfg, errors.Wrapf(err, "Prompt failed")
+		}
+	}
+	// If no-aws-sso flag is provided, do not use AWS SSO creds, instead load default configuration.
+	if noAWSSSO {
+		// Load the Shared AWS Configuration (~/.aws/config)
+		cfg, err := config.LoadDefaultConfig(context.TODO(), config.WithRegion(region))
+		if err != nil {
+			err = errors.Wrapf(err, "error creating AWS session")
+		}
+		return cfg, err
+	}
+	// Retrieve AWS SSO credentials for roleName
+	credentialsPath := utils.RetriveAWSSSOCreds(ridectlHomeDir, startUrl, accountId, roleName)
+
+	cfg, err := config.LoadDefaultConfig(context.TODO(),
+		config.WithSharedCredentialsFiles([]string{credentialsPath}),
+		config.WithSharedConfigProfile(roleName),
+		config.WithDefaultRegion(region))
+	if err != nil {
+		err = errors.Wrapf(err, "error retrieving AWS SSO credentials")
+	}
+	if updateAWSAccountInfo {
+		// Create/Update AWS Account info
+		utils.UpdateAWSAccountInfo(ridectlConfigFile, roleName, startUrl, accountId)
+	}
+	return cfg, err
+}
+
+func validateStartUrl(input string) error {
+	if strings.Contains(input, " ") {
+		return errors.New("Remove white-spaces from input [" + input + "]")
+	}
+
+	pattern := `^https://[a-zA-Z0-9-]+\.awsapps\.com/start$`
+	matched, err := regexp.MatchString(pattern, input)
+	if err != nil {
+		return err
+	}
+	if !matched {
+		return errors.New("start url is invalid")
+	}
+	return nil
+}
+func validateAccountId(input string) error {
+	pattern := `^[0-9]{12}$`
+	matched, err := regexp.MatchString(pattern, input)
+	if err != nil {
+		return err
+	}
+	if !matched {
+		return errors.New("aws account id is invalid")
+	}
+	return nil
 }
