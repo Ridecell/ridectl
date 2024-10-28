@@ -52,7 +52,8 @@ var ecrLoginCmd = &cobra.Command{
 	},
 	RunE: func(_ *cobra.Command, fileNames []string) error {
 
-		cfg, err := createAWSConfig("devops-team", "us-west-2")
+		// Use "ecr-login" SSO role for retrieving ECR credentials
+		cfg, err := createAWSConfig("ecr-login", "us-west-2")
 		if err != nil {
 			return errors.Wrapf(err, "error creating AWS session")
 		}
