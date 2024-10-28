@@ -80,7 +80,7 @@ var dbShellCmd = &cobra.Command{
 		case "read-only":
 			err = kubeObj.Client.Get(context.Background(), types.NamespacedName{Name: target.Name + "-rdsiam-readonly.postgres-user-password", Namespace: target.Namespace}, secretObj)
 			if err != nil {
-				return fmt.Errorf("Error getting secret for instance %s", err)
+				return fmt.Errorf("error getting secret for instance %s", err)
 			}
 
 			clusterName := strings.TrimPrefix(kubeObj.Context, "teleport.aws-us-support.ridecell.io-")
@@ -96,7 +96,7 @@ var dbShellCmd = &cobra.Command{
 			dbLoginArgs := []string{"db", "login", "--db-user=" + string(secretObj.Data["username"]), "--db-name=" + string(secretObj.Data["dbname"]), rdsInstanceName}
 			err = exec.ExecuteCommand("tsh", dbLoginArgs, false)
 			if err != nil {
-				return fmt.Errorf("Could not login to database, %s", err)
+				return fmt.Errorf("could not login to database, %s", err)
 			}
 			pterm.Info.Println("Logging in into database with read-only mode")
 			dbConnectCmd := []string{"db", "connect", rdsInstanceName}
@@ -106,7 +106,7 @@ var dbShellCmd = &cobra.Command{
 			// Read application database credentials for login
 			err = kubeObj.Client.Get(context.Background(), types.NamespacedName{Name: target.Name + ".postgres-user-password", Namespace: target.Namespace}, secretObj)
 			if err != nil {
-				return fmt.Errorf("Error getting secret for instance %s", err)
+				return fmt.Errorf("error getting secret for instance %s", err)
 			}
 
 			// Prompt user for confirming read-write mode for Prod/UAT env.

@@ -214,9 +214,8 @@ func renewAccessToken(startUrl, awsSSOCachePath string) (string, error) {
 		StartURL:    startUrl,
 	}
 	cacheData, _ := json.Marshal(cache)
-	os.WriteFile(filepath.Join(awsSSOCachePath, ClientName+".json"), cacheData, 0644)
 
-	return accessToken, nil
+	return accessToken, os.WriteFile(filepath.Join(awsSSOCachePath, ClientName+".json"), cacheData, 0644)
 }
 
 func fetchAccountsCredentials(accessToken, roleName, accountId string) (*types.RoleCredentials, error) {

@@ -65,7 +65,7 @@ var rootCmd = &cobra.Command{
 			pterm.Success.Printf("ridectl version %s\n", version)
 		} else if len(args) == 0 {
 
-			return fmt.Errorf("No command specified.")
+			return fmt.Errorf("no command specified")
 		}
 		return nil
 	},
@@ -289,7 +289,7 @@ func createAWSConfig(roleName, region string) (aws.Config, error) {
 	}
 	if updateAWSAccountInfo {
 		// Create/Update AWS Account info
-		utils.UpdateAWSAccountInfo(ridectlConfigFile, roleName, startUrl, accountId)
+		err = utils.UpdateAWSAccountInfo(ridectlConfigFile, roleName, startUrl, accountId)
 	}
 	return cfg, err
 }
