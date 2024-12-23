@@ -181,3 +181,11 @@ func GetAnnouncementMessage() string {
 	defer resp.Body.Close()
 	return ""
 }
+
+func CreateDirIfNotPresent(dirPath string) {
+	err := os.MkdirAll(dirPath, os.ModePerm)
+	if err != nil {
+		pterm.Error.Printf("error creating %s directory: %v", dirPath, err)
+		os.Exit(1)
+	}
+}

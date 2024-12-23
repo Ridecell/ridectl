@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"os"
 
+	utils "github.com/Ridecell/ridectl/pkg/utils"
 	"github.com/aws/aws-sdk-go-v2/service/ecr"
 	"github.com/pterm/pterm"
 
@@ -36,7 +37,7 @@ func init() {
 
 An explanation of the ECR login process:
 
-1. Check if existing AWS SSO creds are valid, if not, renew them and obtain credentials for docker login role.
+1. Check if existing AWS SSO creds are valid, if not, renew them and obtain credentials for ecr login role.
 2. Retrieve AWS ECR login credentials
 3. Read existing ~/.docker/config.json file if present, and update/add ECR credentials in it.
 4. Save ~/.docker/config.json with updated auth data.
@@ -46,7 +47,7 @@ An explanation of the ECR login process:
 var ecrLoginCmd = &cobra.Command{
 	Use:   "ecr-login",
 	Short: "AWS ECR registry login",
-	Long:  `Logins to AWS ECR docker registry`,
+	Long:  `Logins to AWS ECR container registry`,
 	Args: func(_ *cobra.Command, args []string) error {
 		return nil
 	},
@@ -77,7 +78,7 @@ var ecrLoginCmd = &cobra.Command{
 			os.Exit(1)
 		}
 		dockerDir := userHomeDir + "/.docker"
-		createDirIfNotPresent(dockerDir)
+		utils.CreateDirIfNotPresent(dockerDir)
 
 		// Load existing ~/.docker/config.json file if exists
 		dockerConfig := map[string]interface{}{}

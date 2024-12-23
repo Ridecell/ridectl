@@ -63,13 +63,13 @@ func openBrowser(url string) {
 	}
 }
 
-func getSSOCachedLogin(startUrl, awsSSOCachePath string) (string, error) {
+func getSSOCachedLogin(awsSSOCachePath string) (string, error) {
 	cacheFileName := awsSSOCachePath + "/" + ClientName + ".json"
 
 	cache, err := loadSSOCache(cacheFileName)
 	if err == nil && cache != nil {
-		// Validate if startUrl matches and token is not expired
-		if cache.StartURL == startUrl && cache.Region == AWSRegion && isoTimeNow().Before(parseTimestamp(cache.ExpiresAt)) {
+		// Validate if token is not expired
+		if isoTimeNow().Before(parseTimestamp(cache.ExpiresAt)) {
 			return cache.AccessToken, nil
 		}
 	}
@@ -101,14 +101,14 @@ func isCredentialValid(awsCredentialPath, roleName string) bool {
 	return false
 }
 
-func LoadAWSAccountInfo(ridectlConfigFile, roleName string) (string, string) {
+func LoadAWSAccountInfo(ridectlConfigFile string) (string, string) {
 
 	startUrl, accountId := "", ""
 	cfg, err := ini.LooseLoad(ridectlConfigFile)
 
 	if err == nil {
-		// Read profile section named as roleName
-		section := cfg.Section("aws:" + roleName)
+		// Read profile section named as aws
+		section := cfg.Section("aws")
 		startUrlValue, err := section.GetKey("aws_start_url")
 		if err == nil {
 			startUrl = startUrlValue.String()
@@ -121,14 +121,14 @@ func LoadAWSAccountInfo(ridectlConfigFile, roleName string) (string, string) {
 	return startUrl, accountId
 }
 
-func UpdateAWSAccountInfo(ridectlConfigFile, roleName, startUrl, accountId string) error {
+func UpdateAWSAccountInfo(ridectlConfigFile, startUrl, accountId string) error {
 
 	cfg, err := ini.LooseLoad(ridectlConfigFile)
 	if err != nil {
 		cfg = ini.Empty()
 	}
-	// Read profile section named as roleName
-	section := cfg.Section("aws:" + roleName)
+	// Read profile section named as aws
+	section := cfg.Section("aws")
 
 	// Update the keys
 	section.Key("aws_start_url").SetValue(startUrl)
@@ -215,10 +215,10 @@ func renewAccessToken(startUrl, awsSSOCachePath string) (string, error) {
 	}
 	cacheData, _ := json.Marshal(cache)
 
-	return accessToken, os.WriteFile(filepath.Join(awsSSOCachePath, ClientName+".json"), cacheData, 0644)
+	return accessToken, os.WriteFile(filepath.Join(awsSSOCachePath, ClientName+".json"), cacheData, 0640)
 }
 
-func fetchAccountsCredentials(accessToken, roleName, accountId string) (*types.RoleCredentials, error) {
+func fetchRoleCredentials(accessToken, roleName, accountId string) (*types.RoleCredentials, error) {
 	cfg, err := config.LoadDefaultConfig(context.TODO(), config.WithRegion(AWSRegion))
 	if err != nil {
 		return nil, fmt.Errorf("unable to load SDK config: %v", err)
@@ -237,12 +237,18 @@ func fetchAccountsCredentials(accessToken, roleName, accountId string) (*types.R
 	return roleCredentials.RoleCredentials, nil
 }
 
-func RetriveAWSSSOCreds(ridectlHomeDir, startUrl, accountId, roleName string) string {
+func RetriveAWSSSOCredsPath(ridectlHomeDir, startUrl, accountId, roleName string) string {
+
+	// Check if existing credentials are valid
+	awsCredentialPath := ridectlHomeDir + "/credentials"
+	if isCredentialValid(awsCredentialPath, roleName) {
+		return awsCredentialPath
+	}
 
 	// Unset AWS_PROFILE env var if set.
 	_ = os.Setenv("AWS_PROFILE", "")
 
-	accessToken, err := getSSOCachedLogin(startUrl, ridectlHomeDir)
+	accessToken, err := getSSOCachedLogin(ridectlHomeDir)
 	if err != nil {
 		pterm.Warning.Printf("%v, renewing access token.\n", err)
 		accessToken, err = renewAccessToken(startUrl, ridectlHomeDir)
@@ -252,13 +258,7 @@ func RetriveAWSSSOCreds(ridectlHomeDir, startUrl, accountId, roleName string) st
 		}
 	}
 
-	// Check if existing credentials are valid
-	awsCredentialPath := ridectlHomeDir + "/credentials"
-	if isCredentialValid(awsCredentialPath, roleName) {
-		return awsCredentialPath
-	}
-
-	credentials, err := fetchAccountsCredentials(accessToken, roleName, accountId)
+	credentials, err := fetchRoleCredentials(accessToken, roleName, accountId)
 	if err != nil {
 		pterm.Error.Printf("error fetching account credentials: %v", err)
 		os.Exit(1)
