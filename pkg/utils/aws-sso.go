@@ -63,7 +63,7 @@ func openBrowser(url string) {
 	}
 }
 
-func getSSOCachedLogin(awsSSOCachePath string) (string, error) {
+func getSSOCachedAccessToken(awsSSOCachePath string) (string, error) {
 	cacheFileName := awsSSOCachePath + "/" + ClientName + ".json"
 
 	cache, err := loadSSOCache(cacheFileName)
@@ -103,22 +103,18 @@ func isCredentialValid(awsCredentialPath, roleName string) bool {
 
 func LoadAWSAccountInfo(ridectlConfigFile string) (string, string) {
 
-	startUrl, accountId := "", ""
 	cfg, err := ini.LooseLoad(ridectlConfigFile)
 
 	if err == nil {
 		// Read profile section named as aws
 		section := cfg.Section("aws")
-		startUrlValue, err := section.GetKey("aws_start_url")
-		if err == nil {
-			startUrl = startUrlValue.String()
-		}
-		accountIdValue, err := section.GetKey("aws_account_id")
-		if err == nil {
-			accountId = accountIdValue.String()
+		if section.HasKey("start_url") && section.HasKey("account_id") {
+			startUrl, _ := section.GetKey("start_url")
+			accountId, _ := section.GetKey("account_id")
+			return startUrl.String(), accountId.String()
 		}
 	}
-	return startUrl, accountId
+	return "", ""
 }
 
 func UpdateAWSAccountInfo(ridectlConfigFile, startUrl, accountId string) error {
@@ -248,7 +244,7 @@ func RetriveAWSSSOCredsPath(ridectlHomeDir, startUrl, accountId, roleName string
 	// Unset AWS_PROFILE env var if set.
 	_ = os.Setenv("AWS_PROFILE", "")
 
-	accessToken, err := getSSOCachedLogin(ridectlHomeDir)
+	accessToken, err := getSSOCachedAccessToken(ridectlHomeDir)
 	if err != nil {
 		pterm.Warning.Printf("%v, renewing access token.\n", err)
 		accessToken, err = renewAccessToken(startUrl, ridectlHomeDir)

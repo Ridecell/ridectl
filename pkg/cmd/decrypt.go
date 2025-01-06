@@ -64,7 +64,7 @@ var decryptCmd = &cobra.Command{
 	},
 	RunE: func(_ *cobra.Command, fileNames []string) error {
 
-		cfg, err := createAWSConfig("kms-grants", "us-west-1")
+		cfg, err := getAWSConfig("kms-grants", "us-west-1")
 		if err != nil {
 			return errors.Wrapf(err, "error creating AWS session")
 		}

@@ -73,7 +73,7 @@ var encryptCmd = &cobra.Command{
 		}
 		pterm.Info.Println("Encrypting using key: " + keyId)
 
-		cfg, err := createAWSConfig("kms-grants", "us-west-1")
+		cfg, err := getAWSConfig("kms-grants", "us-west-1")
 		if err != nil {
 			return errors.Wrapf(err, "error creating AWS session")
 		}

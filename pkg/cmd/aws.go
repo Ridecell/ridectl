@@ -28,7 +28,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func createAWSConfig(roleName, region string) (aws.Config, error) {
+func getAWSConfig(roleName, region string) (aws.Config, error) {
 	var cfg aws.Config
 
 	// If no-aws-sso flag is provided, do not use AWS SSO creds, instead load default configuration.

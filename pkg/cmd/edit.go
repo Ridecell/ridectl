@@ -151,7 +151,7 @@ var editCmd = &cobra.Command{
 			return errors.Wrap(err, "error decoding input YAML")
 		}
 
-		cfg, err := createAWSConfig("kms-grants", "us-west-1")
+		cfg, err := getAWSConfig("kms-grants", "us-west-1")
 		if err != nil {
 			return errors.Wrapf(err, "error creating AWS session")
 		}

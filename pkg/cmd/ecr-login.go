@@ -54,12 +54,12 @@ var ecrLoginCmd = &cobra.Command{
 	RunE: func(_ *cobra.Command, fileNames []string) error {
 
 		// Use "ecr-login" SSO role for retrieving ECR credentials
-		cfg, err := createAWSConfig("ecr-login", "us-west-2")
+		cfg, err := getAWSConfig("ecr-login", "us-west-2")
 		if err != nil {
 			return errors.Wrapf(err, "error creating AWS session")
 		}
 
-		// Create an Amazon KMS service client
+		// Create an Amazon ECR service client
 		ecrService := ecr.NewFromConfig(cfg)
 		output, err := ecrService.GetAuthorizationToken(context.TODO(), &ecr.GetAuthorizationTokenInput{})
 		if err != nil {
