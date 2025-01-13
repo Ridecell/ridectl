@@ -127,8 +127,8 @@ func UpdateAWSAccountInfo(ridectlConfigFile, startUrl, accountId string) error {
 	section := cfg.Section("aws")
 
 	// Update the keys
-	section.Key("aws_start_url").SetValue(startUrl)
-	section.Key("aws_account_id").SetValue(accountId)
+	section.Key("start_url").SetValue(startUrl)
+	section.Key("account_id").SetValue(accountId)
 
 	// Save the updated configuration back to the file
 	return cfg.SaveTo(ridectlConfigFile)
