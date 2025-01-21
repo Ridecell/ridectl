@@ -18,14 +18,12 @@ package cmd
 
 import (
 	"bytes"
-	"context"
 	"crypto/rand"
 	"encoding/base64"
 	"encoding/gob"
 	"os"
 
 	"github.com/Ridecell/ridectl/pkg/cmd/edit"
-	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/kms"
 	"github.com/pkg/errors"
 	"github.com/pterm/pterm"
@@ -75,8 +73,7 @@ var encryptCmd = &cobra.Command{
 		}
 		pterm.Info.Println("Encrypting using key: " + keyId)
 
-		// Load the Shared AWS Configuration (~/.aws/config)
-		cfg, err := config.LoadDefaultConfig(context.TODO(), config.WithRegion("us-west-1"))
+		cfg, err := getAWSConfig("kms-grants", "us-west-1")
 		if err != nil {
 			return errors.Wrapf(err, "error creating AWS session")
 		}

@@ -37,7 +37,7 @@ func GetKubeconfig(kubeconfigFlag string) *string {
 
 	// Look for the environoment veriable named KUBECONFIG
 	// Note: KUBECONFIG stores the array of paths, separated by the delimiter ':'.
-	// 		 As single path to the kubeconfig is expected by the library, hence using the last entry in the array.	
+	// 		 As single path to the kubeconfig is expected by the library, hence using the last entry in the array.
 	if kubeconfigEnv := os.Getenv("KUBECONFIG"); kubeconfigEnv != "" {
 		paths := strings.Split(kubeconfigEnv, ":")
 		lastPath := paths[len(paths)-1]
@@ -180,4 +180,12 @@ func GetAnnouncementMessage() string {
 	}
 	defer resp.Body.Close()
 	return ""
+}
+
+func CreateDirIfNotPresent(dirPath string) {
+	err := os.MkdirAll(dirPath, os.ModePerm)
+	if err != nil {
+		pterm.Error.Printf("error creating %s directory: %v", dirPath, err)
+		os.Exit(1)
+	}
 }

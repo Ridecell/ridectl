@@ -83,7 +83,7 @@ var postgresdumpCMD = &cobra.Command{
 			}
 		}
 		if postgresUser.Name == "" {
-			return fmt.Errorf("No Postgres users of type owner found in namespace: %s", target.Namespace)
+			return fmt.Errorf("no Postgres users of type owner found in namespace: %s", target.Namespace)
 		}
 
 		var instanceName string

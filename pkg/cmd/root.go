@@ -41,10 +41,13 @@ import (
 )
 
 var (
-	kubeconfigFlag string
-	versionFlag    bool
-	version        string
-	inCluster      bool
+	kubeconfigFlag    string
+	versionFlag       bool
+	version           string
+	inCluster         bool
+	noAWSSSO          bool
+	ridectlHomeDir    string
+	ridectlConfigFile string
 )
 var rootCmd = &cobra.Command{
 	Use:           "ridectl",
@@ -55,7 +58,7 @@ var rootCmd = &cobra.Command{
 			pterm.Success.Printf("ridectl version %s\n", version)
 		} else if len(args) == 0 {
 
-			return fmt.Errorf("No command specified.")
+			return fmt.Errorf("no command specified")
 		}
 		return nil
 	},
@@ -70,6 +73,7 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&kubeconfigFlag, "kubeconfig", "", "(optional) absolute path to the kubeconfig file")
 	rootCmd.Flags().BoolVar(&versionFlag, "version", false, "--version")
 	rootCmd.PersistentFlags().BoolVar(&inCluster, "incluster", false, "(optional) use in cluster kube config")
+	rootCmd.PersistentFlags().BoolVar(&noAWSSSO, "no-aws-sso", false, "(optional) do not use AWS SSO for AWS authentication; use shared default configuration instead.")
 
 	// Display announcement banner if present
 	displayAnnouncementBanner()
@@ -92,6 +96,16 @@ func init() {
 	_ = secretsv1beta2.AddToScheme(scheme.Scheme)
 	_ = hackapis.AddToScheme(scheme.Scheme)
 	_ = dbv1beta2.AddToScheme(scheme.Scheme)
+
+	// Create ~/.ridectl directory for aws sso cache
+	userHomeDir, err := os.UserHomeDir()
+	if err != nil {
+		pterm.Error.Printf("error getting user home directory: %v", err)
+		os.Exit(1)
+	}
+	ridectlHomeDir = userHomeDir + "/.ridectl"
+	utils.CreateDirIfNotPresent(ridectlHomeDir)
+	ridectlConfigFile = ridectlHomeDir + "/ridectl.cfg"
 }
 
 func Execute() {
