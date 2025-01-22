@@ -18,6 +18,7 @@ package cmd
 
 import (
 	"context"
+	"os"
 	"regexp"
 	"strings"
 
@@ -31,8 +32,10 @@ import (
 func getAWSConfig(roleName, region string) (aws.Config, error) {
 	var cfg aws.Config
 
-	// If no-aws-sso flag is provided, do not use AWS SSO creds, instead load default configuration.
-	if noAWSSSO {
+	// If RIDECTL_SKIP_AWS_SSO env var is set to true, do not use AWS SSO creds, instead load default configuration.
+	noAWSSSO := os.Getenv("RIDECTL_SKIP_AWS_SSO")
+
+	if noAWSSSO == "true" {
 		// Load the Shared AWS Configuration (~/.aws/config)
 		cfg, err := config.LoadDefaultConfig(context.TODO(), config.WithRegion(region))
 		if err != nil {
