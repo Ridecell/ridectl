@@ -48,6 +48,7 @@ func getAWSConfig(roleName, region string) (aws.Config, error) {
 	startUrl, accountId := utils.LoadAWSAccountInfo(ridectlConfigFile)
 	if startUrl == "" || accountId == "" {
 		updateAWSAccountInfo = true
+		pterm.Info.Println("If you don't know what to do, refer FAQs: https://docs.google.com/document/d/1v6lbH4NgN6rHBHpELWrcQ4CyqwVeSgeP/preview")
 
 		prompt := promptui.Prompt{
 			Label:    "Enter AWS SSO Start url",
