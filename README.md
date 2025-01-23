@@ -54,7 +54,7 @@ For a full list of functionalities, run `ridectl --help`
 
 ## Installing `ridectl`
 
-# Mac-os
+### Mac-os
 ```
 curl -L "https://github.com/Ridecell/ridectl/releases/latest/download/ridectl_macos.zip" -o ./ridectl_macos.zip
 unzip ridectl_macos.zip
@@ -62,10 +62,21 @@ chmod 0755 ridectl
 sudo cp ridectl /usr/local/bin/ridectl
 ```
 **Note:** When running `ridectl` for first time, Mac OS will not allow the binary to execute. So, to solve this issue, navigate to `System Prefrences` > `Security & Privacy` and in `General` section, allow `ridectl` to open.
-# Linux
+### Linux
 ```
 curl -L "https://github.com/Ridecell/ridectl/releases/latest/download/ridectl_linux.zip" -o ./ridectl_linux.zip
 unzip ridectl_linux.zip
 chmod 0755 ridectl
 sudo cp ridectl /usr/local/bin/ridectl
 ```
+
+## Environment variables
+
+List of environment variables used by `ridectl`:
+
+| Environment variable | Value | Description |
+| -------------------- | ------------- | ---------------- |
+| `RIDECTL_SKIP_UPGRADE` | `true\|false` | If set `true`, skips auto-upgrade of ridectl version; used in Github actions workflows |
+| `RIDECTL_SKIP_AWS_SSO` | `true\|false` | If set `true`, ridectl uses default AWS configuration instead of AWS SSO; used in Github actions workflows |
+| `EDITOR` | `vim`, `code`, etc | Sets editor's binary path for `ridectl edit` command |
+| `RIDECTL_TSH_CHECK` | `true\|false` | If set `false`, ridectl does not check for tsh login profile; used in Github actions workflows |
