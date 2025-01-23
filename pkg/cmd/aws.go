@@ -27,6 +27,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/manifoldco/promptui"
 	"github.com/pkg/errors"
+	"github.com/pterm/pterm"
 )
 
 func getAWSConfig(roleName, region string) (aws.Config, error) {
