@@ -45,7 +45,6 @@ var (
 	versionFlag       bool
 	version           string
 	inCluster         bool
-	noAWSSSO          bool
 	ridectlHomeDir    string
 	ridectlConfigFile string
 )
@@ -73,7 +72,6 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&kubeconfigFlag, "kubeconfig", "", "(optional) absolute path to the kubeconfig file")
 	rootCmd.Flags().BoolVar(&versionFlag, "version", false, "--version")
 	rootCmd.PersistentFlags().BoolVar(&inCluster, "incluster", false, "(optional) use in cluster kube config")
-	rootCmd.PersistentFlags().BoolVar(&noAWSSSO, "no-aws-sso", false, "(optional) do not use AWS SSO for AWS authentication; use shared default configuration instead.")
 
 	// Display announcement banner if present
 	displayAnnouncementBanner()

@@ -18,6 +18,7 @@ package cmd
 
 import (
 	"context"
+	"os"
 	"regexp"
 	"strings"
 
@@ -26,13 +27,16 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/manifoldco/promptui"
 	"github.com/pkg/errors"
+	"github.com/pterm/pterm"
 )
 
 func getAWSConfig(roleName, region string) (aws.Config, error) {
 	var cfg aws.Config
 
-	// If no-aws-sso flag is provided, do not use AWS SSO creds, instead load default configuration.
-	if noAWSSSO {
+	// If RIDECTL_SKIP_AWS_SSO env var is set to true, do not use AWS SSO creds, instead load default configuration.
+	noAWSSSO := os.Getenv("RIDECTL_SKIP_AWS_SSO")
+
+	if noAWSSSO == "true" {
 		// Load the Shared AWS Configuration (~/.aws/config)
 		cfg, err := config.LoadDefaultConfig(context.TODO(), config.WithRegion(region))
 		if err != nil {
@@ -45,6 +49,7 @@ func getAWSConfig(roleName, region string) (aws.Config, error) {
 	startUrl, accountId := utils.LoadAWSAccountInfo(ridectlConfigFile)
 	if startUrl == "" || accountId == "" {
 		updateAWSAccountInfo = true
+		pterm.Info.Println("If you don't know what to do, refer FAQs: https://docs.google.com/document/d/1v6lbH4NgN6rHBHpELWrcQ4CyqwVeSgeP/preview")
 
 		prompt := promptui.Prompt{
 			Label:    "Enter AWS SSO Start url",
