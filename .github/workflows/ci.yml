@@ -37,10 +37,6 @@ jobs:
           go-version-file: go.mod
       - name: build
         run: |
-          env
-          echo "-----"
-          echo $GITHUB_ACTIONS
-          echo "-----"
           make build_macos build_linux
       - name: Release
         if: startsWith(github.ref, 'refs/tags/')

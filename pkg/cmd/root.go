@@ -76,6 +76,13 @@ func init() {
 	// Display announcement banner if present
 	displayAnnouncementBanner()
 
+	// Check if ridectl is running on Github actions runner
+	if os.Getenv("GITHUB_ACTIONS") == "true" {
+		// Set environment variables for Github actions runner
+		os.Setenv("RIDECTL_SKIP_AWS_SSO", "true")
+		os.Setenv("RIDECTL_TSH_CHECK", "false")
+	}
+
 	// check version and update if not latest
 	if !isLatestVersion() {
 		skipUpgrade := os.Getenv("RIDECTL_SKIP_UPGRADE")
