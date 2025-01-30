@@ -18,10 +18,10 @@ package cmd
 
 import (
 	"context"
-	"encoding/json"
-	"os"
+	"encoding/base64"
+	"strings"
 
-	utils "github.com/Ridecell/ridectl/pkg/utils"
+	"github.com/Ridecell/ridectl/pkg/exec"
 	"github.com/aws/aws-sdk-go-v2/service/ecr"
 	"github.com/pterm/pterm"
 
@@ -66,41 +66,15 @@ var ecrLoginCmd = &cobra.Command{
 			return errors.Wrapf(err, "error creating ECR auth token")
 		}
 
-		// Create docker creds using ECR Auth token output
-		ecrAuth := map[string]string{
-			"auth": *output.AuthorizationData[0].AuthorizationToken,
-		}
-
-		// Load existing ~/.docker/config.json file if exists, create if not present.
-		userHomeDir, err := os.UserHomeDir()
+		// Decode Auth Token and extract ECR auth password
+		decodedToken, err := base64.StdEncoding.DecodeString(*output.AuthorizationData[0].AuthorizationToken)
 		if err != nil {
-			pterm.Error.Printf("error getting user home directory: %v", err)
-			os.Exit(1)
+			return errors.Wrapf(err, "error decoding ECR auth token")
 		}
-		dockerDir := userHomeDir + "/.docker"
-		utils.CreateDirIfNotPresent(dockerDir)
+		ecrAuth := strings.TrimPrefix(string(decodedToken), "AWS:")
 
-		// Load existing ~/.docker/config.json file if exists
-		dockerConfig := map[string]interface{}{}
-		configData, _ := os.ReadFile(dockerDir + "/config.json")
-		if configData != nil {
-			_ = json.Unmarshal(configData, &dockerConfig)
-		}
-
-		// Add/Update docker creds
-		if _, ok := dockerConfig["auths"]; ok {
-			dockerConfig["auths"].(map[string]interface{})[*output.AuthorizationData[0].ProxyEndpoint] = ecrAuth
-		} else {
-			dockerConfig["auths"] = map[string]interface{}{
-				*output.AuthorizationData[0].ProxyEndpoint: ecrAuth,
-			}
-		}
-
-		byteValue, err := json.MarshalIndent(dockerConfig, "", "  ")
-		if err != nil {
-			return err
-		}
-		err = os.WriteFile(dockerDir+"/config.json", byteValue, 0600)
+		dockerArgs := []string{"login", "--username", "AWS", *output.AuthorizationData[0].ProxyEndpoint, "--password", ecrAuth}
+		err = exec.ExecuteCommand("docker", dockerArgs, false)
 		if err == nil {
 			pterm.Success.Println("ECR login successful. NOTE: These credentials are only valid for 12 hours.")
 		}
