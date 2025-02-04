@@ -77,7 +77,7 @@ func getAWSConfig(roleName, region string) (aws.Config, error) {
 	cfg, err := config.LoadDefaultConfig(context.TODO(),
 		config.WithSharedCredentialsFiles([]string{credentialsPath}),
 		config.WithSharedConfigProfile(roleName),
-		config.WithDefaultRegion(region))
+		config.WithRegion(region))
 	if err != nil {
 		err = errors.Wrapf(err, "error retrieving AWS SSO credentials")
 	}
