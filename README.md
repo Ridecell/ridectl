@@ -80,3 +80,4 @@ List of environment variables used by `ridectl`:
 | `RIDECTL_SKIP_AWS_SSO` | `true\|false` | If set `true`, ridectl uses default AWS configuration instead of AWS SSO; used in Github actions workflows |
 | `EDITOR` | `vim`, `code`, etc | Sets editor's binary path for `ridectl edit` command |
 | `RIDECTL_TSH_CHECK` | `true\|false` | If set `false`, ridectl does not check for tsh login profile; used in Github actions workflows |
+
