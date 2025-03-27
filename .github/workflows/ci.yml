@@ -6,8 +6,6 @@ jobs:
   lint:
     name: Lint
     runs-on: ubuntu-20.04
-    env:
-      TOKEN: ${{ secrets.USER_GITHUB_TOKEN }}
     steps:
       - uses: actions/checkout@v4
       - name: Setup go
