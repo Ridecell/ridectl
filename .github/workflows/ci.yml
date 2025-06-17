@@ -5,7 +5,7 @@ on:
 jobs:
   lint:
     name: Lint
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     env:
       TOKEN: ${{ secrets.RIDECELL_PUBLIC_REPO_TOKEN }}
     steps:
@@ -25,7 +25,7 @@ jobs:
 
   build:
     name: Build
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     needs: lint
     env:
       TOKEN: ${{ secrets.RIDECELL_PUBLIC_REPO_TOKEN }}
