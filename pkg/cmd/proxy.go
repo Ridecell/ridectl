@@ -1,5 +1,5 @@
 /*
-Copyright 2021 Ridecell, Inc.
+Copyright 2025 Ridecell, Inc.
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -24,17 +24,17 @@ import (
 )
 
 func init() {
-	rootCmd.AddCommand(dbProxyCmd)
+	rootCmd.AddCommand(proxyCmd)
 }
 
-var dbProxyCmd = &cobra.Command{
-	Use:   "dbproxy <app_database_name>",
-	Short: "Creates a proxy to IBM application's database instance to access it localy.",
+var proxyCmd = &cobra.Command{
+	Use:   "proxy <teleport_app_name>",
+	Short: "Creates a proxy to Teleport's TCP application to access it localy.",
 	Long: "Example:\n" +
-		"ridectl dbproxy <app_database_name>               -- e.g. ridectl dbproxy data-lab-superset-db\n",
+		"ridectl proxy <teleport_app_name>               -- e.g. ridectl proxy data-lab-superset-db\n",
 	Args: func(_ *cobra.Command, args []string) error {
 		if len(args) == 0 {
-			return fmt.Errorf("application database name argument is required")
+			return fmt.Errorf("teleport application name argument is required")
 		}
 		if len(args) > 1 {
 			return fmt.Errorf("too many arguments")
@@ -51,9 +51,9 @@ var dbProxyCmd = &cobra.Command{
 		appLoginArgs := []string{"apps", "login", args[0]}
 		err := exec.ExecuteCommand("tsh", appLoginArgs, false)
 		if err != nil {
-			return fmt.Errorf("could not login to database app, %s", err)
+			return fmt.Errorf("could not login to teleport app, %s", err)
 		}
-		pterm.Info.Println("Starting proxy to database")
+		pterm.Info.Println("Starting proxy to application")
 		appProxyCmd := []string{"proxy", "app", args[0]}
 		return exec.ExecuteCommand("tsh", appProxyCmd, true)
 	},
