@@ -47,14 +47,18 @@ var proxyCmd = &cobra.Command{
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
 
-		pterm.Info.Println("Logging into app")
-		appLoginArgs := []string{"apps", "login", args[0]}
-		err := exec.ExecuteCommand("tsh", appLoginArgs, false)
+		pterm.Info.Println("Checking teleport application")
+		err := exec.ExecuteShellCommand("tsh apps ls app_name="+args[0]+" | grep ridectl || exit 1", false)
 		if err != nil {
-			return fmt.Errorf("could not login to teleport app, %s", err)
+			return fmt.Errorf("the teleport application deos not present or you do not have access to it, %s", err)
+		}
+
+		pterm.Info.Println("Logging into application")
+		err = exec.ExecuteShellCommand("tsh apps login "+args[0], false)
+		if err != nil {
+			return fmt.Errorf("could not login to teleport application, %s", err)
 		}
 		pterm.Info.Println("Starting proxy to application")
-		appProxyCmd := []string{"proxy", "app", args[0]}
-		return exec.ExecuteCommand("tsh", appProxyCmd, true)
+		return exec.ExecuteShellCommand("tsh proxy app "+args[0], true)
 	},
 }
