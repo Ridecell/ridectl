@@ -50,7 +50,7 @@ var proxyCmd = &cobra.Command{
 		pterm.Info.Println("Checking teleport application")
 		err := exec.ExecuteShellCommand("tsh apps ls app_name="+args[0]+" | grep ridectl || exit 1", false)
 		if err != nil {
-			return fmt.Errorf("the teleport application deos not present or you do not have access to it, %s", err)
+			return fmt.Errorf("the teleport application does not present or you do not have access to it, %s", err)
 		}
 
 		pterm.Info.Println("Logging into application")
