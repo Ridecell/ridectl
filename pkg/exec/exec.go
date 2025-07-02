@@ -107,6 +107,40 @@ func CheckBinary(binary string) (string, bool) {
 	return binaryPath, err == nil
 }
 
+// ExecuteShellCommand uses os/exec Command function to execute shell command,
+// which returns the process output/error to parent process,
+// If detachProcess flag set to true, then ridectl will exit with
+// no error irrespective of given command's exit code.
+func ExecuteShellCommand(cmd string, detachProcess bool) error {
+
+	c := exec.Command("sh", "-c", cmd)
+	c.Stdin = os.Stdin
+
+	// Execute a process by seperating it's Stderr and Stdout streams from ridectl code
+	// Here we will just execute the command, and complete ridectl command with no error
+	// Mainly used by "kubectl exec" and "psql" commands
+	if detachProcess {
+		c.Stdout = os.Stdout
+		c.Stderr = os.Stderr
+		_ = c.Run()
+		return nil
+	}
+
+	// Here we will capture Stderr from given command output
+	// Mainly used by "tsh status" and "tsh db login" commands
+	var stderr bytes.Buffer
+	c.Stderr = &stderr
+	err := c.Run()
+	if err != nil {
+		if stderr.String() != "" {
+
+			return fmt.Errorf("%s", stderr.String())
+		}
+		return fmt.Errorf("error while executing command: %s", err.Error())
+	}
+	return nil
+}
+
 // ExecuteCommand uses os/exec Command fucntion to execute command,
 // which returns the process output/error to parent process,
 // If detachProcess flag set to true, then ridectl will exit with
@@ -137,10 +171,9 @@ func ExecuteCommand(binary string, args []string, detachProcess bool) error {
 	err = c.Run()
 	if err != nil {
 		if stderr.String() != "" {
-			
 			return fmt.Errorf("%s", stderr.String())
 		}
-		return fmt.Errorf("Error while executing command: %s", err.Error())
+		return fmt.Errorf("error while executing command: %s", err.Error())
 	}
 	return nil
 }
