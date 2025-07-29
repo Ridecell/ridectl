@@ -48,7 +48,7 @@ var proxyCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 
 		pterm.Info.Println("Checking teleport application")
-		err := exec.ExecuteShellCommand("tsh apps ls app_name="+args[0]+" | grep ridectl || exit 1", false)
+		err := exec.ExecuteShellCommand("tsh apps ls app_name="+args[0]+" --format=json | grep ridectl || exit 1", false)
 		if err != nil {
 			return fmt.Errorf("the teleport application with ridectl label does not exists or you do not have access to it, %s", err)
 		}
