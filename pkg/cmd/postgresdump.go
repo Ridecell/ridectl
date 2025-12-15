@@ -39,7 +39,8 @@ func init() {
 }
 
 var postgresdumpCMD = &cobra.Command{
-	Use:   "postgresdump [flags] <microservice_or_tenant_name> <backup_name>",
+	Use: "postgresdump [flags] <microservice_or_tenant_name> <backup_name>\n." +
+		"In case of tenant based SVCs, use <tenant_name-svc_name>. E.g. ridectl postgresdump starflightbeam-prod-intelligence",
 	Short: "Take postgres DB dump",
 	Long:  `Take postgres DB dump, encrypt backup file and push it to s3 bucket`,
 	Args: func(_ *cobra.Command, args []string) error {
