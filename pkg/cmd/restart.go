@@ -160,10 +160,11 @@ var rollingRestartCmd = &cobra.Command{
 			var deploymentName string
 			podLabels := make(map[string]string)
 
-			if target.Type == "summon" {
+			switch target.Type {
+			case "summon":
 				podLabels["app.kubernetes.io/instance"] = fmt.Sprintf("%s-%s", target.Name, component)
 				deploymentName = fmt.Sprintf("%s-%s", target.Name, component)
-			} else if target.Type == "microservice" {
+			case "microservice":
 				podLabels["app"] = fmt.Sprintf("%s-svc-%s", target.Env, target.Namespace)
 				podLabels["environment"] = target.Env
 				podLabels["region"] = target.Region

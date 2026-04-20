@@ -178,7 +178,7 @@ func GetAnnouncementMessage() string {
 			return string(content)
 		}
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	return ""
 }
 

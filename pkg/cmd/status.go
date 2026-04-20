@@ -44,7 +44,8 @@ func getData(objType string, context string, namespace string, tenant string) (s
 	var data []byte
 	var err error
 
-	if objType == "summon" {
+	switch objType {
+	case "summon":
 		summonData, err := TempFS.ReadFile("templates/show_summon.tpl")
 		if err != nil {
 			return "", errors.Wrap(err, "error reading show_summon.tpl")
@@ -54,7 +55,7 @@ func getData(objType string, context string, namespace string, tenant string) (s
 		if err != nil {
 			return "", errors.Wrap(err, "error getting summon platform info")
 		}
-	} else if objType == "deployment" {
+	case "deployment":
 		deploymentData, err := TempFS.ReadFile("templates/show_deployments.tpl")
 		if err != nil {
 			return "", errors.Wrap(err, "error reading show_deployments.tpl")
@@ -64,7 +65,7 @@ func getData(objType string, context string, namespace string, tenant string) (s
 		if err != nil {
 			return "", errors.Wrap(err, "error getting deployment info")
 		}
-	} else {
+	default:
 		objectData, err := TempFS.ReadFile("templates/show_postgresdump.tpl")
 		if err != nil {
 			return "", errors.Wrap(err, "error reading show_postgresdump.tpl")

@@ -141,7 +141,7 @@ var editCmd = &cobra.Command{
 				return errors.Wrapf(err, "error reading input file %s", filename)
 			}
 		} else {
-			defer inFile.Close()
+			defer func() { _ = inFile.Close() }()
 			inStream = inFile
 		}
 
@@ -194,7 +194,7 @@ var editCmd = &cobra.Command{
 		if err != nil {
 			return errors.Wrapf(err, "error opening %s for writing", filename)
 		}
-		defer outFile.Close()
+		defer func() { _ = outFile.Close() }()
 		_ = afterManifest.Serialize(outFile)
 		return nil
 	},
@@ -253,8 +253,8 @@ func editObjects(manifest edit.Manifest, comment string) (edit.Manifest, error) 
 		if err != nil {
 			return nil, errors.Wrap(err, "error making tempfile")
 		}
-		defer tmpfile.Close()
-		defer os.Remove(tmpfile.Name())
+		defer func() { _ = tmpfile.Close() }()
+		defer func() { _ = os.Remove(tmpfile.Name()) }()
 		_, _ = editorReader.WriteTo(tmpfile)
 		_ = tmpfile.Sync()
 
@@ -269,7 +269,7 @@ func editObjects(manifest edit.Manifest, comment string) (edit.Manifest, error) 
 		if err != nil {
 			return nil, errors.Wrapf(err, "error re-opening tempfile %s", tmpfile.Name())
 		}
-		defer afterTmpfile.Close()
+		defer func() { _ = afterTmpfile.Close() }()
 		afterBuf := bytes.Buffer{}
 		_, err = afterBuf.ReadFrom(afterTmpfile)
 		if err != nil {

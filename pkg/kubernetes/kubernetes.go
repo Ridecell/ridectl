@@ -121,7 +121,8 @@ func fetchContextForObject(channel chan Kubeobject, clusterName string, cluster 
 	defer wg.Done()
 
 	var objectName string
-	if subject.Type == "summon" {
+	switch subject.Type {
+	case "summon":
 		summonObj := &summonv1beta2.SummonPlatform{}
 		pterm.Info.Printf("Checking instance in %s\n", clusterName)
 		err := crclient.Get(context.TODO(), types.NamespacedName{Name: subject.Name, Namespace: subject.Namespace}, summonObj)
@@ -135,7 +136,7 @@ func fetchContextForObject(channel chan Kubeobject, clusterName string, cluster 
 			return
 		}
 
-	} else if subject.Type == "microservice" {
+	case "microservice":
 		objectName = fmt.Sprintf("%s-svc-%s-web", subject.Env, subject.Namespace)
 
 		deploymentObj := &appsv1.Deployment{}
@@ -152,7 +153,7 @@ func fetchContextForObject(channel chan Kubeobject, clusterName string, cluster 
 		} else {
 			return
 		}
-	} else if subject.Type == "job" {
+	case "job":
 		jobObj := &batchv1.Job{}
 
 		pterm.Info.Printf(" Checking job in %s\n", cluster.Cluster)
@@ -248,7 +249,7 @@ func ParseSubject(instanceName string) (Subject, error) {
 		return subject, nil
 	}
 	// Nothing matched, return empty with error
-	return subject, fmt.Errorf("could not parse out information from %s.", instanceName)
+	return subject, fmt.Errorf("could not parse out information from %s", instanceName)
 }
 
 // Return true only if given Environment is present in target cluster
