@@ -59,7 +59,7 @@ func InstallOrUpgradeTsh() error {
 	if err != nil {
 		return errors.Wrapf(err, "Error opening tsh")
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	hash := md5.New()
 	_, err = io.Copy(hash, f)

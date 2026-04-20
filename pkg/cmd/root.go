@@ -79,8 +79,8 @@ func init() {
 	// Check if ridectl is running on Github actions runner
 	if os.Getenv("GITHUB_ACTIONS") == "true" {
 		// Set environment variables for Github actions runner
-		os.Setenv("RIDECTL_SKIP_AWS_SSO", "true")
-		os.Setenv("RIDECTL_TSH_CHECK", "false")
+		_ = os.Setenv("RIDECTL_SKIP_AWS_SSO", "true")
+		_ = os.Setenv("RIDECTL_TSH_CHECK", "false")
 	}
 
 	// check version and update if not latest
@@ -129,7 +129,7 @@ func isLatestVersion() bool {
 	}
 
 	body, _ := io.ReadAll(resp.Body)
-	resp.Body.Close()
+	_ = resp.Body.Close()
 
 	if resp.StatusCode == 403 {
 		pterm.Warning.Printf("Unable to check latest version (version check API unavailable). Continuing.\n")
@@ -177,7 +177,7 @@ func selfUpdate() {
 	if err != nil {
 		log.Fatalln(err)
 	}
-	defer res.Body.Close()
+	defer func() { _ = res.Body.Close() }()
 	p.Increment()
 
 	p.Title = "Extracting"
