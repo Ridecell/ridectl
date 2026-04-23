@@ -62,3 +62,4 @@ var proxyCmd = &cobra.Command{
 		return exec.ExecuteShellCommand("tsh proxy app "+args[0], true)
 	},
 }
+
