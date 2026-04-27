@@ -31,7 +31,7 @@ var proxyCmd = &cobra.Command{
 	Use:   "proxy <teleport_app_name>",
 	Short: "Creates a proxy to Teleport's TCP application to access it localy.",
 	Long: "Example:\n" +
-		"ridectl proxy <teleport_app_name>               -- e.g. ridectl proxy data-lab-superset-db\n",
+		"ridectl proxy <teleport_app_name>      -- e.g. ridectl proxy data-lab-superset-db. To find list of supported teleport app run 'tsh apps ls | grep ridectl'",
 	Args: func(_ *cobra.Command, args []string) error {
 		if len(args) == 0 {
 			return fmt.Errorf("teleport application name argument is required")
@@ -62,4 +62,3 @@ var proxyCmd = &cobra.Command{
 		return exec.ExecuteShellCommand("tsh proxy app "+args[0], true)
 	},
 }
-
