@@ -25,7 +25,7 @@ jobs:
 
   build:
     name: Build
-    runs-on: ubuntu-24.04
+    runs-on: macos-latest
     needs: lint
     env:
       TOKEN: ${{ secrets.RIDECELL_PUBLIC_REPO_TOKEN }}
