@@ -35,6 +35,11 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
+
+      - name: Setup gitconfig for private go modules
+        run: |
+          git config --global url."https://${TOKEN}:x-oauth-basic@github.com/Ridecell".insteadOf "https://github.com/Ridecell"
+          
       - name: build
         run: |
           make build_macos build_linux
