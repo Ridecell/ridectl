@@ -24,7 +24,7 @@ then
   wget https://get.gravitational.com/teleport-v$TSH_VERSION-darwin-arm64-bin.tar.gz
   tar -xf teleport-v$TSH_VERSION-darwin-arm64-bin.tar.gz
   cp teleport/tsh.app/Contents/MacOS/tsh pkg/exec/bin/
-  GOOS=darwin GOARCH=amd64 go build -o bin/ridectl.macos -ldflags "-X github.com/Ridecell/ridectl/pkg/exec.tshMD5=$(md5sum teleport/tsh | awk '{ print $1 }'| tr -d '\n') -X github.com/Ridecell/ridectl/pkg/cmd.version=$(git describe --tags)" -tags release github.com/Ridecell/ridectl/cmd/ridectl
+  GOOS=darwin GOARCH=amd64 go build -o bin/ridectl.macos -ldflags "-X github.com/Ridecell/ridectl/pkg/exec.tshMD5=$(md5sum teleport/tsh.app/Contents/MacOS/tsh | awk '{ print $1 }'| tr -d '\n') -X github.com/Ridecell/ridectl/pkg/cmd.version=$(git describe --tags)" -tags release github.com/Ridecell/ridectl/cmd/ridectl
 elif [[ "$OS" == "linux" ]]
 then
   wget https://get.gravitational.com/teleport-v$TSH_VERSION-linux-amd64-bin.tar.gz
