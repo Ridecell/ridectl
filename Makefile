@@ -16,7 +16,7 @@ TSH_VERSION = 18.7.2
 
 # Build command binary, for macOS
 build_macos:
-	./build_ridectl.sh macos $(TSHOVERSION)
+	./build_ridectl.sh macos $(TSH_VERSION)
 
 # Build command binary, for Linux
 build_linux:
