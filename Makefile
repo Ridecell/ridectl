@@ -12,11 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-TSH_VERSION = 17.7.20
+TSH_VERSION = 18.7.2
 
 # Build command binary, for macOS
 build_macos:
-	./build_ridectl.sh macos $(TSH_VERSION)
+	./build_ridectl.sh macos $(TSHOVERSION)
 
 # Build command binary, for Linux
 build_linux:
