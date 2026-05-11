@@ -35,6 +35,8 @@ github.com/Ridecell/summon-operator v0.0.0-20260510182955-c7d90017fdb8 h1:fXDrgg
 github.com/Ridecell/summon-operator v0.0.0-20260510182955-c7d90017fdb8/go.mod h1:XJddtgsHrIL1rPaFW1/sG3modjWmxyKxTuy870S0aRk=
 github.com/Ridecell/summon-operator v0.0.0-20260510183357-5217bfe1340d h1:VbYgYrGZuREgjAcy/eFQv6zDZThY/E20bWSIKzfHf3Y=
 github.com/Ridecell/summon-operator v0.0.0-20260510183357-5217bfe1340d/go.mod h1:5h3mKhWh/U1rspnTecYHQUAk7M2+IjzpNSZJ843kTLw=
+github.com/Ridecell/summon-operator v0.0.0-20260511152833-0c4fa5df474e h1:wR4R7KSiNAV/KjZnJ4FI72gnyeVB5AChxkpt/lCx3ok=
+github.com/Ridecell/summon-operator v0.0.0-20260511152833-0c4fa5df474e/go.mod h1:5h3mKhWh/U1rspnTecYHQUAk7M2+IjzpNSZJ843kTLw=
 github.com/atomicgo/cursor v0.0.1/go.mod h1:cBON2QmmrysudxNBFthvMtN32r3jxVRIvzkUiF/RuIk=
 github.com/aws/aws-sdk-go-v2 v1.41.5 h1:dj5kopbwUsVUVFgO4Fi5BIT3t4WyqIDjGKCangnV/yY=
 github.com/aws/aws-sdk-go-v2 v1.41.5/go.mod h1:mwsPRE8ceUUpiTgF7QmQIJ7lgsKUPQOUl3o72QBrE1o=
