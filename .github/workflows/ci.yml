@@ -50,7 +50,7 @@ jobs:
         run: |
           mv bin/ridectl.macos bin/ridectl && zip -jrm bin/ridectl_macos.zip bin/ridectl
           mv bin/ridectl.linux bin/ridectl && zip -jrm bin/ridectl_linux.zip bin/ridectl
-          go install github.com/tcnksm/ghr@latest
+          go install github.com/tcnksm/ghr@v0.18.2
           ghr -c ${{ github.sha }} ${{ github.ref_name }} bin/
 
   build-linux-arm64:
@@ -80,5 +80,5 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           mv bin/ridectl.linux.arm64 bin/ridectl && zip -jrm bin/ridectl_linux_arm64.zip bin/ridectl
-          go install github.com/tcnksm/ghr@latest
+          go install github.com/tcnksm/ghr@v0.18.2
           ghr -c ${{ github.sha }} ${{ github.ref_name }} bin/
