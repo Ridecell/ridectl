@@ -9,9 +9,9 @@ jobs:
     env:
       TOKEN: ${{ secrets.RIDECELL_PUBLIC_REPO_TOKEN }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Setup go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v7
         with:
           go-version-file: go.mod
       - name: Setup gitconfig fot private go module
@@ -30,9 +30,9 @@ jobs:
     env:
       TOKEN: ${{ secrets.RIDECELL_PUBLIC_REPO_TOKEN }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Setup go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v7
         with:
           go-version-file: go.mod
 
@@ -60,9 +60,9 @@ jobs:
     env:
       TOKEN: ${{ secrets.RIDECELL_PUBLIC_REPO_TOKEN }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Setup go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v7
         with:
           go-version-file: go.mod
 
