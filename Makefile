@@ -21,3 +21,7 @@ build_macos:
 # Build command binary, for Linux
 build_linux:
 	./build_ridectl.sh linux $(TSH_VERSION)
+
+# Build command binary, for Linux arm64
+build_linux_arm64:
+	./build_ridectl.sh linux_arm64 $(TSH_VERSION)
