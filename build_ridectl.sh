@@ -36,6 +36,12 @@ then
   tar -xf teleport-v$TSH_VERSION-linux-amd64-bin.tar.gz
   cp teleport/tsh pkg/exec/bin/
   GOOS=linux GOARCH=amd64 go build -o bin/ridectl.linux -ldflags "-X github.com/Ridecell/ridectl/pkg/exec.tshMD5=$(md5sum teleport/tsh | awk '{ print $1 }'| tr -d '\n') -X github.com/Ridecell/ridectl/pkg/cmd.version=$(git describe --tags)" -tags release github.com/Ridecell/ridectl/cmd/ridectl
+elif [[ "$OS" == "linux_arm64" ]]
+then
+  wget https://get.gravitational.com/teleport-v$TSH_VERSION-linux-arm64-bin.tar.gz
+  tar -xf teleport-v$TSH_VERSION-linux-arm64-bin.tar.gz
+  cp teleport/tsh pkg/exec/bin/
+  GOOS=linux GOARCH=arm64 go build -o bin/ridectl.linux.arm64 -ldflags "-X github.com/Ridecell/ridectl/pkg/exec.tshMD5=$(md5sum teleport/tsh | awk '{ print $1 }'| tr -d '\n') -X github.com/Ridecell/ridectl/pkg/cmd.version=$(git describe --tags)" -tags release github.com/Ridecell/ridectl/cmd/ridectl
 else
   echo "Invalid OS value: $OS, exiting."
   exit 1
