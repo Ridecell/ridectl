@@ -25,7 +25,7 @@ jobs:
 
   build:
     name: Build (all platforms)
-    runs-on: ubuntu-24.04
+    runs-on: macos-latest
     needs: lint
     env:
       TOKEN: ${{ secrets.RIDECELL_PUBLIC_REPO_TOKEN }}
@@ -45,10 +45,10 @@ jobs:
       - name: Build macOS (darwin/arm64)
         run: |
           rm -rf teleport*
-          wget -q https://get.gravitational.com/teleport-v${TSH_VERSION}-darwin-arm64-bin.tar.gz
+          curl -sLO https://get.gravitational.com/teleport-v${TSH_VERSION}-darwin-arm64-bin.tar.gz
           tar -xf teleport-v${TSH_VERSION}-darwin-arm64-bin.tar.gz
           cp teleport/tsh.app/Contents/MacOS/tsh pkg/exec/bin/
-          TSH_MD5=$(md5sum pkg/exec/bin/tsh | awk '{ print $1 }' | tr -d '\n')
+          TSH_MD5=$(md5 -q pkg/exec/bin/tsh | tr -d '\n')
           GOOS=darwin GOARCH=arm64 go build -o bin/ridectl.macos \
             -ldflags "-X github.com/Ridecell/ridectl/pkg/exec.tshMD5=${TSH_MD5} -X github.com/Ridecell/ridectl/pkg/cmd.version=$(git describe --tags)" \
             -tags release github.com/Ridecell/ridectl/cmd/ridectl
@@ -56,10 +56,10 @@ jobs:
       - name: Build Linux amd64
         run: |
           rm -rf teleport*
-          wget -q https://get.gravitational.com/teleport-v${TSH_VERSION}-linux-amd64-bin.tar.gz
+          curl -sLO https://get.gravitational.com/teleport-v${TSH_VERSION}-linux-amd64-bin.tar.gz
           tar -xf teleport-v${TSH_VERSION}-linux-amd64-bin.tar.gz
           cp teleport/tsh pkg/exec/bin/
-          TSH_MD5=$(md5sum teleport/tsh | awk '{ print $1 }' | tr -d '\n')
+          TSH_MD5=$(md5 -q pkg/exec/bin/tsh | tr -d '\n')
           GOOS=linux GOARCH=amd64 go build -o bin/ridectl.linux \
             -ldflags "-X github.com/Ridecell/ridectl/pkg/exec.tshMD5=${TSH_MD5} -X github.com/Ridecell/ridectl/pkg/cmd.version=$(git describe --tags)" \
             -tags release github.com/Ridecell/ridectl/cmd/ridectl
@@ -67,10 +67,10 @@ jobs:
       - name: Build Linux arm64
         run: |
           rm -rf teleport*
-          wget -q https://get.gravitational.com/teleport-v${TSH_VERSION}-linux-arm64-bin.tar.gz
+          curl -sLO https://get.gravitational.com/teleport-v${TSH_VERSION}-linux-arm64-bin.tar.gz
           tar -xf teleport-v${TSH_VERSION}-linux-arm64-bin.tar.gz
           cp teleport/tsh pkg/exec/bin/
-          TSH_MD5=$(md5sum teleport/tsh | awk '{ print $1 }' | tr -d '\n')
+          TSH_MD5=$(md5 -q pkg/exec/bin/tsh | tr -d '\n')
           GOOS=linux GOARCH=arm64 go build -o bin/ridectl.linux.arm64 \
             -ldflags "-X github.com/Ridecell/ridectl/pkg/exec.tshMD5=${TSH_MD5} -X github.com/Ridecell/ridectl/pkg/cmd.version=$(git describe --tags)" \
             -tags release github.com/Ridecell/ridectl/cmd/ridectl
