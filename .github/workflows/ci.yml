@@ -43,37 +43,13 @@ jobs:
           git config --global url."https://${TOKEN}:x-oauth-basic@github.com/Ridecell".insteadOf "https://github.com/Ridecell"
 
       - name: Build macOS (darwin/arm64)
-        run: |
-          rm -rf teleport*
-          curl -sLO https://get.gravitational.com/teleport-v${TSH_VERSION}-darwin-arm64-bin.tar.gz
-          tar -xf teleport-v${TSH_VERSION}-darwin-arm64-bin.tar.gz
-          cp teleport/tsh.app/Contents/MacOS/tsh pkg/exec/bin/
-          TSH_MD5=$(md5 -q pkg/exec/bin/tsh | tr -d '\n')
-          GOOS=darwin GOARCH=arm64 go build -o bin/ridectl.macos \
-            -ldflags "-X github.com/Ridecell/ridectl/pkg/exec.tshMD5=${TSH_MD5} -X github.com/Ridecell/ridectl/pkg/cmd.version=$(git describe --tags)" \
-            -tags release github.com/Ridecell/ridectl/cmd/ridectl
+        run: make build_macos
 
       - name: Build Linux amd64
-        run: |
-          rm -rf teleport*
-          curl -sLO https://get.gravitational.com/teleport-v${TSH_VERSION}-linux-amd64-bin.tar.gz
-          tar -xf teleport-v${TSH_VERSION}-linux-amd64-bin.tar.gz
-          cp teleport/tsh pkg/exec/bin/
-          TSH_MD5=$(md5 -q pkg/exec/bin/tsh | tr -d '\n')
-          GOOS=linux GOARCH=amd64 go build -o bin/ridectl.linux \
-            -ldflags "-X github.com/Ridecell/ridectl/pkg/exec.tshMD5=${TSH_MD5} -X github.com/Ridecell/ridectl/pkg/cmd.version=$(git describe --tags)" \
-            -tags release github.com/Ridecell/ridectl/cmd/ridectl
+        run: make build_linux
 
       - name: Build Linux arm64
-        run: |
-          rm -rf teleport*
-          curl -sLO https://get.gravitational.com/teleport-v${TSH_VERSION}-linux-arm64-bin.tar.gz
-          tar -xf teleport-v${TSH_VERSION}-linux-arm64-bin.tar.gz
-          cp teleport/tsh pkg/exec/bin/
-          TSH_MD5=$(md5 -q pkg/exec/bin/tsh | tr -d '\n')
-          GOOS=linux GOARCH=arm64 go build -o bin/ridectl.linux.arm64 \
-            -ldflags "-X github.com/Ridecell/ridectl/pkg/exec.tshMD5=${TSH_MD5} -X github.com/Ridecell/ridectl/pkg/cmd.version=$(git describe --tags)" \
-            -tags release github.com/Ridecell/ridectl/cmd/ridectl
+        run: make build_linux_arm64
 
       - name: Release
         if: startsWith(github.ref, 'refs/tags/')
