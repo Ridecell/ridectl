@@ -19,9 +19,18 @@ fi
 # remove any old teleport files/folders
 rm -rf teleport*
 
+# Portable MD5: use md5sum (Linux) or md5 -q (macOS)
+md5_hash() {
+  if command -v md5sum &>/dev/null; then
+    md5sum "$1" | awk '{ print $1 }'
+  else
+    md5 -q "$1"
+  fi
+}
+
 if [[ "$OS" == "macos" ]]
 then
-  wget https://get.gravitational.com/teleport-v$TSH_VERSION-darwin-arm64-bin.tar.gz
+  curl -sLO https://get.gravitational.com/teleport-v$TSH_VERSION-darwin-arm64-bin.tar.gz
   tar -xf teleport-v$TSH_VERSION-darwin-arm64-bin.tar.gz
   cp teleport/tsh.app/Contents/MacOS/tsh pkg/exec/bin/
   # Re-sign with ad-hoc signature so tsh runs standalone outside the .app bundle.
@@ -29,19 +38,19 @@ then
   # its embedded.provisionprofile; without this macOS sends SIGKILL on execution.
   codesign --remove-signature pkg/exec/bin/tsh
   codesign -s - pkg/exec/bin/tsh
-  GOOS=darwin GOARCH=arm64 go build -o bin/ridectl.macos -ldflags "-X github.com/Ridecell/ridectl/pkg/exec.tshMD5=$(md5sum pkg/exec/bin/tsh | awk '{ print $1 }'| tr -d '\n') -X github.com/Ridecell/ridectl/pkg/cmd.version=$(git describe --tags)" -tags release github.com/Ridecell/ridectl/cmd/ridectl
+  GOOS=darwin GOARCH=arm64 go build -o bin/ridectl.macos -ldflags "-X github.com/Ridecell/ridectl/pkg/exec.tshMD5=$(md5_hash pkg/exec/bin/tsh | tr -d '\n') -X github.com/Ridecell/ridectl/pkg/cmd.version=$(git describe --tags)" -tags release github.com/Ridecell/ridectl/cmd/ridectl
 elif [[ "$OS" == "linux" ]]
 then
-  wget https://get.gravitational.com/teleport-v$TSH_VERSION-linux-amd64-bin.tar.gz
+  curl -sLO https://get.gravitational.com/teleport-v$TSH_VERSION-linux-amd64-bin.tar.gz
   tar -xf teleport-v$TSH_VERSION-linux-amd64-bin.tar.gz
   cp teleport/tsh pkg/exec/bin/
-  GOOS=linux GOARCH=amd64 go build -o bin/ridectl.linux -ldflags "-X github.com/Ridecell/ridectl/pkg/exec.tshMD5=$(md5sum teleport/tsh | awk '{ print $1 }'| tr -d '\n') -X github.com/Ridecell/ridectl/pkg/cmd.version=$(git describe --tags)" -tags release github.com/Ridecell/ridectl/cmd/ridectl
+  GOOS=linux GOARCH=amd64 go build -o bin/ridectl.linux -ldflags "-X github.com/Ridecell/ridectl/pkg/exec.tshMD5=$(md5_hash pkg/exec/bin/tsh | tr -d '\n') -X github.com/Ridecell/ridectl/pkg/cmd.version=$(git describe --tags)" -tags release github.com/Ridecell/ridectl/cmd/ridectl
 elif [[ "$OS" == "linux_arm64" ]]
 then
-  wget https://get.gravitational.com/teleport-v$TSH_VERSION-linux-arm64-bin.tar.gz
+  curl -sLO https://get.gravitational.com/teleport-v$TSH_VERSION-linux-arm64-bin.tar.gz
   tar -xf teleport-v$TSH_VERSION-linux-arm64-bin.tar.gz
   cp teleport/tsh pkg/exec/bin/
-  GOOS=linux GOARCH=arm64 go build -o bin/ridectl.linux.arm64 -ldflags "-X github.com/Ridecell/ridectl/pkg/exec.tshMD5=$(md5sum teleport/tsh | awk '{ print $1 }'| tr -d '\n') -X github.com/Ridecell/ridectl/pkg/cmd.version=$(git describe --tags)" -tags release github.com/Ridecell/ridectl/cmd/ridectl
+  GOOS=linux GOARCH=arm64 go build -o bin/ridectl.linux.arm64 -ldflags "-X github.com/Ridecell/ridectl/pkg/exec.tshMD5=$(md5_hash pkg/exec/bin/tsh | tr -d '\n') -X github.com/Ridecell/ridectl/pkg/cmd.version=$(git describe --tags)" -tags release github.com/Ridecell/ridectl/cmd/ridectl
 else
   echo "Invalid OS value: $OS, exiting."
   exit 1
